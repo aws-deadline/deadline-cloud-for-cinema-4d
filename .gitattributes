@@ -1,0 +1,7 @@
+*.md	text eol=lf
+*.py	text eol=lf
+*.pyp	text eol=lf
+*.sh	text eol=lf
+*.toml	text eol=lf
+*.txt	text eol=lf
+*.yaml	text eol=lf
