@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 # we mock c4d and UI code
 mock_modules = [
-    "deadline.client.ui.deadline_credentials_status",
+    "deadline.client.ui.deadline_authentication_status",
     "c4d",
     "c4d.documents",
     "PySide2",
