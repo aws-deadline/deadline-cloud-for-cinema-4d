@@ -1,4 +1,4 @@
-# Amazon Deadline Cloud for Cinema4D Development
+# AWS Deadline Cloud for Cinema4D Development
 
 ## Get started
 
