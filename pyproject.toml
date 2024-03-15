@@ -3,10 +3,10 @@ requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
-name = "deadline-cloud-for-cinema4d"
+name = "deadline-cloud-for-cinema-4d"
 dynamic = ["version"]
 readme = "README.md"
-license = ""
+license = "Apache-2.0"
 requires-python = ">=3.9"
 
 dependencies = [
@@ -108,7 +108,11 @@ filterwarnings = [
 source_pkgs = [ "deadline/cinema4d_adaptor", "deadline/cinema4d_submitter" ]
 branch = true
 parallel = true
-omit = [ "**/__main__.py", "**/_version.py" ]
+omit = [
+  "**/__main__.py",
+  "**/_version.py",
+  "*/deadline/cinema4d_submitter/ui/*"
+]
 
 [tool.coverage.paths]
 source =  [
