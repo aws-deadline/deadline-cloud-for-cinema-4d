@@ -1,3 +1,8 @@
+## 0.2.1 (2024-03-26)
+
+### Dependencies
+* update deadline-cloud dependency 0.45.0 (#15) ([`3677a7b`](https://github.com/casillas2/deadline-cloud-for-cinema-4d/pull/15/commits/3677a7b7e1e73939ecae6987fbdc4bc4842c38ec))
+
 ## v0.2.0 (2024-03-15)
 
 ### Breaking
