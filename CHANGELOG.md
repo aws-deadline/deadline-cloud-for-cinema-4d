@@ -1,3 +1,8 @@
+# CHANGELOG
+## v0.2.1 (2024-03-26)
+### Dependencies
+* chore: update deadline-cloud dependency 0.45.0 (#15)
+
 ## v0.2.0 (2024-03-15)
 
 ### Breaking
