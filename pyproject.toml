@@ -9,6 +9,9 @@ readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.9"
 description = "The submitter and adaptor to enable Cinema 4D support for AWS Deadline Cloud"
+authors = [
+  {name = "Amazon Web Services"},
+]
 # https://pypi.org/classifiers/
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -30,6 +33,10 @@ dependencies = [
     "deadline == 0.45.*",
     "openjd-adaptor-runtime == 0.6.*",
 ]
+
+[project.urls]
+Homepage = "https://github.com/aws-deadline/deadline-cloud-for-cinema-4d"
+Source = "https://github.com/aws-deadline/deadline-cloud-for-cinimema-4d"
 
 [project.scripts]
 cinema4d-openjd = "deadline.cinema4d_adaptor.Cinema4DAdaptor:main"
