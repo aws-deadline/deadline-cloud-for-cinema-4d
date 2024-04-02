@@ -1,3 +1,10 @@
+## 0.3.0 (2024-04-02)
+
+### BREAKING CHANGES
+* public release (#21) ([`2fc84af`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/2fc84affe0206687d08915c8301f0cbd8882f075))
+
+
+
 ## 0.2.1 (2024-03-26)
 
 ### Dependencies
