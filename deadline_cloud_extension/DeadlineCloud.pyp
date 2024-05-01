@@ -10,10 +10,10 @@ if 'cinema4d_submitter' not in sys.modules.keys():
     for n in python_paths:
         if n not in sys.path:
             sys.path.append(n)
-    import cinema4d_submitter
+    import deadline.cinema4d_submitter
 else:
     import importlib
-    importlib.reload(cinema4d_submitter)
+    importlib.reload(deadline.cinema4d_submitter)
 
 import c4d
 
@@ -23,7 +23,7 @@ PLUGIN_ID = 1062029
 class DeadlineCloudRenderCommand(c4d.plugins.CommandData):
 
     def Execute(self, doc):
-        cinema4d_submitter.show_submitter()
+        deadline.cinema4d_submitter.show_submitter()
         return True
 
 
