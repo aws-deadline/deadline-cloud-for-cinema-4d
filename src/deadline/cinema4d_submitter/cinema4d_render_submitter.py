@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import c4d
 
-from PySide2 import QtWidgets
+from qtpy import QtWidgets
 
 from deadline.client.job_bundle.submission import AssetReferences
 from deadline.client.job_bundle._yaml import deadline_yaml_dump
@@ -17,7 +17,7 @@ from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint
     JobBundlePurpose,
 )
 from deadline.client.exceptions import DeadlineOperationError
-from PySide2.QtCore import Qt  # pylint: disable=import-error
+from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 
 from .data_classes import (
     RenderSubmitterUISettings,
