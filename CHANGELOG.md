@@ -1,3 +1,9 @@
+## 0.3.1 (2024-05-01)
+
+### Dependencies
+* update deadline requirement from ==0.47.* to ==0.48.* (#33) ([`8e16c43`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8e16c437872e81162a79ba2c220397cc180deddb))
+
+
 ## 0.3.0 (2024-04-02)
 
 ### BREAKING CHANGES
