@@ -1,3 +1,10 @@
+## 0.3.2 (2024-05-08)
+
+
+
+### Bug Fixes
+* update imports (#36) ([`ef50e5a`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/ef50e5ae7745addcb601b7dc7d91304a4d307dff))
+
 ## 0.3.1 (2024-05-01)
 
 ### Dependencies
