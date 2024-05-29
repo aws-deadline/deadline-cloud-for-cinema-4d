@@ -69,7 +69,7 @@ Example linux env below:
 
 ```
 export DEADLINE_CLOUD_PYTHONPATH="/tmp/lib/python3.11/site-packages"
-export DEADLINE_CINEMA4D_EXE="/opt/maxon/cinema4dr2024.200/bin/c4d"
+export CINEMA4D_ADAPTOR_CINEMA4D_EXE="/opt/maxon/cinema4dr2024.200/bin/c4d"
 ```
 
 ### Windows

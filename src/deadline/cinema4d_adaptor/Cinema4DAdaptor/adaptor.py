@@ -271,7 +271,9 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         # XXX: on linux we need to run the c4d env setup script first, this env
         # var allows us to use a wrapper around Commandline. Ideally a conda env
         # does this for us.
-        c4d_exe_env = os.getenv("DEADLINE_CINEMA4D_EXE", "")
+        # On Linux this should be a path similar to this: /opt/maxon/cinema4dr2024.200/bin/c4d
+        # On Windows it should be a path similar to this: "C:\Program Files\Maxon Cinema 4D R26\Commandline.exe"
+        c4d_exe_env = os.getenv("CINEMA4D_ADAPTOR_CINEMA4D_EXE", "")
         if not c4d_exe_env:
             c4d_exe = "Commandline"
         else:
