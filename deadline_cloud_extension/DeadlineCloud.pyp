@@ -5,7 +5,7 @@ root = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root, 'modules'))
 
 if 'cinema4d_submitter' not in sys.modules.keys():
-    python_path = os.getenv('DEADLINE_CLOUD_PYTHONPATH')
+    python_path = os.environ.get('CINEMA4D_DEADLINE_CLOUD_PYTHONPATH', '')
     python_paths = python_path.split(os.pathsep)
     for n in python_paths:
         if n not in sys.path:
