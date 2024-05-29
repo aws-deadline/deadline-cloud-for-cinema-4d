@@ -12,7 +12,7 @@ for n in sys.path:
 
 # cinema4d doesn't use PYTHONPATH so explicitly load modules
 if 'openjd' not in sys.modules.keys():
-    python_path = os.getenv('DEADLINE_CLOUD_PYTHONPATH')
+    python_path = os.getenv('CINEMA4D_DEADLINE_CLOUD_PYTHONPATH')
     python_paths = python_path.split(os.pathsep)
     for p in python_paths:
         if sys.platform == 'win32':
