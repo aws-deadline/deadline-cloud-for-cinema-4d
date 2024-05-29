@@ -67,5 +67,5 @@ Example linux env below:
 
 ```
 export C4DPYTHONPATH311="/path/to/deadline-cloud/site-packages"
-export DEADLINE_CINEMA4D_EXE="/opt/maxon/cinema4dr2024.200/bin/c4d"
+export CINEMA4D_ADAPTOR_COMMANDLINE_EXE="/opt/maxon/cinema4dr2024.200/bin/Commandline"
 ```
