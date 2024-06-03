@@ -22,11 +22,7 @@ if 'openjd' not in sys.modules.keys():
                 print('add_dll_directory failed: %s' % p)
         sys.path.append(p)
 
-try:
-    from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client import main
-except Exception as e:
-    print(e)
-    traceback.print_exc()
+from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client import main
 
 
 def parse_argv(argv):

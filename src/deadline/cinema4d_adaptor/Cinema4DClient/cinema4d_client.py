@@ -6,18 +6,13 @@ import os
 from types import FrameType
 from typing import Optional
 
-# print('Client import')
-# print('======')
-# for n in sys.path:
-#     print(n)
-# print('======')
 from openjd.adaptor_runtime_client import (
-    HTTPClientInterface,
+    ClientInterface,
 )
 from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler
 
 
-class Cinema4DClient(HTTPClientInterface):
+class Cinema4DClient(ClientInterface):
     """
     Client that runs in Cinema4D for the Cinema4D Adaptor
     """
