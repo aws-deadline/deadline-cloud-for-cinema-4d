@@ -1,0 +1,22 @@
+name: Sync Fork
+
+on:
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron:  '0 0 * * *'
+  workflow_dispatch: # on button click
+
+jobs:
+  sync:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: tgymnich/fork-sync@master
+        with:
+          owner: Ahuge
+          base: arch-mainline
+          head: mainline
+          merge_method: rebase
+ 
+          
