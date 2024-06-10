@@ -149,7 +149,7 @@ class Scene:
                 xpath = os.path.join(doc_path, xpath)
             image_paths.add(os.path.dirname(xpath))
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
-            path = render_data.GetFilename(c4d.RDATA_MULTIPASS_FILENAME)
+            path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
             xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
             if not os.path.isabs(xpath):
                 xpath = os.path.join(doc_path, xpath)
