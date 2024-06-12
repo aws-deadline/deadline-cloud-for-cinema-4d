@@ -23,9 +23,10 @@ jobs:
         id: export-files
         run: |
           cd ${GITHUB_WORKSPACE}
+          REF="$(cut -d'+' -f1 <<<"${GITHUB_REF##*/}")"
           hatch -v build
-          echo "whl-path=${GITHUB_WORKSPACE}/dist/deadline_cloud_for_cinema_4d-${GITHUB_REF##*/}-py3-none-any.whl" >> ${GITHUB_OUTPUT}
-          echo "tgz-path=${GITHUB_WORKSPACE}/dist/deadline_cloud_for_cinema_4d-${GITHUB_REF##*/}.tar.gz" >> ${GITHUB_OUTPUT}
+          echo "whl-path=${GITHUB_WORKSPACE}/dist/deadline_cloud_for_cinema_4d-${REF}-py3-none-any.whl" >> ${GITHUB_OUTPUT}
+          echo "tgz-path=${GITHUB_WORKSPACE}/dist/deadline_cloud_for_cinema_4d-${REF}.tar.gz" >> ${GITHUB_OUTPUT}
           echo "plugin-path=${GITHUB_WORKSPACE}/deadline_cloud_extension/DeadlineCloud.pyp" >> ${GITHUB_OUTPUT}
       - name: Upload Release Asset
         id: upload-release-asset-windows
