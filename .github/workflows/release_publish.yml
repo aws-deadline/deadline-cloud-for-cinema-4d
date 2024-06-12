@@ -1,38 +1,17 @@
 name: "Release: Publish"
 run-name: "Release: ${{ github.event.head_commit.message }}"
 
-on:
-  push:
-    branches:
-      - mainline
-    paths:
-      - CHANGELOG.md
 
-concurrency:
-  group: release
+on:
+  release:
+    types: [published]
 
 jobs:
-  Publish:
-    name: Publish Release
-    permissions:
-      id-token: write
-      contents: write
-    uses: aws-deadline/.github/.github/workflows/reusable_publish.yml@mainline
-    secrets: inherit
-  # PyPI does not support reusable workflows yet
-  # # See https://github.com/pypi/warehouse/issues/11096
-  PublishToPyPI:
-    needs: Publish
+  PublishTo:
     runs-on: ubuntu-latest
-    environment: release
-    permissions:
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: release
-          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -40,8 +19,21 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade hatch
-      - name: Build
-        run: hatch -v build
-      # # See https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-pypi
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Export Built Files
+        id: export-files
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          hatch -v build
+          echo "whl-path=${GITHUB_WORKSPACE}/dist/deadline_cloud_for_cinema_4d-${GITHUB_REF##*/}-py3-none-any.whl" >> ${GITHUB_OUTPUT}
+          echo "tgz-path=${GITHUB_WORKSPACE}/dist/deadline_cloud_for_cinema_4d-${GITHUB_REF##*/}.tar.gz" >> ${GITHUB_OUTPUT}
+          echo "plugin-path=${GITHUB_WORKSPACE}/deadline_cloud_extension/DeadlineCloud.pyp" >> ${GITHUB_OUTPUT}
+      - name: Upload Release Asset
+        id: upload-release-asset-windows
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ${{steps.export-files.outputs.whl-path}}
+            ${{steps.export-files.outputs.tgz-path}}
+            ${{steps.export-files.outputs.plugin-path}}
+
