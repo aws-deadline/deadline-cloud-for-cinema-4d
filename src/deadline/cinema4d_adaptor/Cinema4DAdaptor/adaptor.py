@@ -8,6 +8,7 @@ import re
 import threading
 import time
 from functools import wraps
+import platform
 from typing import Callable
 
 from openjd.adaptor_runtime.adaptors import Adaptor, AdaptorDataValidators, SemanticVersion
@@ -300,8 +301,12 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             new_module_path = plugin_dir + os.pathsep + module_path
         os.environ[module_path_key] = new_module_path
 
+        arguments = [c4d_exe, "-nogui", "-DeadlineCloudClient"]
+        if "linux" in platform.system().lower():
+            _logger.info("Inserting Linux adaptor wrapper script")
+            arguments.insert(0, os.path.join(os.path.dirname(__file__), "adaptor.sh"))
         self._cinema4d_client = LoggingSubprocess(
-            args=[c4d_exe, "-nogui", "-DeadlineCloudClient"],
+            args=arguments,
             stdout_handler=regexhandler,
             stderr_handler=regexhandler,
         )
