@@ -302,13 +302,14 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             new_module_path = plugin_dir + os.pathsep + module_path
         os.environ[module_path_key] = new_module_path
 
+        arguments = [c4d_exe, "-nogui", "-DeadlineCloudClient"]
         if "linux" in platform.system().lower():
             _logger.info("Setting Linux Cinema4D environment")
             env = self._get_cinema4d_environment(c4d_exe)
             _logger.info("Inserting Linux adaptor wrapper script")
             arguments.insert(0, os.path.join(os.path.dirname(__file__), "adaptor.sh"))
         self._cinema4d_client = LoggingSubprocess(
-            args=[c4d_exe, "-nogui", "-DeadlineCloudClient"],
+            args=arguments,
             stdout_handler=regexhandler,
             stderr_handler=regexhandler,
         )
@@ -339,6 +340,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         paths = [os.path.join(c4d_root_path, "bin"),]
         if environ.get("PATH", None):
             paths.insert(0, environ["PATH"])
+        _logger.info("Setting PATH to %s" % str(paths))
         os.environ["PATH"] = os.pathsep.join(paths)
         environ["PATH"] = os.pathsep.join(paths)
 
@@ -349,9 +351,11 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         python_paths = [python_path, python_path2]
         if environ.get("PYTHONPATH", None):
             python_paths.insert(0, environ["PYTHONPATH"])
+        _logger.info("Setting PYTHONPATH to %s" % str(python_paths))
         os.environ["PYTHONPATH"] = os.pathsep.join(python_paths)
         environ["PYTHONPATH"] = os.pathsep.join(python_paths)
 
+        _logger.info("Setting LC_NUMERIC to en_US.UTF-8")
         os.environ["LC_NUMERIC"] = "en_US.UTF-8"
         environ["LC_NUMERIC"] = "en_US.UTF-8"
         return environ
