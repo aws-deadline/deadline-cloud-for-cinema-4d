@@ -1,3 +1,11 @@
+## 0.3.3 (2024-06-19)
+
+
+
+### Bug Fixes
+* properly access multipass filename from render data (#47) ([`6da82bf`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/6da82bf511b4af364b047fd22f678c63230acf92))
+* windows adaptor was failing to load (#44) ([`f5b1c6d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f5b1c6d76c40811a78cd14cd822872fd47f93488))
+
 ## 0.3.2 (2024-05-08)
 
 
