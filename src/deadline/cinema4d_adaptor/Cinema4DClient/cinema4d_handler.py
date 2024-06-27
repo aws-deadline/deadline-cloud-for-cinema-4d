@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 from __future__ import annotations
 
-import os as os
+import os
 from typing import Any, Callable, Dict
 
 try:
@@ -19,8 +19,9 @@ def progress_callback(progress, progress_type):
 class Cinema4DHandler:
     action_dict: Dict[str, Callable[[Dict[str, Any]], None]] = {}
     render_kwargs: Dict[str, Any]
+    map_path: Callable[[str], str]
 
-    def __init__(self) -> None:
+    def __init__(self, map_path: Callable[[str], str]) -> None:
         """
         Constructor for the c4dpy handler. Initializes action_dict and render variables
         """
@@ -32,6 +33,7 @@ class Cinema4DHandler:
         }
         self.render_kwargs = {}
         self.take = "Main"
+        self.map_path = map_path
 
     def start_render(self, data: dict) -> None:
         self.doc = c4d.documents.GetActiveDocument()
@@ -42,6 +44,17 @@ class Cinema4DHandler:
         self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
         self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(frame, fps)
         self.render_data[c4d.RDATA_FRAMESTEP] = 1
+
+        if self.render_data[c4d.RDATA_PATH]:
+            self.render_data[c4d.RDATA_PATH] = self.map_path(self.render_data[c4d.RDATA_PATH])
+        if (
+            self.render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]
+            and self.render_data[c4d.RDATA_MULTIPASS_FILENAME]
+        ):
+            self.render_data[c4d.RDATA_MULTIPASS_FILENAME] = self.map_path(
+                self.render_data[c4d.RDATA_MULTIPASS_FILENAME]
+            )
+
         bm = bitmaps.MultipassBitmap(
             int(self.render_data[c4d.RDATA_XRES]),
             int(self.render_data[c4d.RDATA_YRES]),
