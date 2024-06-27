@@ -1,3 +1,10 @@
+## 0.3.4 (2024-06-27)
+
+
+
+### Bug Fixes
+* frame override checkbox with pyside6 (#54) ([`9f3813c`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/9f3813c65451f073cea4d256817dd2f927b906c0))
+
 ## 0.3.3 (2024-06-19)
 
 
