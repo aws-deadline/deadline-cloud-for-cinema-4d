@@ -19,7 +19,7 @@ class Cinema4DClient(ClientInterface):
 
     def __init__(self, server_path: str) -> None:
         super().__init__(server_path=server_path)
-        self.actions.update(Cinema4DHandler().action_dict)
+        self.actions.update(Cinema4DHandler(lambda path: self.map_path(path)).action_dict)
 
     def close(self, args: Optional[dict] = None) -> None:
         sys.exit(0)
