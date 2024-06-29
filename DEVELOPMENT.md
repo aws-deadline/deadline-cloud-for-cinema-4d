@@ -69,7 +69,7 @@ Example linux env below:
 
 ```
 export DEADLINE_CLOUD_PYTHONPATH="/tmp/lib/python3.11/site-packages"
-export DEADLINE_CINEMA4D_EXE="/opt/maxon/cinema4dr2024.200/bin/c4d"
+export COMMANDLINE_EXECUTABLE="/opt/maxon/cinema4dr2024.200/bin/Commandline"
 ```
 
 ### Windows
@@ -78,6 +78,6 @@ To run the adaptor on Windows, you'll have to configure the environment variable
 
 ```
 set DEADLINE_CLOUD_PYTHONPATH="C:\path\to\deadline-cloud\site-packages"
-"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe" -m ensurepip   
-"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe" -m pip install pywin32  
+"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe" -m ensurepip
+"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe" -m pip install pywin32
 ```
