@@ -38,21 +38,50 @@ hatch run all:test
 
 ## Submitter environment
 
-Cinema4D does not support PYTHONPATH. We set DEADLINE_CLOUD_PYTHONPATH which the
-submitter and adaptor uses to set sys.path explictly and load deadline modules.
+### Submitter Python environment 
+The submitter requires the following modules to be installed:
 
-- install deadline-cloud with pyside
-- set env below
-
-```
-# deadline-cloud lib with pyside
-export DEADLINE_CLOUD_PYTHONPATH="/path/to/deadline-cloud/site-packages"
-# configure cinema4d to find extension entry point
-export g_additionalModulePath="/path/to/deadline-cloud-for-cinema4d/deadline_cloud_extension"
+```sh
+pip install deadline-cloud-for-cinema-4d
+pip install deadline[gui]
 ```
 
-- run cinema4d
-- Extensions > Deadline Cloud Submitter
+### Cinema 4D Plugin Extension Setup 
+
+The Cinema 4D plugin extension can be downloaded from the git repo:
+
+https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/blob/mainline/deadline_cloud_extension/DeadlineCloud.pyp
+
+Place this in a location accessible by C4D instances.
+
+Add the `g_additionalModulePath` environment variable to point to the above location, so that Cinema 4D can load the plugin.
+
+By default, Cinema4D does not see **PYTHON_PATH** and as a result **deadline-cloud-for-cinema-4d** - the extension is programmed to look for an environment variable called `DEADLINE_CLOUD_PYTHONPATH`. Setup this variable to point to the location of your **Python > Lib > site-packages**  - e.g.
+
+```
+C:\Program Files\Python311\Lib\site-packages
+```
+
+If you load a scene, click on **Extensions > Deadline Cloud Submitter** to view the submitter.
+
+### Additional Python Libraries
+
+Some specific versions of Cinema 4d ( e.g. `Cinema 4D 2024.1.0`) have been found to be missing some libraries key to Deadline requirements ; in later versions such as `2024.4.0` this has been resolved. 
+
+A missing library error will manifest in errors that can be visible from the **Python** section of the **Extensions > Console** UI. These typically look like:
+
+```
+PySide6/__init__.py: Unable to import Shiboken from  ...
+```
+
+To remedy these errors, you can switch to a later version of Cinema 4D which resolves the missing libraries, or you can manually add them specifically to the Cinema 4D python module, e.g.
+
+```
+& "C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe"-m ensurepip   
+& "C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe"-m pip install MISSING_MODULE
+```       
+
+
 
 ## Worker adaptor environment
 
