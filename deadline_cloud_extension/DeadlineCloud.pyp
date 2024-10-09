@@ -17,8 +17,9 @@ else:
 
 import c4d
 
-# TODO: replace with real id, 1062029 is a dev id
-PLUGIN_ID = 1062029
+# This is the ID generated from Maxon's PluginCafe 
+# Plugin ID generator for DeadlineCloudSubmitter.
+PLUGIN_ID = 1064358
 
 class DeadlineCloudRenderCommand(c4d.plugins.CommandData):
 
