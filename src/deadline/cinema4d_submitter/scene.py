@@ -146,14 +146,18 @@ class Scene:
             path = render_data[c4d.RDATA_PATH]
             xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
             if not os.path.isabs(xpath):
+                if xpath.startswith('./'):
+                    xpath = xpath[2:]
                 xpath = os.path.join(doc_path, xpath)
-            image_paths.add(os.path.dirname(xpath))
+            image_paths.add(os.path.dirname(os.path.normpath(xpath)))
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
             path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
             xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
             if not os.path.isabs(xpath):
+                if xpath.startswith('./'):
+                    xpath = xpath[2:]
                 xpath = os.path.join(doc_path, xpath)
-            image_paths.add(os.path.dirname(xpath))
+            image_paths.add(os.path.dirname(os.path.normpath(xpath)))
         return image_paths
 
     @staticmethod
@@ -169,6 +173,43 @@ class Scene:
         if render_data is None:
             render_data = doc.GetActiveRenderData()
         return render_data
+
+    @staticmethod
+    def get_output_paths(take=None) -> str:
+        doc = c4d.documents.GetActiveDocument()
+        doc_path = doc.GetDocumentPath()
+        if not take:
+            take_data = doc.GetTakeData()
+            take = take_data.GetCurrentTake()
+        render_data = Scene.get_render_data(doc=doc, take=take)
+        rbc = render_data.GetDataInstance()
+        rpd = {
+            "_doc": doc,
+            "_rData": render_data,
+            "_rBc": rbc,
+            "_frame": doc.GetTime().GetFrame(doc.GetFps()),
+        }
+        if take:
+            rpd["take"] = take
+        default_out = ''
+        multi_out = ''
+        if render_data[c4d.RDATA_SAVEIMAGE]:
+            path = render_data[c4d.RDATA_PATH]
+            xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
+            if not os.path.isabs(xpath):
+                if xpath.startswith('./'):
+                    xpath = xpath[2:]
+                xpath = os.path.join(doc_path, xpath)
+            default_out = os.path.normpath(xpath)
+        if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
+            path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
+            xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
+            if not os.path.isabs(xpath):
+                if xpath.startswith('./'):
+                    xpath = xpath[2:]
+                xpath = os.path.join(doc_path, xpath)
+            multi_out = os.path.normpath(xpath)
+        return default_out, multi_out
 
     @staticmethod
     def output_path() -> str:

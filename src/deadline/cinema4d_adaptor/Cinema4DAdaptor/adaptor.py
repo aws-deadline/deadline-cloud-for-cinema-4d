@@ -26,7 +26,7 @@ class Cinema4DNotRunningError(Exception):
     pass
 
 
-_FIRST_CINEMA4D_ACTIONS = ["scene_file", "take"]
+_FIRST_CINEMA4D_ACTIONS = ["scene_file", "take", "output_path", "multi_pass_path"]
 _CINEMA4D_RUN_KEYS = {
     "frame",
 }
