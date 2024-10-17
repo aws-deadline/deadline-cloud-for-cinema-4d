@@ -239,6 +239,16 @@ def _get_job_template(
 
 def _show_submitter(parent=None, f=Qt.WindowFlags()):
 
+    if Scene.changed():
+        prompt = QtWidgets.QMessageBox.warning(
+            None,
+            "Deadline Cloud",
+            "Save scene changes before submission?",
+            QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel
+        )
+        if prompt == QtWidgets.QMessageBox.Ok:
+            Scene.save()
+
     render_settings = RenderSubmitterUISettings()
 
     # Set the setting defaults that come from the scene
