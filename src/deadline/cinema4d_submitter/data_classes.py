@@ -25,6 +25,7 @@ class RenderSubmitterUISettings:
     override_frame_range: bool = field(default=False, metadata={"sticky": True})
     frame_list: str = field(default="", metadata={"sticky": True})
     output_path: str = field(default="")
+    multi_pass_path: str = field(default="")
 
     input_filenames: list[str] = field(default_factory=list, metadata={"sticky": True})
     input_directories: list[str] = field(default_factory=list, metadata={"sticky": True})

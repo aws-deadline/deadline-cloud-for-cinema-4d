@@ -3,7 +3,9 @@
     "type": "object",
     "properties": {
         "scene_file": { "type": "string" },
-        "take": { "type": "string" }
+        "take": { "type": "string" },
+        "output_path": { "type": "string" },
+        "multi_pass_path": { "type": "string" }
     },
     "required": [ "scene_file" ]
 }
