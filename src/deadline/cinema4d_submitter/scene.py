@@ -101,19 +101,6 @@ class Scene:
     """
     Functionality for retrieving settings from the active scene
     """
-    @staticmethod
-    def save() -> bool:
-        """Save active document"""
-        doc = c4d.documents.GetActiveDocument()
-        return c4d.documents.SaveDocument(doc, doc.GetDocumentName(), c4d.SAVEDOCUMENTFLAGS_DIALOGSALLOWED, c4d.FORMAT_C4DEXPORT)
-
-    @staticmethod
-    def changed() -> bool:
-        """
-        Returns True if Active scene has unsaved changes
-        """
-        doc = c4d.documents.GetActiveDocument()
-        return doc.GetChanged()
 
     @staticmethod
     def name() -> str:
