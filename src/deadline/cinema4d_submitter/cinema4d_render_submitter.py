@@ -170,7 +170,10 @@ def _get_job_template(
         else:
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
-            init_data["data"] = "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'" % take_data.name
+            init_data["data"] = (
+                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'"
+                % take_data.name
+            )
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
@@ -251,7 +254,7 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
     render_settings.multi_pass_path = multi_path
 
     # Load the sticky settings
-    # render_settings.load_sticky_settings(Scene.name())
+    render_settings.load_sticky_settings(Scene.name())
 
     doc = c4d.documents.GetActiveDocument()
     take_data = doc.GetTakeData()
