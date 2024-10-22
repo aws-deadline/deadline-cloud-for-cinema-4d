@@ -10,6 +10,19 @@ try:
 except ImportError:  # pragma: no cover
     raise OSError("Could not find the Cinema4D module. Are you running this inside of Cinema4D?")
 
+_RENDERRESULT = {
+    c4d.RENDERRESULT_OK: "Function was successful.",
+    c4d.RENDERRESULT_OUTOFMEMORY: "Not enough memory.",
+    c4d.RENDERRESULT_ASSETMISSING: "Assets (textures etc.) are missing.",
+    c4d.RENDERRESULT_SAVINGFAILED: "Failed to save.",
+    c4d.RENDERRESULT_USERBREAK: "User stopped the processing.",
+    c4d.RENDERRESULT_GICACHEMISSING: "GI cache is missing.",
+    c4d.RENDERRESULT_NOMACHINE: "Machine was not found. (Team Rendering only)",
+    c4d.RENDERRESULT_PROJECTNOTFOUND: "Project was not found.",
+    c4d.RENDERRESULT_ERRORLOADINGPROJECT: "There was an error while loading the project.",
+    c4d.RENDERRESULT_NOOUTPUTSPECIFIED: "Output was not specified.",
+}
+
 
 def progress_callback(progress, progress_type):
     if progress_type == c4d.RENDERPROGRESSTYPE_DURINGRENDERING:
@@ -68,8 +81,11 @@ class Cinema4DHandler:
             c4d.RENDERFLAGS_EXTERNAL | c4d.RENDERFLAGS_SHOWERRORS,
             prog=progress_callback,
         )
-        if result != c4d.RENDERRESULT_OK and result != c4d.RENDERRESULT_USERBREAK:
-            print("Error: RenderDocument: %s" % result)
+        result_description = _RENDERRESULT.get(result, None)
+        if result_description is None:
+            print("Error: unhandled render result: %s" % result)
+        if result != c4d.RENDERRESULT_OK:
+            print("Error: render result: %s" % result_description)
         else:
             print("Finished Rendering")
 
