@@ -43,6 +43,8 @@ class Cinema4DHandler:
             "take": self.set_take,
             "frame": self.set_frame,
             "start_render": self.start_render,
+            "output_path": self.output_path,
+            "multi_pass_path": self.multi_pass_path,
         }
         self.render_kwargs = {}
         self.take = "Main"
@@ -88,6 +90,20 @@ class Cinema4DHandler:
             raise RuntimeError("Error: render result: %s" % result_description)
         else:
             print("Finished Rendering")
+
+    def output_path(self, data: dict) -> None:
+        output_path = data.get("output_path", "")
+        if output_path:
+            doc = c4d.documents.GetActiveDocument()
+            render_data = doc.GetActiveRenderData()
+            render_data[c4d.RDATA_PATH] = output_path
+
+    def multi_pass_path(self, data: dict) -> None:
+        multi_pass_path = data.get("multi_pass_path", "")
+        if multi_pass_path:
+            doc = c4d.documents.GetActiveDocument()
+            render_data = doc.GetActiveRenderData()
+            render_data[c4d.RDATA_MULTIPASS_FILENAME] = multi_pass_path
 
     def set_take(self, data: dict) -> None:
         """

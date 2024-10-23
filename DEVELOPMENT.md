@@ -38,15 +38,14 @@ hatch run all:test
 
 ## Submitter environment
 
-Cinema4D does not support PYTHONPATH. We set DEADLINE_CLOUD_PYTHONPATH which the
-submitter and adaptor uses to set sys.path explictly and load deadline modules.
+Install deadline in a [supported search path](https://developers.maxon.net/docs/py/2024_0_0a/manuals/manual_py_libraries.html#python-interpreter-bound-search-paths) or set a [custom interpreter path](https://developers.maxon.net/docs/py/2024_0_0a/manuals/manual_py_libraries.html#custom-interpreter-bound-search-paths) to the deadline install location.
 
 - install deadline-cloud with pyside
 - set env below
 
 ```
 # deadline-cloud lib with pyside
-export DEADLINE_CLOUD_PYTHONPATH="/path/to/deadline-cloud/site-packages"
+export C4DPYTHONPATH311 "/path/to/deadline-cloud/site-packages"
 # configure cinema4d to find extension entry point
 export g_additionalModulePath="/path/to/deadline-cloud-for-cinema4d/deadline_cloud_extension"
 ```
@@ -56,8 +55,7 @@ export g_additionalModulePath="/path/to/deadline-cloud-for-cinema4d/deadline_clo
 
 ## Worker adaptor environment
 
-Cinema4D does not support PYTHONPATH. We set DEADLINE_CLOUD_PYTHONPATH which the
-adaptor uses to set sys.path explictly and load deadline modules.
+Install deadline in a [supported search path](https://developers.maxon.net/docs/py/2024_0_0a/manuals/manual_py_libraries.html#python-interpreter-bound-search-paths) or set a [custom interpreter path](https://developers.maxon.net/docs/py/2024_0_0a/manuals/manual_py_libraries.html#custom-interpreter-bound-search-paths) to the deadline install location.
 
 ### Linux
 
@@ -68,16 +66,6 @@ client.
 Example linux env below:
 
 ```
-export DEADLINE_CLOUD_PYTHONPATH="/tmp/lib/python3.11/site-packages"
+export C4DPYTHONPATH311 "/path/to/deadline-cloud/site-packages"
 export DEADLINE_CINEMA4D_EXE="/opt/maxon/cinema4dr2024.200/bin/c4d"
-```
-
-### Windows
-
-To run the adaptor on Windows, you'll have to configure the environment variable `DEADLINE_CLOUD_PYTHONPATH` (like the submitter above) and install pywin32 into Cinema4D's python. Example:
-
-```
-set DEADLINE_CLOUD_PYTHONPATH="C:\path\to\deadline-cloud\site-packages"
-"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe" -m ensurepip   
-"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe" -m pip install pywin32  
 ```

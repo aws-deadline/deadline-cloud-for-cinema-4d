@@ -70,6 +70,8 @@ def _get_parameter_values(
 
     # Set the c4d scene file value
     parameter_values.append({"name": "Cinema4DFile", "value": Scene.name()})
+    parameter_values.append({"name": "OutputPath", "value": settings.output_path})
+    parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
 
     if settings.override_frame_range:
         frame_list = settings.frame_list
@@ -168,7 +170,10 @@ def _get_job_template(
         else:
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
-            init_data["data"] = "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'" % take_data.name
+            init_data["data"] = (
+                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'"
+                % take_data.name
+            )
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
@@ -244,7 +249,9 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
     # Set the setting defaults that come from the scene
     render_settings.name = Path(Scene.name()).name
     render_settings.frame_list = str(Animation.frame_list())
-    render_settings.output_path = Scene.output_path()
+    default_path, multi_path = Scene.get_output_paths()
+    render_settings.output_path = default_path
+    render_settings.multi_pass_path = multi_path
 
     # Load the sticky settings
     render_settings.load_sticky_settings(Scene.name())
@@ -308,6 +315,12 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
         if settings.take_selection == TakeSelection.CURRENT:
             submit_takes = current_data_list
 
+        # Add overrides to asset references
+        if settings.output_path:
+            asset_references.output_directories.add(os.path.dirname(settings.output_path))
+        if settings.multi_pass_path:
+            asset_references.output_directories.add(os.path.dirname(settings.multi_pass_path))
+
         # # Check if there are multiple frame ranges across the takes
         first_frame_range = submit_takes[0].frame_range
         per_take_frames_parameters = not settings.override_frame_range and any(
@@ -355,7 +368,6 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
 
     for take_data in take_data_list:
         auto_detected_attachments.output_directories.update(take_data.output_directories)
-
     attachments = AssetReferences(
         input_filenames=set(render_settings.input_filenames),
         input_directories=set(render_settings.input_directories),
