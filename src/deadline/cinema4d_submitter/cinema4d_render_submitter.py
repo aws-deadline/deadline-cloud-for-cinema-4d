@@ -237,7 +237,41 @@ def _get_job_template(
     return job_template
 
 
+def _prompt_save_current_document():
+    doc = c4d.documents.GetActiveDocument()
+    if not doc.GetChanged():
+        # Document has no unsaved changed
+        return
+    if not c4d.gui.QuestionDialog("Save scene changes before submission?"):
+        # User selected No
+        return
+    file_path = doc.GetDocumentPath()
+    file_name = doc.GetDocumentName()
+    if file_path:
+        # Document save path exists
+        save_path = os.path.join(file_path, file_name)
+    else:
+        # Prompt with Save As to set path for Untitled document
+        save_path = c4d.storage.SaveDialog(c4d.FILESELECTTYPE_ANYTHING, "Save As", "c4d")
+        # Handle user cancels document save
+        if not save_path:
+            return
+        # Set document path and name
+        doc_path = os.path.dirname(save_path)
+        base_name = os.path.basename(save_path)
+        doc.SetDocumentPath(doc_path)
+        doc.SetDocumentName(base_name)
+    # Save document to disk
+    c4d.documents.SaveDocument(doc, save_path, c4d.SAVEDOCUMENTFLAGS_0, c4d.FORMAT_C4DEXPORT)
+    # Ensure document is active
+    c4d.documents.InsertBaseDocument(doc)
+    # Update UI
+    c4d.EventAdd()
+
+
 def _show_submitter(parent=None, f=Qt.WindowFlags()):
+
+    _prompt_save_current_document()
 
     render_settings = RenderSubmitterUISettings()
 
