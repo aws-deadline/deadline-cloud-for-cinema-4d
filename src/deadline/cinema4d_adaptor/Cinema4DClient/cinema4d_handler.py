@@ -83,9 +83,9 @@ class Cinema4DHandler:
         )
         result_description = _RENDERRESULT.get(result, None)
         if result_description is None:
-            print("Error: unhandled render result: %s" % result)
+            raise RuntimeError("Error: unhandled render result: %s" % result)
         if result != c4d.RENDERRESULT_OK:
-            print("Error: render result: %s" % result_description)
+            raise RuntimeError("Error: render result: %s" % result_description)
         else:
             print("Finished Rendering")
 
