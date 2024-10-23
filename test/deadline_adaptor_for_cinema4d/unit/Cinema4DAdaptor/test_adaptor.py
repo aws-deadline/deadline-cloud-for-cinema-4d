@@ -40,3 +40,20 @@ class TestCinema4DAdaptor_on_cleanup:
         # THEN
         assert match is not None
         assert str(adaptor._exc_info) == f"Cinema4D Encountered an Error: {stdout}"
+
+    def test_handle_error(self, init_data: dict) -> None:
+        """Tests that the _handle_error method throws a error runtime error correctly"""
+        # GIVEN
+        adaptor = Cinema4DAdaptor(init_data)
+
+        # WHEN
+        error_regex = re.compile(".*Error: .*|.*\\[Error\\].*|.*CRITICAL: .*")
+        stdout = "Redshift Error: Maxon licensing error: User not logged in (7)"
+
+        match = error_regex.search(stdout)
+        if match:
+            adaptor._handle_error(match)
+
+        # THEN
+        assert match is not None
+        assert str(adaptor._exc_info) == f"Cinema4D Encountered an Error: {stdout}"
