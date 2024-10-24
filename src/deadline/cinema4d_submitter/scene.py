@@ -140,7 +140,7 @@ class Scene:
             "_frame": doc.GetTime().GetFrame(doc.GetFps()),
         }
         if take:
-            rpd["take"] = take
+            rpd["_take"] = take
         image_paths = set()
         if render_data[c4d.RDATA_SAVEIMAGE]:
             path = render_data[c4d.RDATA_PATH]
@@ -178,9 +178,6 @@ class Scene:
     def get_output_paths(take=None) -> str:
         doc = c4d.documents.GetActiveDocument()
         doc_path = doc.GetDocumentPath()
-        if not take:
-            take_data = doc.GetTakeData()
-            take = take_data.GetCurrentTake()
         render_data = Scene.get_render_data(doc=doc, take=take)
         render_base_container_instance = render_data.GetDataInstance()
         rpd = {
@@ -190,7 +187,7 @@ class Scene:
             "_frame": doc.GetTime().GetFrame(doc.GetFps()),
         }
         if take:
-            rpd["take"] = take
+            rpd["_take"] = take
         default_out = ""
         multi_out = ""
         if render_data[c4d.RDATA_SAVEIMAGE]:
