@@ -45,7 +45,7 @@ Install deadline in a [supported search path](https://developers.maxon.net/docs/
 
 ```
 # deadline-cloud lib with pyside
-export C4DPYTHONPATH311 "/path/to/deadline-cloud/site-packages"
+export C4DPYTHONPATH311="/path/to/deadline-cloud/site-packages"
 # configure cinema4d to find extension entry point
 export g_additionalModulePath="/path/to/deadline-cloud-for-cinema4d/deadline_cloud_extension"
 ```
@@ -66,6 +66,6 @@ client.
 Example linux env below:
 
 ```
-export C4DPYTHONPATH311 "/path/to/deadline-cloud/site-packages"
+export C4DPYTHONPATH311="/path/to/deadline-cloud/site-packages"
 export DEADLINE_CINEMA4D_EXE="/opt/maxon/cinema4dr2024.200/bin/c4d"
 ```
