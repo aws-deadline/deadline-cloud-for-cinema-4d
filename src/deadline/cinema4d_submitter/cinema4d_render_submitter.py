@@ -255,7 +255,10 @@ def _prompt_save_current_document():
         save_path = c4d.storage.SaveDialog(c4d.FILESELECTTYPE_ANYTHING, "Save As", "c4d")
         # Handle user cancels document save
         if not save_path:
-            return
+            c4d.gui.MessageDialog(
+                "Submission canceled. File must be saved to disk before submission."
+            )
+            return False
         # Set document path and name
         doc_path = os.path.dirname(save_path)
         base_name = os.path.basename(save_path)
@@ -271,7 +274,8 @@ def _prompt_save_current_document():
 
 def _show_submitter(parent=None, f=Qt.WindowFlags()):
 
-    _prompt_save_current_document()
+    if _prompt_save_current_document() is False:
+        return
 
     render_settings = RenderSubmitterUISettings()
 
