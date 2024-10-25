@@ -44,6 +44,10 @@ class TakeData:
 
 
 def show_submitter():
+    
+    if _prompt_save_current_document() is False:
+        return
+
     try:
         app = QtWidgets.QApplication.instance()
         if not app:
@@ -273,9 +277,6 @@ def _prompt_save_current_document():
 
 
 def _show_submitter(parent=None, f=Qt.WindowFlags()):
-
-    if _prompt_save_current_document() is False:
-        return
 
     render_settings = RenderSubmitterUISettings()
 
