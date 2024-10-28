@@ -12,8 +12,9 @@ def _checkerboard_bmp(filename):
     file_size = 14 + 40 + (width * height * 3)
     file_header = struct.pack("<2sIHHI", b"BM", file_size, 0, 0, 54)
     # DIB header
-    dib_header = struct.pack("<IiiHHIIiiII", 40, width, height, 1, 24, 0,
-                             width * height * 3, 2835, 2835, 0, 0)
+    dib_header = struct.pack(
+        "<IiiHHIIiiII", 40, width, height, 1, 24, 0, width * height * 3, 2835, 2835, 0, 0
+    )
     pixel_data = []
     for y in range(height):
         row_data = []
@@ -41,13 +42,13 @@ def main():
     mat = c4d.BaseList2D(c4d.Mmaterial)
     doc.InsertMaterial(mat)
     mat[c4d.MATERIAL_USE_REFLECTION] = False
-    bitmapShader = c4d.BaseShader(c4d.Xbitmap)
+    bitmap_shader = c4d.BaseShader(c4d.Xbitmap)
     tex_dir = os.path.join(os.path.dirname(__file__), "tex")
     os.makedirs(tex_dir, exist_ok=True)
     _checkerboard_bmp(os.path.join(tex_dir, "checkerboard.bmp"))
-    bitmapShader[c4d.BITMAPSHADER_FILENAME] = "tex/checkerboard.bmp"
-    mat[c4d.MATERIAL_COLOR_SHADER] = bitmapShader
-    mat.InsertShader(bitmapShader)
+    bitmap_shader[c4d.BITMAPSHADER_FILENAME] = "tex/checkerboard.bmp"
+    mat[c4d.MATERIAL_COLOR_SHADER] = bitmap_shader
+    mat.InsertShader(bitmap_shader)
     texture_tag = c4d.TextureTag()
     texture_tag.SetMaterial(mat)
     cube.InsertTag(texture_tag)
