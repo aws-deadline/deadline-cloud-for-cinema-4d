@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Tuple
 
 import c4d
 
@@ -175,7 +175,10 @@ class Scene:
         return render_data
 
     @staticmethod
-    def get_output_paths(take=None) -> str:
+    def get_output_paths(take=None) -> Tuple[str, str]:
+        """
+        Returns the default and multi-pass output paths.
+        """
         doc = c4d.documents.GetActiveDocument()
         doc_path = doc.GetDocumentPath()
         render_data = Scene.get_render_data(doc=doc, take=take)
@@ -207,14 +210,6 @@ class Scene:
                 xpath = os.path.join(doc_path, xpath)
             multi_out = os.path.normpath(xpath)
         return default_out, multi_out
-
-    @staticmethod
-    def output_path() -> str:
-        """
-        Returns the path to the default output directory.
-        """
-        doc = c4d.documents.GetActiveDocument()
-        return doc.GetDocumentPath()
 
 
 @dataclass
