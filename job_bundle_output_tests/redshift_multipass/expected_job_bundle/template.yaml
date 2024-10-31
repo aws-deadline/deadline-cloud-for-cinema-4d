@@ -1,0 +1,103 @@
+specificationVersion: jobtemplate-2023-09
+name: redshift_multipass.c4d
+parameterDefinitions:
+- name: Cinema4DFile
+  type: PATH
+  objectType: FILE
+  dataFlow: IN
+  userInterface:
+    control: CHOOSE_INPUT_FILE
+    label: Cinema4D Document File
+    groupLabel: Cinema4D Settings
+    fileFilters:
+    - label: Cinema4D document files
+      patterns:
+      - '*.c4d'
+    - label: All Files
+      patterns:
+      - '*'
+  description: The Cinema4D document file to render.
+- name: Frames
+  type: STRING
+  userInterface:
+    control: LINE_EDIT
+    label: Frames
+    groupLabel: Cinema4D Settings
+  description: The frames to render. E.g. 1-3,8,11-15
+  minLength: 1
+- name: OutputPath
+  type: STRING
+  userInterface:
+    control: LINE_EDIT
+    label: Default image output
+    groupLabel: Cinema4D Settings
+  description: Image output path
+- name: MultiPassPath
+  type: STRING
+  userInterface:
+    control: LINE_EDIT
+    label: Multi-pass output path
+    groupLabel: Cinema4D Settings
+  description: Multi-pass image output
+steps:
+- name: Main
+  parameterSpace:
+    taskParameterDefinitions:
+    - name: Frame
+      type: INT
+      range: '{{Param.Frames}}'
+  stepEnvironments:
+  - name: Cinema4D
+    description: Runs Cinema4D in the background.
+    script:
+      embeddedFiles:
+      - name: initData
+        filename: init-data.yaml
+        type: TEXT
+        data: |-
+          scene_file: '{{Param.Cinema4DFile}}'
+          take: 'Main'
+          output_path: '{{Param.OutputPath}}'
+          multi_pass_path: '{{Param.MultiPassPath}}'
+      actions:
+        onEnter:
+          command: cinema4d-openjd
+          args:
+          - daemon
+          - start
+          - --path-mapping-rules
+          - file://{{Session.PathMappingRulesFile}}
+          - --connection-file
+          - '{{Session.WorkingDirectory}}/connection.json'
+          - --init-data
+          - file://{{Env.File.initData}}
+          cancelation:
+            mode: NOTIFY_THEN_TERMINATE
+        onExit:
+          command: cinema4d-openjd
+          args:
+          - daemon
+          - stop
+          - --connection-file
+          - '{{ Session.WorkingDirectory }}/connection.json'
+          cancelation:
+            mode: NOTIFY_THEN_TERMINATE
+  script:
+    embeddedFiles:
+    - name: runData
+      filename: run-data.yaml
+      type: TEXT
+      data: |
+        frame: {{Task.Param.Frame}}
+    actions:
+      onRun:
+        command: cinema4d-openjd
+        args:
+        - daemon
+        - run
+        - --connection-file
+        - '{{ Session.WorkingDirectory }}/connection.json'
+        - --run-data
+        - file://{{ Task.File.runData }}
+        cancelation:
+          mode: NOTIFY_THEN_TERMINATE

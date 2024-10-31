@@ -1,0 +1,17 @@
+parameterValues:
+- name: Cinema4DFile
+  value: C:\normalized\job\bundle\dir\redshift_multipass.c4d
+- name: OutputPath
+  value: ''
+- name: MultiPassPath
+  value: C:\normalized\job\bundle\dir\renders\redshift_multipass_multipass
+- name: Frames
+  value: '1'
+- name: deadline:targetTaskRunStatus
+  value: READY
+- name: deadline:maxFailedTasksCount
+  value: 20
+- name: deadline:maxRetriesPerTask
+  value: 5
+- name: deadline:priority
+  value: 50

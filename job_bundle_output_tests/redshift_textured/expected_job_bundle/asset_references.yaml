@@ -1,0 +1,10 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - C:\normalized\job\bundle\dir\redshift_textured.c4d
+    - C:\normalized\job\bundle\dir\tex\checkerboard.bmp
+  outputs:
+    directories:
+    - C:\normalized\job\bundle\dir\renders
+  referencedPaths: []

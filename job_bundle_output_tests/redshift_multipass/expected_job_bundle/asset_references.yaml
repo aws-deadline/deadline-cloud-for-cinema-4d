@@ -1,0 +1,9 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - C:\normalized\job\bundle\dir\redshift_multipass.c4d
+  outputs:
+    directories:
+    - C:\normalized\job\bundle\dir\renders
+  referencedPaths: []
