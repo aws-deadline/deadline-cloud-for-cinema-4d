@@ -446,4 +446,5 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         set to be added to the action queue.
         """
         for name in _FIRST_CINEMA4D_ACTIONS:
-            self._action_queue.enqueue_action(Action(name, {name: self.init_data[name]}))
+            if name in self.init_data:
+                self._action_queue.enqueue_action(Action(name, {name: self.init_data[name]}))
