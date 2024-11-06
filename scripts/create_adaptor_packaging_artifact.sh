@@ -104,7 +104,7 @@ if [ $SOURCE = 1 ]; then
         $ADAPTOR_INSTALLABLE
 else
     # In PyPI mode, PyPI and/or a CodeArtifact must have these packages
-    RUNTIME_INSTALLABLE=openjd-adaptor-runtime-for-python
+    RUNTIME_INSTALLABLE=openjd-adaptor-runtime
     ADAPTOR_INSTALLABLE=$ADAPTOR_NAME
 
     pip install \
