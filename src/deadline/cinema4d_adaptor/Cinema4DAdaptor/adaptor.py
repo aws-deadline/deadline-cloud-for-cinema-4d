@@ -193,7 +193,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             completed_regexes = [re.compile(".*Finished Rendering.*")]
             progress_regexes = [re.compile(".*Progress ([0-9]+)%.*")]
             error_regexes = [
-                re.compile(".*Error: .*|.*\\[Error\\].*|.*CRITICAL: .*", re.IGNORECASE)
+                re.compile(r"(.*Error: .*)|(.*\[Error\].*)|(.*CRITICAL: Stop.*)", re.IGNORECASE)
             ]
 
             callback_list.append(RegexCallback(completed_regexes, self._handle_complete))
