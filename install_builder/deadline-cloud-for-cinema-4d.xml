@@ -1,0 +1,133 @@
+<component>
+    <name>deadline_cloud_for_cinema_4d</name>
+    <description>Deadline Cloud for Cinema 4D 2024-2025</description>
+    <detailedDescription>Cinema 4D plugin for submitting jobs to AWS Deadline Cloud. Compatible with Cinema 4D 2024/2025</detailedDescription>
+    <canBeEdited>1</canBeEdited>
+    <selected>0</selected>
+    <show>1</show>
+    <folderList>
+        <folder>
+            <description>Cinema4D Deadline Cloud Extension</description>
+            <destination>${installdir}/tmp/c4d_deps</destination>
+            <name>cinema4dextension</name>
+            <platforms>all</platforms>
+            <distributionFileList>
+                <distributionFile>
+                    <origin>components/deadline-cloud-for-cinema-4d/deadline_cloud_extension/DeadlineCloud.pyp</origin>
+                </distributionFile>
+            </distributionFileList>
+        </folder>
+        <folder>
+            <description>Dependency Files</description>
+             <destination>${installdir}/tmp/c4d_deps</destination>
+             <name>c4ddeps</name>
+             <platforms>all</platforms>
+             <distributionFileList>
+                 <distributionDirectory allowWildcards="1">
+                     <origin>components/deadline-cloud-for-cinema-4d/dependency_bundle</origin>
+                 </distributionDirectory>
+             </distributionFileList>
+        </folder>
+        <folder>
+            <description>Cinema 4D submitter installation directory</description>
+            <destination>${cinema_4d_submitter_installdir}</destination>
+            <name>cinema4d</name>
+            <platforms>all</platforms>
+            <distributionFileList>
+                <distributionDirectory allowWildcards="1">
+                    <origin>components/deadline-cloud-for-cinema-4d/src/*</origin>
+                    <filterEvaluationLogic>or</filterEvaluationLogic>
+                    <onPackingFilterList>
+                        <fileNameFilter pattern="*/deadline/cinema4d_submitter/*" logic="matches" patternType="glob"/>
+                    </onPackingFilterList>
+                </distributionDirectory>
+            </distributionFileList>
+        </folder>
+    </folderList>
+    <initializationActionList>
+        <if>
+            <conditionRuleList>
+                <compareText>
+                    <logic>does_not_contain</logic>
+                    <text>${platform_name}</text>
+                    <value>linux</value>
+                </compareText>
+            </conditionRuleList>
+            <actionList>
+                <setInstallerVariable name="all_components" value="${all_components} deadline_cloud_for_cinema_4d" />
+            </actionList>
+            <elseActionList>
+                <setInstallerVariable name="component(deadline_cloud_for_cinema_4d).show" value="0"/>
+            </elseActionList>
+        </if>
+        <setInstallerVariable name="cinema_4d_submitter_installdir" value="${installdir}\Submitters\Cinema4D" />
+        <if>
+            <conditionRuleList>
+                <platformTest type="windows" />
+            </conditionRuleList>
+            <actionList>
+                <setInstallerVariable name="cinema_4d_deps_platform" value="windows" />
+            </actionList>
+        </if>
+    </initializationActionList>
+    <parameterList>
+        <stringParameter name="deadline_cloud_for_cinema_4d_summary" ask="0" cliOptionShow="0">
+            <value>Deadline Cloud for Cinema 4D
+- Register the extension with Cinema 4D by moving the DeadlineCloud.pyp file to the Cinema 4D plugins folder. 
+- Set the C4DPYTHONPATH311 to retrieve deadline modules. 
+            </value>
+        </stringParameter>
+        <directoryParameter>
+            <name>cinema_4d_installdir</name>
+            <title>Cinema 4D</title>
+            <description>Cinema 4D Installation Directory</description>
+            <explanation>Path to Cinema 4D installation directory. For easiest installation, Cinema 4D should be installed before installing Deadline Cloud for Cinema 4D.</explanation>
+            <allowEmptyValue>0</allowEmptyValue>
+            <ask>yes</ask>
+            <cliOptionName>cinema4d-installation-directory</cliOptionName>
+            <cliOptionText>Path to Cinema 4D installation directory. </cliOptionText>
+            <mustBeWritable>yes</mustBeWritable>
+            <mustExist>1</mustExist>
+        </directoryParameter>
+    </parameterList>
+    <postInstallationActionList>
+        <createDirectory>
+            <path>${cinema_4d_installdir}/plugins</path>
+            <ruleList>
+                <fileTest condition="not_exists" path="${cinema_4d_installdir}/plugins"/>
+            </ruleList>
+        </createDirectory>
+        <copyFile>
+            <destination>${cinema_4d_installdir}/plugins/DeadlineCloud.pyp</destination>
+            <origin>${installdir}/tmp/c4d_deps/DeadlineCloud.pyp</origin>
+        </copyFile>
+        <addFilesToUninstaller files="${cinema_4d_installdir}/plugins/DeadlineCloud.pyp" />
+        <showInfo>
+            <text>Moved DeadlineCloud.pyp to ${cinema_4d_installdir}/plugins/</text>
+        </showInfo>
+        <unzip>
+            <destinationDirectory>${cinema_4d_submitter_installdir}</destinationDirectory>
+            <zipFile>${installdir}/tmp/c4d_deps/dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-${cinema_4d_deps_platform}.zip</zipFile>
+        </unzip>
+        <fnAddPathEnvironmentVariable>
+            <progressText>Setting C4DPYTHONPATH311</progressText>
+            <name>C4DPYTHONPATH311</name>
+            <value>${cinema_4d_submitter_installdir}</value>
+            <scope>${installscope}</scope>
+            <insertAt>end</insertAt>
+        </fnAddPathEnvironmentVariable>
+        <showInfo>
+            <text>Added ${cinema_4d_submitter_installdir} to C4DPYTHONPATH311.</text>
+        </showInfo>
+        <deleteFile>
+            <path>${installdir}/tmp/c4d_deps</path>
+        </deleteFile>
+    </postInstallationActionList>
+    <shouldPackRuleList>
+        <compareText>
+               <logic>does_not_contain</logic>
+               <text>${platform_name}</text>
+               <value>linux</value>
+        </compareText>
+    </shouldPackRuleList>
+</component>
