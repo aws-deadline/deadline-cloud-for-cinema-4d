@@ -6,10 +6,21 @@ import os
 from types import FrameType
 from typing import Optional
 
-from openjd.adaptor_runtime_client import (
-    ClientInterface,
-)
-from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler
+# The Cinema4D Adaptor adds the `openjd` namespace directory to PYTHONPATH,
+# so that importing just the adaptor_runtime_client should work.
+try:
+    from adaptor_runtime_client import ClientInterface  # type: ignore[import]
+except (ImportError, ModuleNotFoundError):
+    # On Windows, HTTPClientInterface is not available, only ClientInterface
+    from openjd.adaptor_runtime_client import ClientInterface  # type: ignore[import]
+
+
+# The Cinema4D Adaptor adds the `deadline` namespace directory to PYTHONPATH,
+# so that importing just the cinema4d_adaptor should work.
+try:
+    from cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler  # type: ignore[import]
+except (ImportError, ModuleNotFoundError):
+    from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler  # type: ignore[import]
 
 
 class Cinema4DClient(ClientInterface):
