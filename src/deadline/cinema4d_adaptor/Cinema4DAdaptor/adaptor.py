@@ -263,6 +263,26 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         """
         self._exc_info = RuntimeError(match.group(0))
 
+    def _add_deadline_openjd_paths(self) -> None:
+        # Add the openjd namespace directory to PYTHONPATH, so that adaptor_runtime_client
+        # will be available directly to the adaptor client.
+        import openjd.adaptor_runtime_client
+        import deadline.cinema4d_adaptor
+
+        openjd_namespace_dir = os.path.dirname(
+            os.path.dirname(openjd.adaptor_runtime_client.__file__)
+        )
+        deadline_namespace_dir = os.path.dirname(
+            os.path.dirname(deadline.cinema4d_adaptor.__file__)
+        )
+        python_path_addition = f"{openjd_namespace_dir}{os.pathsep}{deadline_namespace_dir}"
+        if "C4DPYTHONPATH311" in os.environ:
+            os.environ["C4DPYTHONPATH311"] = (
+                f"{os.environ['C4DPYTHONPATH311']}{os.pathsep}{python_path_addition}"
+            )
+        else:
+            os.environ["C4DPYTHONPATH311"] = python_path_addition
+
     def _start_cinema4d_client(self) -> None:
         """
         Starts the cinema4d client by launching Cinema4D with the cinema4d_client.py file.
@@ -305,6 +325,9 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         if "linux" in platform.system().lower():
             _logger.info("Inserting Linux adaptor wrapper script")
             arguments.insert(0, os.path.join(os.path.dirname(__file__), "adaptor.sh"))
+
+        self._add_deadline_openjd_paths()
+
         self._cinema4d_client = LoggingSubprocess(
             args=arguments,
             stdout_handler=regexhandler,

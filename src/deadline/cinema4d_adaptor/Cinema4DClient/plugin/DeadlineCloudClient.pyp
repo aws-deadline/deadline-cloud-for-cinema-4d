@@ -9,7 +9,13 @@ for n in sys.path:
     print(n)
 
 import c4d
-from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client import main
+
+# The Cinema4D Adaptor adds the `deadline` namespace directory to PYTHONPATH,
+# so that importing just the cinema4d_adaptor should work.
+try:
+    from cinema4d_adaptor.Cinema4DClient.cinema4d_client import main # type: ignore[import]
+except (ImportError, ModuleNotFoundError):
+    from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client import main # type: ignore[import]
 
 def parse_argv(argv):
     for arg in argv:
