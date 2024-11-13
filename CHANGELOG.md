@@ -1,3 +1,23 @@
+## 0.4.0 (2024-11-13)
+
+### BREAKING CHANGES
+* renamed env variable for loading adaptor executable, added support for running the adaptor on Linux, and added support for earlier versions of 2024 (#59) ([`be33b63`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/be33b63860a2d078f2802766d6eb5ce567c05aba))
+* add adaptor output path mapping and overrides (#55) (#73) ([`6dcaf4a`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/6dcaf4a35dfb6704bdb4c04b78e76e2e36a43349))
+
+### Features
+* Add InstallBuilder submitter installer XML. (#85) ([`73dbb75`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/73dbb7518c04b8d443849f57e9461b4cf14c4d2e))
+* Only import openjd and deadline modules. (#88) ([`71911ae`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/71911ae1394203fea36875b1350e4cb4a67470d1))
+* prompt save before submit (#53) (#69) ([`c1d463c`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/c1d463c6c57fdd95c2a3d4e58d024ba3ad58a693))
+* Add DeadlineCloudSubmitter plugin ID to submitter plugin. ([`9242593`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/9242593455c70ce06cacec94d84839bf957a47cc))
+
+### Bug Fixes
+* Resolve typos in bundling scripts. (#82) ([`caf33e3`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/caf33e3ac3136c311c18069c2fa78628fcddbcfc))
+* Ensure only Critical stops fail the job and not others. (#80) ([`80af90f`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/80af90fbf2fe75c4866b26abc8cea5ba66f974ef))
+* Fix python-semantic-release issues with 9.12 (#78) ([`8cc9728`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8cc9728c52e2e6ea83b2871887299f01124889ff))
+* handle CRITICAL error in adaptor regex callbacks (#51) (#72) ([`817eb68`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/817eb68346f165de974dca55033837a07548884b))
+* adaptor handle render result failure results (#66) (#76) ([`8e0e127`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8e0e1277dd15faa0a8784c95b0fcb43b0505236d))
+* Add path mapping to outputs (#57) ([`056f5ea`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/056f5ea931b78eea0e21024e192179c7f5d871d8))
+
 ## 0.3.4 (2024-06-27)
 
 
