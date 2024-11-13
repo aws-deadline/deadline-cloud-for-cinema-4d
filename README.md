@@ -13,37 +13,147 @@ Our focus is to explore a variety of software applications to ensure we have goo
 This example has been used by at least one internal or external development team to create a series of jobs that successfully rendered. However, your mileage may vary. If you have questions or issues with this example, please start a discussion or cut an issue.
 ---
 
-AWS Deadline Cloud for Cinema 4D is a python package that allows users to create [AWS Deadline Cloud][deadline-cloud] jobs from within Cinema 4D. Using the [Open Job Description (OpenJD) Adaptor Runtime][openjd-adaptor-runtime] this package also provides a command line application that adapts Cinema 4D's command line interface to support the [OpenJD specification][openjd].
+AWS Deadline Cloud for Cinema 4D is a python package that allows users to create [AWS Deadline Cloud][deadline-cloud] jobs from within Cinema 4D. It provides both the implementation of a Cinema 4D extension for your workstation that helps you offload the computation for your rendering workloads
+to [AWS Deadline Cloud][deadline-cloud] to free up your workstation's compute for other tasks, and the implementation of a command-line
+adaptor application based on the [Open Job Description (OpenJD) Adaptor Runtime][openjd-adaptor-runtime] that improves AWS Deadline Cloud's
+ability to run Cinema 4D efficiently on your render farm.
+
 
 [deadline-cloud]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/what-is-deadline-cloud.html
 [deadline-cloud-client]: https://github.com/aws-deadline/deadline-cloud
 [openjd]: https://github.com/OpenJobDescription/openjd-specifications/wiki
 [openjd-adaptor-runtime]: https://github.com/OpenJobDescription/openjd-adaptor-runtime-for-python
 [openjd-adaptor-runtime-lifecycle]: https://github.com/OpenJobDescription/openjd-adaptor-runtime-for-python/blob/release/README.md#adaptor-lifecycle
-
+[service-managed-fleets]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/smf-manage.html
+[default-queue-environment]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/create-queue-environment.html#conda-queue-environment
 
 ## Compatibility
 
 This library requires:
 
-1. Cinema 4D 2023 - 2024,
-1. Python 3.9 or higher; and
-1. Linux, Windows, or a macOS operating system.
+1. Cinema 4D 2024 - 2025
+1. Python 3.9 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
+1. Windows is recommended; We have some information below on how to setup the submitter on Mac and adaptors on Linux but it is experimental. 
+
+## Versioning
+
+This package's version follows [Semantic Versioning 2.0](https://semver.org/), but is still considered to be in its 
+initial development, thus backwards incompatible versions are denoted by minor version bumps. To help illustrate how
+versions will increment during this initial development stage, they are described below:
+
+1. The MAJOR version is currently 0, indicating initial development. 
+2. The MINOR version is currently incremented when backwards incompatible changes are introduced to the public API. 
+3. The PATCH version is currently incremented when bug fixes or backwards compatible changes are introduced to the public API. 
+
+## Getting Started
+
+This Cinema 4D integration for AWS Deadline Cloud has two components that you will need to install:
+
+1. The Cinema 4D submitter extension must be installed on the workstation that you will use to submit jobs; and
+2. The Cinema 4D adaptor must be installed on all of your AWS Deadline Cloud worker hosts that will be running the Cinema 4D jobs that you submit.
+
+Before submitting any large, complex, or otherwise compute-heavy Cinema 4D render jobs to your farm using the submitter and adaptor that you
+set up, we strongly recommend that you construct a simple test scene that can be rendered quickly and submit renders of that scene to your farm to ensure that your setup is correctly functioning.
+
 
 ## Submitter
 
-This package provides a Cinema 4D plugin that creates jobs for AWS Deadline Cloud using the [AWS Deadline Cloud client library][deadline-cloud-client]. Based on the loaded scene it determines the files required, allows the user to specify render options, and builds an [OpenJD template][openjd] that defines the workflow.
+The Cinema 4D submitter extension creates a button in your Cinema 4D UI (under Extensions tab) that can be used to submit jobs to AWS Deadline Cloud. Clicking this button reveals a UI to create a job submission for AWS Deadline Cloud using the [AWS Deadline Cloud client library][deadline-cloud-client].
+It automatically determines the files required based on the loaded scene, allows the user to specify render options, builds an
+[Open Job Description template][openjd] that defines the workflow, and submits the job to the farm and queue of your chosing.
+
+### To install the submitter extension:
+
+#### Prerequisites
+
+1. Install the required python modules:
+
+```
+pip install deadline-cloud-for-cinema-4d
+pip install deadline[gui]
+```
+
+2. Set up the `C4DPYTHONPATH311` environment variable:
+  - Windows: 
+```
+set C4DPYTHONPATH311="Path\to\site-packages"
+```
+
+  - Mac:
+```
+export C4DPYTHONPATH311="Path/to/site-packages"
+```
+
+#### Downloading the extension
+
+The Cinema 4D extension can be downloaded from the git repo:
+
+https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/blob/mainline/deadline_cloud_extension/DeadlineCloud.pyp
+
+
+#### Set up Cinema 4D to access DeadlingCloud extension: 
+
+There are 2 ways to setup Cinema 4D to access this extension:
+
+1. Plugin directory method:
+    1. Create a new folder "plugins" within the Cinema 4D installation directory. 
+    2. Place the `DeadlineCloud.pyp` within this "plugins" directory. 
+
+2. Environment variable method:
+    1. Add the `g_additionalModulePath` environment variable to point to the location where `DeadlineCloud.pyp` exists, so that Cinema 4D can load the plugin.
+
+Windows:
+```
+set g_additionalModulePath="Path\to\DeadlineCloud.pyp"
+```
+
+Linux or Mac:
+```
+export g_additionalModulePath="Path/to/DeadlineCloud.pyp"
+```
+
+#### Using the extension
+
+Windows:
+- If the above environment variables are set as user / system variables, then just start Cinema 4D from the start menu. 
+
+Mac:
+- Set the above environment variables in a shell. 
+- Navigate to the location where the Cinema 4D application is present.
+Normally it is in `/Applications/Maxon Cinema 4D 2025/Cinema 4D.app/Contents/MacOS`
+- Run `./Cinema\ 4D`
+
+If you load a scene, click on **Extensions > Deadline Cloud Submitter** to view the submitter.
+
+### Additional Python Libraries
+
+Some specific versions of Cinema 4D ( e.g. `Cinema 4D 2024.1.0`) have been found to be missing some libraries key to Deadline requirements ; in later versions such as `2024.4.0` this has been resolved. 
+
+A missing library error will manifest in errors that can be visible from the **Python** section of the **Extensions > Console** UI. These typically look like:
+
+```
+PySide6/__init__.py: Unable to import Shiboken from  ...
+```
+
+To remedy these errors, you can switch to a later version of Cinema 4D which resolves the missing libraries, or you can manually add them specifically to the Cinema 4D python module, e.g in Windows it will be something like:
+
+```
+"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe"-m ensurepip   
+"C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe"-m pip install MISSING_MODULE
+``` 
 
 ## Adaptor
 
-The Cinema 4D Adaptor implements the [OpenJD][openjd-adaptor-runtime] interface that allows render workloads to launch Cinema 4D and feed it commands. This gives the following benefits:
-* a standardized render application interface,
-* sticky rendering, where the application stays open between tasks,
-* path mapping, that enables cross-platform rendering
+Jobs created by this submitter require this adaptor be installed on your worker hosts, and that both the installed adaptor
+and the Cinema 4D executable be available on the PATH of the user that will be running your jobs.
 
-Jobs created by the submitter use this adaptor by default.
+Or you can set the `CINEMA4D_ADAPTOR_COMMANDLINE_EXE` to point to the Cinema 4D executable. 
 
-### Getting Started
+The adaptor application is a command-line Python-based application that enhances the functionality of Cinema 4D for running within a render farm like Deadline Cloud. Its primary purpose for existing is to add a "sticky rendering" functionality where a single process instance of Cinema 4D is able to load the scene file and then dynamically be instructed to perform desired renders without needing to close and re-launch Cinema 4D between them. It also has additional benefits such as support for path mapping, and reporting the progress of your render to Deadline Cloud. The alternative to "sticky rendering" is that Cinema 4D would need to be run separately for each render that is done, and close afterwards.
+Some scenes can take 10's of minutes just to load for rendering, so being able to keep the application open and loaded between
+renders can be a significant time-saving optimization; particularly when the render itself is quick.
+
+If you are using the [default Queue Environment][default-queue-environment], or an equivalent, to run your jobs, then the adaptor will be automatically made available to your job. Otherwise, you will need to install the adaptor.
 
 The adaptor can be installed by the standard python packaging mechanisms:
 ```sh
@@ -57,19 +167,24 @@ $ cinema4d-openjd --help
 
 For more information on the commands the OpenJD adaptor runtime provides, see [here][openjd-adaptor-runtime-lifecycle].
 
-## Versioning
+## Viewing the Job Bundle that will be submitted
 
-This package's version follows [Semantic Versioning 2.0](https://semver.org/), but is still considered to be in its 
-initial development, thus backwards incompatible versions are denoted by minor version bumps. To help illustrate how
-versions will increment during this initial development stage, they are described below:
+To submit a job, the submitter first generates a [Job Bundle][job-bundle], and then uses functionality from the
+[Deadline][deadline-cloud-client] package to submit the Job Bundle to your render farm to run. If you would like to see
+the job that will be submitted to your farm, then you can use the "Export Bundle" button in the submitter to export the
+Job Bundle to a location of your choice. If you want to submit the job from the export, rather than through the
+submitter plug-in then you can use the [Deadline Cloud application][deadline-cloud-client] to submit that bundle to your farm.
 
-1. The MAJOR version is currently 0, indicating initial development. 
-2. The MINOR version is currently incremented when backwards incompatible changes are introduced to the public API. 
-3. The PATCH version is currently incremented when bug fixes or backwards compatible changes are introduced to the public API. 
+[job-bundle]: https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/build-job-bundle.html
 
 ## Security
 
-See [CONTRIBUTING](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/blob/release/CONTRIBUTING.md#security-issue-notifications) for more information.
+We take all security reports seriously. When we receive such reports, we will 
+investigate and subsequently address any potential vulnerabilities as quickly 
+as possible. If you discover a potential security issue in this project, please 
+notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/)
+or directly via email to [AWS Security](aws-security@amazon.com). Please do not 
+create a public GitHub issue in this project.
 
 ## Telemetry
 
