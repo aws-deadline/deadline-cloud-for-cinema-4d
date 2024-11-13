@@ -50,9 +50,9 @@ if __name__ == '__main__':
 
     c4d.plugins.RegisterCommandPlugin(
         id=PLUGIN_ID,
-        str="Deadline Cloud Submitter",
+        str="AWS Deadline Cloud Submitter",
         info=0,
-        help="Submit to Deadline Cloud",
+        help="Submit to AWS Deadline Cloud",
         dat=DeadlineCloudRenderCommand(),
         icon=None
     )
