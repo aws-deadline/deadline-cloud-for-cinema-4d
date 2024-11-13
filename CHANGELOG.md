@@ -1,3 +1,10 @@
+## 0.4.1 (2024-11-13)
+
+
+
+### Bug Fixes
+* install pip if required before installing GUI dependencies (#91) ([`4b5b75a`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/4b5b75af991c94f033bae84ceb061d4d0f1a278a))
+
 ## 0.4.0 (2024-11-13)
 
 ### BREAKING CHANGES
