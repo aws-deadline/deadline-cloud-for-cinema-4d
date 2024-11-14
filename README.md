@@ -26,6 +26,7 @@ ability to run Cinema 4D efficiently on your render farm.
 [openjd-adaptor-runtime-lifecycle]: https://github.com/OpenJobDescription/openjd-adaptor-runtime-for-python/blob/release/README.md#adaptor-lifecycle
 [service-managed-fleets]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/smf-manage.html
 [default-queue-environment]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/create-queue-environment.html#conda-queue-environment
+[service-managed-fleets]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/smf-manage.html
 
 ## Compatibility
 
@@ -166,6 +167,16 @@ $ cinema4d-openjd --help
 ```
 
 For more information on the commands the OpenJD adaptor runtime provides, see [here][openjd-adaptor-runtime-lifecycle].
+
+### Cinema 4D software availability in AWS Deadline Cloud Service Managed Fleets. 
+You will need to ensure the desired Cinema 4D version is available on the worker host when using AWS Deadline Cloud's [Service Managed Fleets][service-managed-fleets] to run jobs. These hosts do not have pre-installed rendering applications.
+
+Cinema 4D packages are not available in the "deadline-cloud" conda channel. You must build them yourself in DeadlineCloud. We recommend using the conda recipes in our samples Github repository. Two essential conda packages for rendering on Deadline Cloud Service Managed Fleets are [`cinema4d-2025`](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/conda_recipes/cinema4d-2025) and [`cinema4d-openjd`](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/conda_recipes/cinema4d-openjd).
+
+For instructions on building conda recipes on Deadline Cloud, see this [article](https://aws.amazon.com/blogs/media/create-a-conda-package-and-channel-for-aws-deadline-cloud/). 
+Though it refers to Blender, the process applies to Cinema 4D recipes as well.
+
+For licensing Cinema 4D workers, follow the guidelines in this [article](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/byol.html).
 
 ## Viewing the Job Bundle that will be submitted
 
