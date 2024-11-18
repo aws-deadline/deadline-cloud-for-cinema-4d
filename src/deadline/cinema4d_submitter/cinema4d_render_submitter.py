@@ -19,6 +19,7 @@ from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint
 from deadline.client.exceptions import DeadlineOperationError
 from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 
+from ._version import version_tuple as adaptor_version_tuple
 from .data_classes import (
     RenderSubmitterUISettings,
 )
@@ -422,11 +423,15 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
         output_directories=set(render_settings.output_directories),
     )
 
+    c4d_major_version = str(c4d.GetC4DVersion())[:4]
+    adaptor_version = ".".join(str(v) for v in adaptor_version_tuple[:2])
+    conda_packages = f"cinema4d={c4d_major_version}.* cinema4d-openjd={adaptor_version}.*"
+
     submitter_dialog = SubmitJobToDeadlineDialog(
         job_setup_widget_type=SceneSettingsWidget,
         initial_job_settings=render_settings,
         initial_shared_parameter_values={
-            "CondaPackages": "",
+            "CondaPackages": conda_packages,
         },
         auto_detected_attachments=auto_detected_attachments,
         attachments=attachments,
