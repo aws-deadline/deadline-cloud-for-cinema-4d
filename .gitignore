@@ -10,7 +10,12 @@ __pycache__/
 *_version.py
 
 /dependency_bundle/
-/scripts/dependency_bundle/
 /dev_install/
+/job_bundle_output_tests/*/scene/renders
+/job_bundle_output_tests/*/scene/*.c4d
+/job_bundle_output_tests/*/scene/*.deadline_render_settings.json
+/job_bundle_output_tests/*/scene/tex
+/job_bundle_output_tests/*/*.psd
+/scripts/dependency_bundle/
 /wheels/
 **/otls/backup
