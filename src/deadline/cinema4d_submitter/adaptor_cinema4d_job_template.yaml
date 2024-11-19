@@ -41,6 +41,11 @@ parameterDefinitions:
   description: Multi-pass image output
 steps:
 - name: Render
+  hostRequirements:
+    attributes:
+    - name: attr.worker.os.family
+      anyOf:
+      - windows
   parameterSpace:
     taskParameterDefinitions:
     - name: Frame
