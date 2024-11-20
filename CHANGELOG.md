@@ -1,3 +1,10 @@
+## 0.5.1 (2024-11-20)
+
+
+
+### Bug Fixes
+* correct OS conditional for Windows paths (#104) ([`748e1f7`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/748e1f7e24669112f3d9902508aebb12872e036a))
+
 ## 0.5.0 (2024-11-20)
 
 ### BREAKING CHANGES
