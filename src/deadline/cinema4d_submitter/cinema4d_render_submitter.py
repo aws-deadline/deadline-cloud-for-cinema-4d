@@ -438,7 +438,11 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
         on_create_job_bundle_callback=on_create_job_bundle_callback,
         parent=parent,
         f=f,
-        show_host_requirements_tab=True,
+        # host requirements are currently not sticky and don't pick up
+        # the job template's host requirements. To avoid confusion, remove
+        # the tab by default
+        # https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/issues/105
+        show_host_requirements_tab=False,
     )
 
     return submitter_dialog
