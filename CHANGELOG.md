@@ -1,3 +1,14 @@
+## 0.5.0 (2024-11-20)
+
+### BREAKING CHANGES
+* This release contains two breaking changes
+
+### Features
+* install Conda packages by default (#96) ([`8ad8986`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8ad8986c6bb073cb572b176b87e85cecd6b091b4))
+
+### Bug Fixes
+* use only Windows workers by default (#100) ([`88bd6a5`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/88bd6a5c14aa0996ed04cfff452b925d44d17f1c))
+
 ## 0.4.1 (2024-11-13)
 
 
