@@ -10,7 +10,7 @@ def glob_add_path(base, pattern):
         return os.path.join(base, matches[0])
     return base
 
-if "win" in sys.platform:
+if sys.platform in ["win32", "cygwin"]:
     paths = [
         "resource",
         "modules",
