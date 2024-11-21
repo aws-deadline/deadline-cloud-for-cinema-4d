@@ -73,42 +73,28 @@
     <parameterList>
         <stringParameter name="deadline_cloud_for_cinema_4d_summary" ask="0" cliOptionShow="0">
             <value>Deadline Cloud for Cinema 4D
-- Register the extension with Cinema 4D by moving the DeadlineCloud.pyp file to the Cinema 4D plugins folder. 
-- Set the C4DPYTHONPATH311 to retrieve deadline modules. 
+- Compatible with Cinema 4D 2024/2025
+- Installs the integrated Cinema 4D submitter to the installation directory
+- Registers the extension with Cinema 4D by setting the g_additionalModulePath
+- Sets the C4DPYTHONPATH311 to retrieve deadline modules
             </value>
         </stringParameter>
-        <directoryParameter>
-            <name>cinema_4d_installdir</name>
-            <title>Cinema 4D</title>
-            <description>Cinema 4D Installation Directory</description>
-            <explanation>Path to Cinema 4D installation directory. For easiest installation, Cinema 4D should be installed before installing Deadline Cloud for Cinema 4D.</explanation>
-            <allowEmptyValue>0</allowEmptyValue>
-            <ask>yes</ask>
-            <cliOptionName>cinema4d-installation-directory</cliOptionName>
-            <cliOptionText>Path to Cinema 4D installation directory. </cliOptionText>
-            <mustBeWritable>yes</mustBeWritable>
-            <mustExist>1</mustExist>
-        </directoryParameter>
     </parameterList>
     <postInstallationActionList>
-        <createDirectory>
-            <path>${cinema_4d_installdir}/plugins</path>
-            <ruleList>
-                <fileTest condition="not_exists" path="${cinema_4d_installdir}/plugins"/>
-            </ruleList>
-        </createDirectory>
-        <copyFile>
-            <destination>${cinema_4d_installdir}/plugins/DeadlineCloud.pyp</destination>
-            <origin>${installdir}/tmp/c4d_deps/DeadlineCloud.pyp</origin>
-        </copyFile>
-        <addFilesToUninstaller files="${cinema_4d_installdir}/plugins/DeadlineCloud.pyp" />
-        <showInfo>
-            <text>Moved DeadlineCloud.pyp to ${cinema_4d_installdir}/plugins/</text>
-        </showInfo>
         <unzip>
             <destinationDirectory>${cinema_4d_submitter_installdir}</destinationDirectory>
             <zipFile>${installdir}/tmp/c4d_deps/dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-${cinema_4d_deps_platform}.zip</zipFile>
         </unzip>
+        <createDirectory>
+            <path>${cinema_4d_submitter_installdir}/cinema_4d_plugins</path>
+            <ruleList>
+                <fileTest condition="not_exists" path="${cinema_4d_submitter_installdir}/cinema_4d_plugins"/>
+            </ruleList>
+        </createDirectory>
+        <copyFile>
+            <destination>${cinema_4d_submitter_installdir}/cinema_4d_plugins/DeadlineCloud.pyp</destination>
+            <origin>${installdir}/tmp/c4d_deps/DeadlineCloud.pyp</origin>
+        </copyFile>
         <fnAddPathEnvironmentVariable>
             <progressText>Setting C4DPYTHONPATH311</progressText>
             <name>C4DPYTHONPATH311</name>
@@ -116,9 +102,13 @@
             <scope>${installscope}</scope>
             <insertAt>end</insertAt>
         </fnAddPathEnvironmentVariable>
-        <showInfo>
-            <text>Added ${cinema_4d_submitter_installdir} to C4DPYTHONPATH311.</text>
-        </showInfo>
+        <fnAddPathEnvironmentVariable>
+            <progressText>Setting g_additionalModulePath</progressText>
+            <name>g_additionalModulePath</name>
+            <value>${cinema_4d_submitter_installdir}/cinema_4d_plugins</value>
+            <scope>${installscope}</scope>
+            <insertAt>end</insertAt>
+        </fnAddPathEnvironmentVariable>
         <deleteFile>
             <path>${installdir}/tmp/c4d_deps</path>
         </deleteFile>
