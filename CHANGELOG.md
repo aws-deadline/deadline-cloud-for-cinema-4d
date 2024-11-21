@@ -1,3 +1,10 @@
+## 0.5.2 (2024-11-21)
+
+
+
+### Bug Fixes
+* install C4D plugin into user directory to avoid needing elevated permissions (#110) ([`572696c`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/572696cfec82ffcf9acf2e2e80c29c8a2915fc69))
+
 ## 0.5.1 (2024-11-20)
 
 
