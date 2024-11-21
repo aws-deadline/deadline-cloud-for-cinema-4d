@@ -17,6 +17,7 @@ parameterDefinitions:
       patterns:
       - '*'
   description: The Cinema4D document file to render.
+  maxLength: 100000
 - name: Frames
   type: STRING
   userInterface:
@@ -25,6 +26,7 @@ parameterDefinitions:
     groupLabel: Cinema4D Settings
   description: The frames to render. E.g. 1-3,8,11-15
   minLength: 1
+  maxLength: 100000
 - name: OutputPath
   type: STRING
   userInterface:
@@ -32,6 +34,7 @@ parameterDefinitions:
     label: Default image output
     groupLabel: Cinema4D Settings
   description: Image output path
+  maxLength: 100000
 - name: MultiPassPath
   type: STRING
   userInterface:
@@ -39,6 +42,7 @@ parameterDefinitions:
     label: Multi-pass output path
     groupLabel: Cinema4D Settings
   description: Multi-pass image output
+  maxLength: 100000
 steps:
 - name: Render
   hostRequirements:
