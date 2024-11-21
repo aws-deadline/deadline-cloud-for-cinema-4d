@@ -41,6 +41,7 @@ class FileSearchLineEdit(QWidget):
         lyt.setContentsMargins(0, 0, 0, 0)
 
         self.edit = QLineEdit(self)
+        self.edit.setMaxLength(32767)
         self.btn = QPushButton("...", parent=self)
         self.btn.setMaximumSize(QSize(100, 40))
         self.btn.clicked.connect(self.get_file)
@@ -121,6 +122,7 @@ class SceneSettingsWidget(QWidget):
 
         self.frame_override_chck = QCheckBox("Override Frame Range", self)
         self.frame_override_txt = QLineEdit(self)
+        self.frame_override_txt.setMaxLength(32767)
         lyt.addWidget(self.frame_override_chck, 4, 0)
         lyt.addWidget(self.frame_override_txt, 4, 1)
         self.frame_override_chck.stateChanged.connect(self.activate_frame_override_changed)
