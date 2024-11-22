@@ -1,3 +1,10 @@
+## 0.5.3 (2024-11-22)
+
+
+
+### Bug Fixes
+* use user configured installdir for C4D submitter location (#113) ([`173297a`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/173297a4918c87386cf7e16b6fa1aa7817239294))
+
 ## 0.5.2 (2024-11-21)
 
 
