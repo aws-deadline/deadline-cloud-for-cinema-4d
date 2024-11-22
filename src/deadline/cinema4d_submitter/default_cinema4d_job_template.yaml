@@ -1,5 +1,6 @@
 specificationVersion: 'jobtemplate-2023-09'
 name: Default Cinema4D Job Template
+description: Default Cinema4D Job Description
 parameterDefinitions:
 - name: Cinema4DFile
   type: PATH

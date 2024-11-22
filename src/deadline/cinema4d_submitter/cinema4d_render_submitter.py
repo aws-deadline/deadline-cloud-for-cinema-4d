@@ -135,6 +135,13 @@ def _get_job_template(
 
     # Set the job's name
     job_template["name"] = settings.name
+    # Set the job's description
+    if settings.description:
+        job_template["description"] = settings.description
+    else:
+        # remove description field since it can't be empty
+        # ignore if description is missing from template
+        job_template.pop("description", None)
 
     # If there are multiple frame ranges, split up the Frames parameter by take
     if takes[0].frames_parameter_name:
