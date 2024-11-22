@@ -60,7 +60,6 @@
                 <setInstallerVariable name="component(deadline_cloud_for_cinema_4d).show" value="0"/>
             </elseActionList>
         </if>
-        <setInstallerVariable name="cinema_4d_submitter_installdir" value="${installdir}\Submitters\Cinema4D" />
         <if>
             <conditionRuleList>
                 <platformTest type="windows" />
@@ -80,6 +79,9 @@
             </value>
         </stringParameter>
     </parameterList>
+    <readyToInstallActionList>
+        <setInstallerVariable name="cinema_4d_submitter_installdir" value="${installdir}\Submitters\Cinema4D" />
+    </readyToInstallActionList>
     <postInstallationActionList>
         <unzip>
             <destinationDirectory>${cinema_4d_submitter_installdir}</destinationDirectory>
