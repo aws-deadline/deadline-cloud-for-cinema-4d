@@ -1,3 +1,10 @@
+## 0.5.4 (2024-11-26)
+
+
+
+### Bug Fixes
+* use description from GUI submitter (#115) ([`afe039b`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/afe039b52430abe9c8e2ecddc9bda97466ac8f81))
+
 ## 0.5.3 (2024-11-22)
 
 
