@@ -5,5 +5,5 @@ pytest == 8.*
 pytest-cov == 6.*
 pytest-xdist == 3.*
 ruff == 0.8.*
-twine == 5.*
+twine == 6.*
 types-pyyaml == 6.*
