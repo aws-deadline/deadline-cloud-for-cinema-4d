@@ -15,7 +15,7 @@ SCRIPTDIR=$(realpath $(dirname $0))
 SOURCE=0
 # Python 3.11 is for https://vfxplatform.com/ CY2024
 PYTHON_VERSION=3.11
-CONDA_PLATFORM=linux-64
+CONDA_PLATFORM=win-64
 TAR_BASE=
 
 while [ $# -gt 0 ]; do
@@ -112,14 +112,14 @@ else
         --platform $PYPI_PLATFORM \
         --python-version $PYTHON_VERSION \
         --ignore-installed \
-        --only-binary=:all: \
+        --no-deps \
         $RUNTIME_INSTALLABLE
     pip install \
         --target $PACKAGEDIR \
         --platform $PYPI_PLATFORM \
         --python-version $PYTHON_VERSION \
         --ignore-installed \
-        --no-deps \
+        --only-binary=:all: \
         $ADAPTOR_INSTALLABLE
 fi
 
