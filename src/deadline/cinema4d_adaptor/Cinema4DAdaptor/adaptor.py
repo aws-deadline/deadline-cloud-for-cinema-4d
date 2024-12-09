@@ -392,11 +392,12 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         performs a busy wait until the render completes.
         """
 
+        self.validators.run_data.validate(run_data)
+
         if not self._cinema4d_is_running:
             raise Cinema4DNotRunningError("Cannot render because Cinema4D is not running.")
 
         run_data["frame"] = int(run_data["frame"])
-        self.validators.run_data.validate(run_data)
         self._is_rendering = True
 
         for name in _CINEMA4D_RUN_KEYS:
