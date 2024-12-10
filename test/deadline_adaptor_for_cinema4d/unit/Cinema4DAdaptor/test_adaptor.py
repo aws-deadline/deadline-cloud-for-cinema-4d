@@ -61,13 +61,13 @@ class TestCinema4DAdaptor_on_cleanup:
             assert match is None
 
 
-def test_adapter_rejects_malformed_init_data():
+def test_adaptor_rejects_malformed_init_data():
     adapter = Cinema4DAdaptor({"invalid": "data"})
     with pytest.raises(ValidationError):
         adapter.on_start()
 
 
-def test_adapter_rejects_malformed_run_data(init_data: dict):
+def test_adaptor_rejects_malformed_run_data(init_data: dict):
     adapter = Cinema4DAdaptor(init_data)
     with pytest.raises(ValidationError):
         adapter.on_run({"invalid": "data"})
