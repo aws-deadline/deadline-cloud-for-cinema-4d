@@ -65,7 +65,7 @@ class Cinema4DHandler:
         self.doc = c4d.documents.GetActiveDocument()
         self.render_data = self.doc.GetActiveRenderData()
         self.render_data[c4d.RDATA_FRAMESEQUENCE] = c4d.RDATA_FRAMESEQUENCE_MANUAL
-        frame = int(self.render_kwargs["frame"])
+        frame = int(self.render_kwargs.get("frame", data.get("frame")))
         fps = self.doc.GetFps()
         self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
         self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(frame, fps)
