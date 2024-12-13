@@ -51,6 +51,10 @@ class Cinema4DHandler:
         self.map_path = map_path
 
     def _remap_assets(self) -> None:
+        """
+        Asset references in the .c4d files are not automatically re-mapped if they are
+        absolute paths. This function remaps the asset references to the new paths.
+        """
         asset_list: list[Dict[str, Any]] = []
         c4d.documents.GetAllAssetsNew(
             self.doc, allowDialogs=False, lastPath="", assetList=asset_list
@@ -58,8 +62,9 @@ class Cinema4DHandler:
         for asset in asset_list:
             asset_owner = asset.get("owner")
             asset_param_id = asset.get("paramId")
-            if asset_owner and asset_param_id:
-                asset_owner[asset_param_id] = self.map_path(asset.get("filename", ""))
+            asset_filename = asset.get("filename")
+            if asset_owner and asset_param_id and asset_filename:
+                asset_owner[asset_param_id] = self.map_path(asset_filename)
 
     def start_render(self, data: dict) -> None:
         self.doc = c4d.documents.GetActiveDocument()

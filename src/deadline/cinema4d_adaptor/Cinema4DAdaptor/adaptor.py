@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import sys
 import threading
 import time
 from functools import wraps
@@ -72,6 +73,32 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     # Will be optionally changed after the scene is set.
     _expected_outputs: int = 1  # Total number of renders to perform.
     _produced_outputs: int = 0  # Counter for tracking number of complete renders.
+
+    def __init__(self, *args, **kwargs):
+        if sys.platform == "linux" and "path_mapping_data" in kwargs:
+            # on Linux, Cinema4D interprets Windows absolute paths as relative paths
+            # e.g. `C:\Users\test-user\Documents\file.bmp` becomes
+            # `./C:/Users/test-user/Documents/file.bmp`
+            # To map these paths with job attachments, we duplicate any existing Windows path mapping
+            # and then add a `./` prefix to it so that it converts correctly on Linux
+            path_mapping_data = kwargs["path_mapping_data"] or {}
+            path_mapping_rules = path_mapping_data.get("path_mapping_rules", [])
+            for rule in path_mapping_rules.copy():
+                source_path_format = rule.get("source_path_format", "")
+                # if there is no destination_os, the rule applies
+                destination_os = rule.get("destination_os", "linux")
+                if source_path_format.lower().startswith(
+                    "win"
+                ) and destination_os.lower().startswith("linux"):
+                    prefixed_rule = {
+                        "source_path": f"./{rule['source_path']}",
+                        "source_path_format": source_path_format,
+                        "destination_path": rule["destination_path"],
+                    }
+                    if "destination_os" in rule:
+                        prefixed_rule["destination_os"] = rule["destination_os"]
+                    path_mapping_rules.append(prefixed_rule)
+        super().__init__(*args, **kwargs)
 
     @property
     def integration_data_interface_version(self) -> SemanticVersion:
