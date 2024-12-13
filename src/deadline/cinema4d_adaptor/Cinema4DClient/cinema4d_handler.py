@@ -109,14 +109,14 @@ class Cinema4DHandler:
         if output_path:
             doc = c4d.documents.GetActiveDocument()
             render_data = doc.GetActiveRenderData()
-            render_data[c4d.RDATA_PATH] = output_path
+            render_data[c4d.RDATA_PATH] = self.map_path(output_path)
 
     def multi_pass_path(self, data: dict) -> None:
         multi_pass_path = data.get("multi_pass_path", "")
         if multi_pass_path:
             doc = c4d.documents.GetActiveDocument()
             render_data = doc.GetActiveRenderData()
-            render_data[c4d.RDATA_MULTIPASS_FILENAME] = multi_pass_path
+            render_data[c4d.RDATA_MULTIPASS_FILENAME] = self.map_path(multi_pass_path)
 
     def set_take(self, data: dict) -> None:
         """
