@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 from __future__ import annotations
+
 from unittest.mock import patch
 
 from deadline.cinema4d_submitter.assets import AssetIntrospector

@@ -1,33 +1,32 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import os
-from pathlib import Path
-from typing import Any, Optional
-import yaml  # type: ignore[import]
 from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Optional
 
 import c4d
-
+import yaml  # type: ignore[import]
 from qtpy import QtWidgets
-
-from deadline.client.job_bundle.submission import AssetReferences
-from deadline.client.job_bundle._yaml import deadline_yaml_dump
-from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint: disable=import-error
-    SubmitJobToDeadlineDialog,
-    JobBundlePurpose,
-)
-from deadline.client.exceptions import DeadlineOperationError
 from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 
+from deadline.client.exceptions import DeadlineOperationError
+from deadline.client.job_bundle._yaml import deadline_yaml_dump
+from deadline.client.job_bundle.submission import AssetReferences
+from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint: disable=import-error
+    JobBundlePurpose,
+    SubmitJobToDeadlineDialog,
+)
+
 from ._version import version_tuple as adaptor_version_tuple
+from .assets import AssetIntrospector
 from .data_classes import (
     RenderSubmitterUISettings,
 )
-from .ui.components.scene_settings_tab import SceneSettingsWidget
 from .scene import Animation, Scene
-from .assets import AssetIntrospector
-from .takes import TakeSelection
 from .style import C4D_STYLE
+from .takes import TakeSelection
+from .ui.components.scene_settings_tab import SceneSettingsWidget
 
 LOADED = False
 
@@ -274,21 +273,20 @@ def _prompt_save_current_document():
             return False
         else:
             return True
-    else:
+    elif not save_path:
+        # Prompt with Save As to set path for Untitled document
+        save_path = c4d.storage.SaveDialog(c4d.FILESELECTTYPE_ANYTHING, "Save As", "c4d")
+        # Handle user cancels document save
         if not save_path:
-            # Prompt with Save As to set path for Untitled document
-            save_path = c4d.storage.SaveDialog(c4d.FILESELECTTYPE_ANYTHING, "Save As", "c4d")
-            # Handle user cancels document save
-            if not save_path:
-                c4d.gui.MessageDialog(
-                    "Submission canceled. File must be saved to disk before submission."
-                )
-                return False
-            # Set document path and name
-            doc_path = os.path.dirname(save_path)
-            base_name = os.path.basename(save_path)
-            doc.SetDocumentPath(doc_path)
-            doc.SetDocumentName(base_name)
+            c4d.gui.MessageDialog(
+                "Submission canceled. File must be saved to disk before submission."
+            )
+            return False
+        # Set document path and name
+        doc_path = os.path.dirname(save_path)
+        base_name = os.path.basename(save_path)
+        doc.SetDocumentPath(doc_path)
+        doc.SetDocumentName(base_name)
     # Save document to disk
     c4d.documents.SaveDocument(doc, save_path, c4d.SAVEDOCUMENTFLAGS_0, c4d.FORMAT_C4DEXPORT)
     # Ensure document is active

@@ -101,7 +101,7 @@ class Cinema4DHandler:
             c4d.RENDERFLAGS_EXTERNAL | c4d.RENDERFLAGS_SHOWERRORS,
             prog=progress_callback,
         )
-        result_description = _RENDERRESULT.get(result, None)
+        result_description = _RENDERRESULT.get(result)
         if result_description is None:
             raise RuntimeError("Error: unhandled render result: %s" % result)
         if result != c4d.RENDERRESULT_OK:

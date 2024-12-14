@@ -1,8 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 from __future__ import annotations
-import sys
+
 import os
+import sys
 from types import FrameType
 from typing import Optional
 
@@ -18,9 +19,13 @@ except (ImportError, ModuleNotFoundError):
 # The Cinema4D Adaptor adds the `deadline` namespace directory to PYTHONPATH,
 # so that importing just the cinema4d_adaptor should work.
 try:
-    from cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler  # type: ignore[import]
+    from cinema4d_adaptor.Cinema4DClient.cinema4d_handler import (
+        Cinema4DHandler,  # type: ignore[import]
+    )
 except (ImportError, ModuleNotFoundError):
-    from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler  # type: ignore[import]
+    from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import (
+        Cinema4DHandler,  # type: ignore[import]
+    )
 
 
 class Cinema4DClient(ClientInterface):

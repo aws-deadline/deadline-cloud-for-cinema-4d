@@ -1,9 +1,12 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 from __future__ import annotations
+
 import re
 from pathlib import Path
-from .scene import Scene
+
 import c4d
+
+from .scene import Scene
 
 _FRAME_RE = re.compile("#+")
 

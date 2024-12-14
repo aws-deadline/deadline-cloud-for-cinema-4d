@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import pytest
 from jsonschema.exceptions import ValidationError
+
 from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
 
 
-@pytest.fixture()
+@pytest.fixture
 def init_data() -> dict:
     """
     Pytest Fixture to return an init_data dictionary that passes validation

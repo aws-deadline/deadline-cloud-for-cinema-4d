@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Iterator, Optional, Tuple
+from typing import Optional, Tuple
 
 import c4d
 
@@ -84,7 +85,7 @@ class Animation:
         return 4
 
     @classmethod
-    def frame_list(cls, data=None) -> "FrameRange":
+    def frame_list(cls, data=None) -> FrameRange:
         """
         Retursn a FrameRange object representing the full framelist.
         """

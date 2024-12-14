@@ -4,19 +4,19 @@ from __future__ import annotations
 
 import logging
 import os
+import platform
 import re
 import sys
 import threading
 import time
 from functools import wraps
-import platform
 from typing import Callable
 
 from openjd.adaptor_runtime.adaptors import Adaptor, AdaptorDataValidators, SemanticVersion
 from openjd.adaptor_runtime.adaptors.configuration import AdaptorConfiguration
-from openjd.adaptor_runtime.process import LoggingSubprocess
 from openjd.adaptor_runtime.app_handlers import RegexCallback, RegexHandler
 from openjd.adaptor_runtime.application_ipc import ActionsQueue, AdaptorServer
+from openjd.adaptor_runtime.process import LoggingSubprocess
 from openjd.adaptor_runtime_client import Action
 
 _logger = logging.getLogger(__name__)
@@ -24,8 +24,6 @@ _logger = logging.getLogger(__name__)
 
 class Cinema4DNotRunningError(Exception):
     """Error that is raised when attempting to use Cinema4D while it is not running"""
-
-    pass
 
 
 _FIRST_CINEMA4D_ACTIONS = ["scene_file", "take", "output_path", "multi_pass_path"]
@@ -293,8 +291,8 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     def _add_deadline_openjd_paths(self) -> None:
         # Add the openjd namespace directory to PYTHONPATH, so that adaptor_runtime_client
         # will be available directly to the adaptor client.
-        import openjd.adaptor_runtime_client
         import deadline.cinema4d_adaptor
+        import openjd.adaptor_runtime_client
 
         openjd_namespace_dir = os.path.dirname(
             os.path.dirname(openjd.adaptor_runtime_client.__file__)
@@ -334,7 +332,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         if cinema4d_pathmap:
             os.environ["CINEMA4D_PATHMAP"] = cinema4d_pathmap
 
-        _logger.info("Setting CINEMA4D_PATHMAP to: {}".format(cinema4d_pathmap))
+        _logger.info(f"Setting CINEMA4D_PATHMAP to: {cinema4d_pathmap}")
 
         # set plugin path to DeadlineCloudClient
         parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -450,7 +448,6 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     def on_stop(self) -> None:
         """ """
         self._action_queue.enqueue_action(Action("close"), front=True)
-        return
 
     def on_cleanup(self):
         """
