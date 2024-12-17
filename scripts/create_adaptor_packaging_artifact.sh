@@ -132,38 +132,6 @@ if [ -d $PACKAGEDIR/bin ]; then
     rm -r $PACKAGEDIR/bin
 fi
 
-PYSCRIPT="from pathlib import Path
-import sys
-reentry_exe = Path(sys.argv[0]).absolute()
-sys.path.append(str(reentry_exe.parent.parent / \"opt\" / \"$ADAPTOR_NAME\"))
-from deadline.${APP}_adaptor.${MODULE_CAPITAL_D}Adaptor.__main__ import main
-sys.exit(main(reentry_exe=reentry_exe))
-"
-
-cat <<EOF > $BINDIR/$APP-openjd
-#!/usr/bin/env python3.11
-$PYSCRIPT
-EOF
-
-if [ $CONDA_PLATFORM = "win-64" ]; then
-    # Install setuptools to get cli-64.exe
-    mkdir -p $WORKDIR/tmp
-    pip install \
-        --target $WORKDIR/tmp \
-        --platform $PYPI_PLATFORM \
-        --python-version $PYTHON_VERSION \
-        --ignore-installed \
-        --no-deps \
-        setuptools
-
-    # Use setuptools' cli-64.exe to define the entry point
-    cat <<EOF > $BINDIR/$APP-openjd-script.py
-#!C:\\Path\\To\\Python.exe
-$PYSCRIPT
-EOF
-    cp $WORKDIR/tmp/setuptools/cli-64.exe $BINDIR/$APP-openjd.exe
-fi
-
 # Everything between the first "-" and the next "+" is the package version number
 PACKAGEVER=$(cd $PACKAGEDIR; echo deadline_cloud_for*)
 PACKAGEVER=${PACKAGEVER#*-}
