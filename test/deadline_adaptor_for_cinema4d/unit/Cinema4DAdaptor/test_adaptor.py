@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+from jsonschema.exceptions import ValidationError
 from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
 
 
@@ -58,3 +59,15 @@ class TestCinema4DAdaptor_on_cleanup:
             assert str(adaptor._exc_info) == f"Cinema4D Encountered an Error: {stdout}"
         else:
             assert match is None
+
+
+def test_adaptor_rejects_malformed_init_data():
+    adapter = Cinema4DAdaptor({"invalid": "data"})
+    with pytest.raises(ValidationError):
+        adapter.on_start()
+
+
+def test_adaptor_rejects_malformed_run_data(init_data: dict):
+    adapter = Cinema4DAdaptor(init_data)
+    with pytest.raises(ValidationError):
+        adapter.on_run({"invalid": "data"})
