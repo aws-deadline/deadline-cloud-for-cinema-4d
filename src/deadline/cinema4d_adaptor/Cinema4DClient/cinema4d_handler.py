@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from typing import Any, Callable, Dict
+import locale
 
 try:
     import c4d  # type: ignore
@@ -38,6 +39,7 @@ class Cinema4DHandler:
         """
         Constructor for the c4dpy handler. Initializes action_dict and render variables
         """
+
         self.action_dict = {
             "scene_file": self.set_scene_file,
             "take": self.set_take,
@@ -164,6 +166,16 @@ class Cinema4DHandler:
         """
         self.render_kwargs["frame"] = int(data.get("frame", ""))
 
+    def _convert_filename_to_utf8_encoding(self, scene_file: str) -> str:
+        try:
+            return scene_file.encode(locale.getpreferredencoding()).decode("utf-8")
+        except UnicodeError as ue:
+            print(f"Error: Encoding to UTF-8 failed due to unicode error. Exception: {ue}")
+        except Exception as e:
+            print(f"Error: Encoding to UTF-8 failed due to unexpected error. Exception: {e}")
+        print("Returning scene file string as is as encoding/decoding failed.")
+        return scene_file
+
     def set_scene_file(self, data: dict) -> None:
         """
         Opens the scene file in Cinema4D.
@@ -175,6 +187,9 @@ class Cinema4DHandler:
             FileNotFoundError: If path to the scene file does not yield a file
         """
         scene_file = data.get("scene_file", "")
+
+        scene_file = self._convert_filename_to_utf8_encoding(scene_file)
+
         if not os.path.isfile(scene_file):
             raise FileNotFoundError(f"The scene file '{scene_file}' does not exist")
         doc = c4d.documents.LoadDocument(
