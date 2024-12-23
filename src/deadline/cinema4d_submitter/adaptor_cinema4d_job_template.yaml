@@ -55,6 +55,9 @@ steps:
   stepEnvironments:
   - name: Cinema4D
     description: Runs Cinema4D in the background.
+    variables:
+      # Turn off buffering in Python
+      PYTHONUNBUFFERED: "1"
     script:
       embeddedFiles:
       - name: initData
