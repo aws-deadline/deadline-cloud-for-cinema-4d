@@ -32,11 +32,28 @@ class TestCinema4DAdaptor_on_cleanup:
             ("CRITICAL: Stop [ge_file.cpp(1172)]", True),
             # Any string with substring "Error:" should fail the job
             ("Redshift Error: Maxon licensing error: User not logged in (7)", True),
-            # Any string with substring "[Error]" should fail the job
-            ("[Error] Application crashed", True),
             # This error can be printed but the jobs are still successful.
             # Hence, this should not fail the job.
             ("CRITICAL: nullptr [text_object.cpp(1082)] [objectbase1.hxx(549)]", False),
+            ("Project not found", True),
+            ("Error rendering project", True),
+            ("Error loading project", True),
+            ("Error rendering document", True),
+            ("Error loading document", True),
+            ("Rendering failed", True),
+            ("Asset missing", True),
+            ("Asset Error", True),
+            ("Invalid License", True),
+            ("License Check error", True),
+            ("Files cannot be written", True),
+            ("Enter Registration Data", True),
+            ("Unable to write file", True),
+            ("[rlm] abort_on_license_fail enabled", True),
+            ("RenderDocument failed with return code", True),
+            ("Frame rendering aborted", True),
+            ("Rendering was internally aborted", True),
+            ('Cannot find procedure "rsPreference"', True),
+            ("Description Error: ainode_image is already registered", False),
         ],
     )
     def test_handle_errors_on_error_stdout(
@@ -47,12 +64,14 @@ class TestCinema4DAdaptor_on_cleanup:
         adaptor = Cinema4DAdaptor(init_data)
         regex_callbacks = adaptor._get_regex_callbacks()
         # Currently the callback for errors is at index 2
-        error_regex = regex_callbacks[2].regex_list[0]
+        error_regexes = regex_callbacks[2].regex_list
 
         # WHEN
-        match = error_regex.search(stdout)
-        if match:
-            adaptor._handle_error(match)
+        for regex in error_regexes:
+            match = regex.search(stdout)
+            if match:
+                adaptor._handle_error(match)
+                break
 
         # THEN
         if error_expected:

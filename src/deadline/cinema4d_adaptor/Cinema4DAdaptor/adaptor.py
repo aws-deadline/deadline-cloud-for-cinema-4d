@@ -218,7 +218,27 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             completed_regexes = [re.compile(".*Finished Rendering.*")]
             progress_regexes = [re.compile(".*Progress ([0-9]+)%.*")]
             error_regexes = [
-                re.compile(r"(.*Error: .*)|(.*\[Error\].*)|(.*CRITICAL: Stop.*)", re.IGNORECASE)
+                re.compile(r".*CRITICAL: Stop.*", re.IGNORECASE),
+                re.compile(r".*Document not found.*", re.IGNORECASE),
+                re.compile(r".*Project not found.*", re.IGNORECASE),
+                re.compile(r".*Error rendering project.*", re.IGNORECASE),
+                re.compile(r".*Error loading project.*", re.IGNORECASE),
+                re.compile(r".*Error rendering document.*", re.IGNORECASE),
+                re.compile(r".*Error loading document.*", re.IGNORECASE),
+                re.compile(r".*Rendering failed.*", re.IGNORECASE),
+                re.compile(r".*Asset missing.*", re.IGNORECASE),
+                re.compile(r".*Asset Error.*", re.IGNORECASE),
+                re.compile(r".*Invalid License.*", re.IGNORECASE),
+                re.compile(r".*licensing error.*", re.IGNORECASE),
+                re.compile(r".*License Check error.*", re.IGNORECASE),
+                re.compile(r".*Files cannot be written.*", re.IGNORECASE),
+                re.compile(r".*Enter Registration Data.*", re.IGNORECASE),
+                re.compile(r".*Unable to write file.*", re.IGNORECASE),
+                re.compile(r".*\[rlm\] abort_on_license_fail enabled.*", re.IGNORECASE),
+                re.compile(r".*RenderDocument failed with return code.*", re.IGNORECASE),
+                re.compile(r".*Frame rendering aborted.*", re.IGNORECASE),
+                re.compile(r".*Rendering was internally aborted.*", re.IGNORECASE),
+                re.compile(r'.*Cannot find procedure "rsPreference".*', re.IGNORECASE),
             ]
 
             callback_list.append(RegexCallback(completed_regexes, self._handle_complete))
