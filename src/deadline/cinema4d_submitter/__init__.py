@@ -1,11 +1,10 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import logging as _logging
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 import c4d
-
 
 _logger = _logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ def install_gui():
         "-m",
         "ensurepip",
     ]
-    subprocess.run(ensurepip_command)
+    subprocess.run(ensurepip_command, check=False)
 
     import deadline.client
 
@@ -58,7 +57,7 @@ def install_gui():
         _logger.info(
             "Missing GUI libraries with non-standard set-up, installing deadline[gui] into Cinema 4D's python"
         )
-    subprocess.run(deadline_gui_install_command)
+    subprocess.run(deadline_gui_install_command, check=False)
 
 
 if not has_gui_deps():

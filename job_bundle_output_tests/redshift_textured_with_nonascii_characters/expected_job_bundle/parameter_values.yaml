@@ -1,0 +1,21 @@
+parameterValues:
+- name: Cinema4DFile
+  value: "C:\normalized\job\bundle\dir\\\\
+    redshift_textured_with_non_ascii_characters\\scene\\redshift_textured-_\u20BF\
+    _\u0119_\xF1_\u03B2_\u0411_\u062A.c4d"
+- name: OutputPath
+  value: "C:\normalized\job\bundle\dir\\\\
+    redshift_textured_with_non_ascii_characters\\scene\\renders\\redshift_textured-_\u20BF\
+    _\u0119_\xF1_\u03B2_\u0411_\u062A"
+- name: MultiPassPath
+  value: C:\normalized\job\bundle\dir\redshift_textured_with_non_ascii_characters\scene
+- name: Frames
+  value: '1'
+- name: deadline:targetTaskRunStatus
+  value: READY
+- name: deadline:maxFailedTasksCount
+  value: 20
+- name: deadline:maxRetriesPerTask
+  value: 5
+- name: deadline:priority
+  value: 50

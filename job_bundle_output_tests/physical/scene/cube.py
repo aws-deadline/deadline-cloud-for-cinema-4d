@@ -1,4 +1,5 @@
 import os
+
 import c4d
 
 
@@ -6,8 +7,8 @@ def main():
     doc = c4d.documents.GetActiveDocument()
     doc.Flush()
     cube = c4d.BaseObject(c4d.Ocube)
-    cube[c4d.PRIM_CUBE_LEN] = c4d.Vector(200, 200, 200)
-    cube.SetAbsPos(c4d.Vector(0, 170, -170))
+    cube[c4d.PRIM_CUBE_LEN] = c4d.Vector(300, 300, 300)
+    cube.SetAbsPos(c4d.Vector(0, 170, 170))
     doc.InsertObject(cube)
     render_data = doc.GetActiveRenderData()
     render_data[c4d.RDATA_PATH] = "renders/$prj"

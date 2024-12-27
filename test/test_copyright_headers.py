@@ -22,12 +22,11 @@ def _check_file(filename: Path) -> None:
                     f"Could not find a valid Amazon.com copyright header in the top of {filename}."
                     " Please add one."
                 )
-        else:
-            # __init__.py files are usually empty, this is to catch that.
-            raise Exception(
-                f"Could not find a valid Amazon.com copyright header in the top of {filename}."
-                " Please add one."
-            )
+        # __init__.py files are usually empty, this is to catch that.
+        raise Exception(
+            f"Could not find a valid Amazon.com copyright header in the top of {filename}."
+            " Please add one."
+        )
 
 
 def _is_version_file(filename: Path) -> bool:

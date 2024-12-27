@@ -1,10 +1,11 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 from __future__ import annotations
 
+import sys
+from unittest.mock import Mock
+
 import deadline.cinema4d_submitter.cinema4d_render_submitter as submitter_module
 from deadline.cinema4d_submitter.data_classes import RenderSubmitterUISettings
-from unittest.mock import Mock
-import sys
 
 
 def test_get_job_template():

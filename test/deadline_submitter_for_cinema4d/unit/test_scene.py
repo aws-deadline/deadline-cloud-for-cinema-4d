@@ -1,9 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 from typing import Optional
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import patch
 
 from deadline.cinema4d_submitter.scene import FrameRange, RendererNames, Scene
 

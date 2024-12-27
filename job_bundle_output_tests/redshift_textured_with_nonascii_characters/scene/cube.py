@@ -1,6 +1,5 @@
 import os
 import struct
-
 import c4d
 
 
@@ -37,8 +36,8 @@ def main():
     doc = c4d.documents.GetActiveDocument()
     doc.Flush()
     cube = c4d.BaseObject(c4d.Ocube)
-    cube[c4d.PRIM_CUBE_LEN] = c4d.Vector(200, 200, 200)
-    cube.SetAbsPos(c4d.Vector(0, 170, -170))
+    cube[c4d.PRIM_CUBE_LEN] = c4d.Vector(400, 400, 400)
+    cube.SetAbsPos(c4d.Vector(0, 50, -50))
     doc.InsertObject(cube)
     mat = c4d.BaseList2D(c4d.Mmaterial)
     doc.InsertMaterial(mat)
@@ -46,8 +45,8 @@ def main():
     bitmap_shader = c4d.BaseShader(c4d.Xbitmap)
     tex_dir = os.path.join(os.path.dirname(__file__), "tex")
     os.makedirs(tex_dir, exist_ok=True)
-    _checkerboard_bmp(os.path.join(tex_dir, "checkerboard.bmp"))
-    bitmap_shader[c4d.BITMAPSHADER_FILENAME] = "tex/checkerboard.bmp"
+    _checkerboard_bmp(os.path.join(tex_dir, "checkerboard-_₿_ę_ñ_β_Б_ت.bmp"))
+    bitmap_shader[c4d.BITMAPSHADER_FILENAME] = "tex/checkerboard-_₿_ę_ñ_β_Б_ت.bmp"
     mat[c4d.MATERIAL_COLOR_SHADER] = bitmap_shader
     mat.InsertShader(bitmap_shader)
     texture_tag = c4d.TextureTag()
@@ -62,7 +61,7 @@ def main():
     render_data[c4d.RDATA_RENDERENGINE] = 1036219  # redshift
 
     save_dir = os.path.dirname(__file__)
-    save_name = "redshift_textured.c4d"
+    save_name = "redshift_textured-_₿_ę_ñ_β_Б_ت.c4d"
     save_file = os.path.join(save_dir, save_name)
     doc.SetDocumentPath(save_dir)
     doc.SetDocumentName(save_name)

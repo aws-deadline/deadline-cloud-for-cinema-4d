@@ -1,0 +1,12 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - "C:\normalized\job\bundle\dir\redshift_textured-_\u20BF\
+      _\u0119_\xF1_\u03B2_\u0411_\u062A.c4d"
+    - "C:\normalized\job\bundle\dir\tex\checkerboard-_\u20BF\
+      _\u0119_\xF1_\u03B2_\u0411_\u062A.bmp"
+  outputs:
+    directories:
+    - C:\normalized\job\bundle\dir\renders
+  referencedPaths: []

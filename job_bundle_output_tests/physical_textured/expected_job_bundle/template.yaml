@@ -1,6 +1,5 @@
-specificationVersion: 'jobtemplate-2023-09'
-name: Adaptor Cinema4D Job Template
-description: Adaptor Cinema4D Job Description
+specificationVersion: jobtemplate-2023-09
+name: physical_textured.c4d
 parameterDefinitions:
 - name: Cinema4DFile
   type: PATH
@@ -41,7 +40,7 @@ parameterDefinitions:
     groupLabel: Cinema4D Settings
   description: Multi-pass image output
 steps:
-- name: Render
+- name: Main
   hostRequirements:
     attributes:
     - name: attr.worker.os.family
@@ -55,15 +54,12 @@ steps:
   stepEnvironments:
   - name: Cinema4D
     description: Runs Cinema4D in the background.
-    variables:
-      # Turn off buffering in Python
-      PYTHONUNBUFFERED: "1"
     script:
       embeddedFiles:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |
+        data: |-
           scene_file: '{{Param.Cinema4DFile}}'
           take: 'Main'
           output_path: '{{Param.OutputPath}}'
