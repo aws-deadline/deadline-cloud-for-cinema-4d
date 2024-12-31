@@ -100,7 +100,7 @@ if [ $SOURCE = 1 ]; then
         --platform $PYPI_PLATFORM \
         --python-version $PYTHON_VERSION \
         --ignore-installed \
-        --no-deps \
+        --only-binary=:all: \
         $ADAPTOR_INSTALLABLE
 else
     # In PyPI mode, PyPI and/or a CodeArtifact must have these packages
