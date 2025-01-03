@@ -1,3 +1,16 @@
+## 0.6.0 (2025-01-03)
+
+
+### Features
+* Implement asset path mapping for Cinema 4D scene files (#126) ([`33ac2e8`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/33ac2e8c298ac7902b1bdc1c5db87397816e1228))
+* **adaptor**: Update adaptor environment variable executable to C4D_COMMANDLINE_EXE (#121) ([`206b0ad`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/206b0add6bd93ab2587508a075b350e53f1f69f1))
+
+### Bug Fixes
+* Fix adaptor packaging script to package dependencies. (#137) ([`b130ccc`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/b130cccfba780a5ac540a118feb38c316790c45b))
+* Tighten error regex pattern. (#136) ([`83f0a3c`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/83f0a3c59414fc2c7f440582fdadccb1501b2f4a))
+* Ensure stdout/err streams are unbuffered. (#134) ([`0b3c05d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/0b3c05d5c724c63c3a735698e31834b91dbb55e8))
+* add path mapping rules to convert Windows paths to C4D's Linux path format (#127) ([`8fc40d9`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8fc40d9cbbd87a9da593d96b11b0d2bf4b6cc406))
+
 ## 0.5.4 (2024-11-26)
 
 
