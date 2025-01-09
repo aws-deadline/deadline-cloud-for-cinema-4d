@@ -367,6 +367,9 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         os.environ[module_path_key] = new_module_path
 
         arguments = [c4d_exe, "-nogui", "-DeadlineCloudClient"]
+        # If this is a Redshift render, we would want to emit at least error logs
+        # For non-Redshift renders this does not print any extra information.
+        arguments.extend(["-redshift-log-console", "Error"])
         if "linux" in platform.system().lower():
             _logger.info("Inserting Linux adaptor wrapper script")
             arguments.insert(0, os.path.join(os.path.dirname(__file__), "adaptor.sh"))
