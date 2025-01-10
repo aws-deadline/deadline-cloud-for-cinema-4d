@@ -182,6 +182,33 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         self._server = AdaptorServer(self._action_queue, self)
         self._server.serve_forever()
 
+    def _initialize_maxon_assets_db_connection(self) -> None:
+        """
+        When starting `Commandline.exe` the first time on Windows, Cinema 4D sometimes has the following error:
+        ```
+        sslConnection.DoHandShake failed while connecting to https://assets.maxon.net/assets/MaxonAssets.db/_index/modified.dat:
+            SSL_do_handshake returned error: SSL_ERROR_SSL (certificate verify failed Certificate Information: not available)
+        ```
+        This indicates that a secure connection was not able to be made to the Maxon assets DB, so Cinema 4D
+        did not connect to it at all. (i.e. it only connects if the connection is secure)
+
+        However, Cinema 4D appears to quit prematurely the first time because on subsequent retries, the secure
+        handshake will succeed.
+
+        To prevent this from occurring, we pre-emptively initialize the connection.
+
+        The Maxon assets DB is used to pull in assets from Maxon and if outdated, recently released assets may not be
+        available.
+        """
+        if sys.platform in ["win32", "cygwin"]:
+            _logger.info("Initializing the Maxon assets DB connection")
+            curl_subprocess = LoggingSubprocess(
+                args=["curl", "https://assets.maxon.net/assets/MaxonAssets.db/_index/modified.dat"]
+            )
+            # Note that if curl has an error, this will not re-raise the error. This is intended because updating the
+            # asset database does not affect rendering in most cases and there is NO security risk if it has an error.
+            curl_subprocess.wait()
+
     def _start_cinema4d_server_thread(self) -> None:
         """
         Starts the cinema4d adaptor server in a thread.
@@ -415,6 +442,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         self.validators.init_data.validate(self.init_data)
 
         self.update_status(progress=0, status_message="Initializing Cinema4D")
+        self._initialize_maxon_assets_db_connection()
         self._start_cinema4d_server_thread()
         self._populate_action_queue()
         self._start_cinema4d_client()
