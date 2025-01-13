@@ -1,3 +1,12 @@
+## 0.6.1 (2025-01-13)
+
+
+
+### Bug Fixes
+* initialize connection to Maxon assets DB on Windows to fix confusing error message (#144) ([`f75b68d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f75b68d00ea029723fe573df40b3b78b3adf92fd))
+* Add error logs for Redshift. (#143) ([`46771f3`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/46771f333f4c70acc1dfe362a5da55bc321b4e13))
+* Refactor redshift non-ascii test. (#141) ([`0691c44`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/0691c444df7576a4256c7662e6e6c8b48e1f8ea1))
+
 ## 0.6.0 (2025-01-03)
 
 
