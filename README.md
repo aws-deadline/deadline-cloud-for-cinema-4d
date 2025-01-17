@@ -4,15 +4,6 @@
 [![python](https://img.shields.io/pypi/pyversions/deadline-cloud-for-cinema-4d.svg?style=flat)](https://pypi.python.org/pypi/deadline-cloud-for-cinema-4d)
 [![license](https://img.shields.io/pypi/l/deadline-cloud-for-cinema-4d.svg?style=flat)](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/blob/mainline/LICENSE)
 
-### Disclaimer
----
-This GitHub repository is an example integration with AWS Deadline Cloud that is intended to only be used for testing and is subject to change. This code is an alpha release. It is not a commercial release and may contain bugs, errors, defects, or harmful components. Accordingly, the code in this repository is provided as-is. Use within a production environment is at your own risk!
-
-Our focus is to explore a variety of software applications to ensure we have good coverage across common workflows. We prioritized making this example available earlier to users rather than being feature complete.
-
-This example has been used by at least one internal or external development team to create a series of jobs that successfully rendered. However, your mileage may vary. If you have questions or issues with this example, please start a discussion or cut an issue.
----
-
 AWS Deadline Cloud for Cinema 4D is a python package that allows users to create [AWS Deadline Cloud][deadline-cloud] jobs from within Cinema 4D. It provides both the implementation of a Cinema 4D extension for your workstation that helps you offload the computation for your rendering workloads
 to [AWS Deadline Cloud][deadline-cloud] to free up your workstation's compute for other tasks, and the implementation of a command-line
 adaptor application based on the [Open Job Description (OpenJD) Adaptor Runtime][openjd-adaptor-runtime] that improves AWS Deadline Cloud's
