@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional, Tuple
@@ -42,60 +41,64 @@ class Animation:
     """
 
     @staticmethod
-    def current_frame() -> int:
+    def current_frame(data) -> int:
         """
         Returns the current frame number from Cinema 4D.
         """
         doc = c4d.documents.GetActiveDocument()
-        data = doc.GetActiveRenderData()
         return int(data[c4d.RDATA_FRAMEFROM].GetFrame(doc.GetFps()))
 
     @staticmethod
-    def start_frame() -> int:
+    def start_frame(data) -> int:
         """
         Returns the start frame for the scenes render
         """
         doc = c4d.documents.GetActiveDocument()
-        data = doc.GetActiveRenderData()
         return int(data[c4d.RDATA_FRAMEFROM].GetFrame(doc.GetFps()))
 
     @staticmethod
-    def end_frame() -> int:
+    def end_frame(data) -> int:
         """
         Returns the End frame for the scenes Render
         """
         doc = c4d.documents.GetActiveDocument()
-        data = doc.GetActiveRenderData()
         return int(data[c4d.RDATA_FRAMETO].GetFrame(doc.GetFps()))
 
     @staticmethod
-    def frame_step() -> int:
+    def frame_step(data) -> int:
         """
         Returns the frame step of the current render.
         """
-        doc = c4d.documents.GetActiveDocument()
-        data = doc.GetActiveRenderData()
         return int(data[c4d.RDATA_FRAMESTEP])
 
     @staticmethod
-    def extension_padding() -> int:
+    def custom_frames(data) -> str:
         """
-        Returns the amount that frames are padded by in the output file name.
+        Returns the custom frames specification of the current render.
+        Note that this field may be filled even if custom frames are not being used.
+        To check if custom frames are being used, check whether
+        doc.GetActiveRenderData()[c4d.RDATA_FRAMESEQUENCE] == c4d.RDATA_FRAMESEQUENCE_CUSTOM
         """
-        return 4
+        return data[c4d.RDATA_FRAME_RANGE_STRING]
 
     @classmethod
-    def frame_list(cls, data=None) -> FrameRange:
+    def frame_list(cls, data=None) -> str:
         """
-        Retursn a FrameRange object representing the full framelist.
+        Returns a string representing the full framelist.
         """
         if data is None:
             doc = c4d.documents.GetActiveDocument()
             data = doc.GetActiveRenderData()
-        if data[c4d.RDATA_FRAMESEQUENCE] != c4d.RDATA_FRAMESEQUENCE_CURRENTFRAME:
-            return FrameRange(start=cls.start_frame(), stop=cls.end_frame(), step=cls.frame_step())
-        else:
-            return FrameRange(start=cls.current_frame())
+        frame_spec_type = data[c4d.RDATA_FRAMESEQUENCE]
+        if frame_spec_type == c4d.RDATA_FRAMESEQUENCE_CURRENTFRAME:
+            return str(FrameRange(start=cls.current_frame(data)))
+        if frame_spec_type == c4d.RDATA_FRAMESEQUENCE_CUSTOM:
+            return cls.custom_frames(data)
+        return str(
+            FrameRange(
+                start=cls.start_frame(data), stop=cls.end_frame(data), step=cls.frame_step(data)
+            )
+        )
 
 
 class Scene:
@@ -231,9 +234,3 @@ class FrameRange:
             return f"{self.start}-{self.stop}"
 
         return f"{self.start}-{self.stop}:{self.step}"
-
-    def __iter__(self) -> Iterator[int]:
-        stop: int = self.stop if self.stop is not None else self.start
-        step: int = self.step if self.step is not None else 1
-
-        return iter(range(self.start, stop + step, step))

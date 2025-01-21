@@ -80,7 +80,7 @@ def _get_parameter_values(
     if settings.override_frame_range:
         frame_list = settings.frame_list
     else:
-        frame_list = str(Animation.frame_list())
+        frame_list = Animation.frame_list()
     parameter_values.append({"name": "Frames", "value": frame_list})
 
     # Check for any overlap between the job parameters we've defined and the
@@ -302,7 +302,7 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
 
     # Set the setting defaults that come from the scene
     render_settings.name = Path(Scene.name()).name
-    render_settings.frame_list = str(Animation.frame_list())
+    render_settings.frame_list = Animation.frame_list()
     default_path, multi_path = Scene.get_output_paths()
     render_settings.output_path = default_path
     render_settings.multi_pass_path = multi_path
@@ -338,7 +338,7 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
             renderer_name=renderer_name,
             ui_group_label=f"Take {take_name} Settings ({renderer_name} renderer)",
             frames_parameter_name=None,
-            frame_range=str(Animation.frame_list(take_render_data)),
+            frame_range=Animation.frame_list(take_render_data),
             output_directories=output_directories,
             marked=take.IsChecked(),
         )
