@@ -167,7 +167,7 @@ class TestFrameRange:
                 "1-100:7",
                 id="start=1, stop=100, step=7",
             ),
-            pytest.param(4, 10, None, "4-10", id="start=1, stop=100, step=None"),
+            pytest.param(4, 10, None, "4-10", id="start=4, stop=10, step=None"),
             pytest.param(6, 14, 2, "6-14:2", id="start=6, stop=14, step=2"),
             pytest.param(1, None, 7, "1", id="start=1, stop=None, step=7"),
             pytest.param(10, 10, 10, "10", id="start=10, stop=10, step=10"),
