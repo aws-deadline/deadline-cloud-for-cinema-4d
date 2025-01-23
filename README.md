@@ -62,7 +62,7 @@ It automatically determines the files required based on the loaded scene, allows
 
 ```
 pip install deadline-cloud-for-cinema-4d
-pip install deadline[gui]
+pip install "deadline[gui]"
 ```
 
 2. Set up the `C4DPYTHONPATH311` environment variable:
