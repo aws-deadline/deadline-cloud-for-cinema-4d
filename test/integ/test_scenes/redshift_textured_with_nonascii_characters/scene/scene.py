@@ -1,7 +1,9 @@
 import os
 import struct
+import sys
 
 import c4d
+from deadline.cinema4d_submitter.integ_test_helpers import internal_create_job_bundle
 
 
 def create_checkerboard_bmp(
@@ -65,8 +67,10 @@ def main():
     cube = create_cube()
     doc.InsertObject(cube)
 
+    save_dir = sys.argv[1]
+
     # Create texture
-    tex_dir = os.path.join(os.path.dirname(__file__), "tex")
+    tex_dir = os.path.join(save_dir, "tex")
     os.makedirs(tex_dir, exist_ok=True)
     texture_filename = "checkerboard-_₿_ę_ñ_β_Б_ت.bmp"
     texture_path = os.path.join(tex_dir, texture_filename)
@@ -84,7 +88,6 @@ def main():
     setup_render_settings(doc, frame_time, frame_time)
 
     # Save document
-    save_dir = os.path.dirname(__file__)
     save_name = "redshift_textured-_₿_ę_ñ_β_Б_ت.c4d"
     save_path = os.path.join(save_dir, save_name)
     doc.SetDocumentPath(save_dir)
@@ -92,6 +95,7 @@ def main():
     c4d.documents.SaveDocument(doc, save_path, c4d.SAVEDOCUMENTFLAGS_0, c4d.FORMAT_C4DEXPORT)
     c4d.documents.InsertBaseDocument(doc)
     c4d.EventAdd()
+    internal_create_job_bundle(save_dir)
 
 
 if __name__ == "__main__":

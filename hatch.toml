@@ -5,7 +5,7 @@ pre-install-commands = [
 
 [envs.default.scripts]
 sync = "pip install -r requirements-testing.txt"
-test = "pytest {args:test}"
+test = "pytest {args:test/unit}  -vvv"
 typing = "mypy {args:src test}"
 style = [
   "ruff check {args:.}",
@@ -39,3 +39,11 @@ detached = true
 deps = "pip install -r requirements-release.txt"
 bump = "semantic-release -v --strict version --no-push --no-commit --no-tag --skip-build {args}"
 version = "semantic-release -v --strict version --print {args}"
+
+[envs.integ]
+pre-install-commands = [
+  "pip install -r requirements-testing.txt"
+]
+
+[envs.integ.scripts]
+test = "pytest --no-cov {args:test/integ} -vvv --numprocesses=1"

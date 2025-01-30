@@ -1,0 +1,15 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\\
+      test_scenes\\redshift_textured_with_nonascii_characters\\generated_bundle\\\
+      redshift_textured-_\u20BF_\u0119_\xF1_\u03B2_\u0411_\u062A.c4d"
+    - "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\\
+      test_scenes\\redshift_textured_with_nonascii_characters\\generated_bundle\\\
+      tex\\checkerboard-_\u20BF_\u0119_\xF1_\u03B2_\u0411_\u062A.bmp"
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\redshift_textured_with_nonascii_characters
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\redshift_textured_with_nonascii_characters\generated_bundle\renders
+  referencedPaths: []
