@@ -18,14 +18,7 @@ See [DEVELOPMENT.md](https://github.com/aws-deadline/deadline-cloud-for-cinema-4
 - Have you run the unit tests?
 *delete text ending here*
 
-### Did you run the "Job Bundle Output Tests"? If not, why not? If so, paste the test results here.
-
-*delete text starting here*
-See the "Integration Tests" subsection of the
-[Running Submitter Tests](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/blob/mainline/DEVELOPMENT.md#running-submitter-tests)
-section of DEVELOPMENT.md for information on these tests.
-
-*delete text ending here*
+#### Please run the integration tests and paste the results below
 
 ### Was this change documented?
 
@@ -34,6 +27,11 @@ section of DEVELOPMENT.md for information on these tests.
 - Should the README.md, DEVELOPMENT.md, or other documents in the repository's docs/ directory be updated along with your change?
 - Should the schema files for the adaptor's init-data or run-data be updated?
 *delete text ending here*
+
+### Did you make any changes to submitter? Is there a corresponding change in `integ_test_helpers`?
+
+To workaround UI elements in integration tests, we have calls that mimic the actual submitter in `integ_test_helpers`. 
+If modifying any workflow in submitter, add corresponding calls to the `internal_create_job_bundle` function in `integ_test_helpers` as well. 
 
 ### Is this a breaking change?
 

@@ -1,0 +1,25 @@
+parameterValues:
+- name: Cinema4DFile
+  value: "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\\
+    test_scenes\\redshift_textured_with_nonascii_characters\\generated_bundle\\redshift_textured-_\u20BF\
+    _\u0119_\xF1_\u03B2_\u0411_\u062A.c4d"
+- name: OutputPath
+  value: "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\\
+    test_scenes\\redshift_textured_with_nonascii_characters\\generated_bundle\\renders\\\
+    redshift_textured-_\u20BF_\u0119_\xF1_\u03B2_\u0411_\u062A"
+- name: MultiPassPath
+  value: PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\redshift_textured_with_nonascii_characters\generated_bundle
+- name: Frames
+  value: '1'
+- name: CondaPackages
+  value: cinema4d=2025.* cinema4d-openjd=0.6.*
+- name: CondaChannels
+  value: deadline-cloud
+- name: deadline:targetTaskRunStatus
+  value: READY
+- name: deadline:maxFailedTasksCount
+  value: 20
+- name: deadline:maxRetriesPerTask
+  value: 5
+- name: deadline:priority
+  value: 50
