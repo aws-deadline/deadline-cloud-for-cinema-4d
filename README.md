@@ -25,6 +25,7 @@ ability to run Cinema 4D efficiently on your render farm.
 This library requires:
 
 1. Cinema 4D 2024 - 2025
+   * Redshift is supported but not required
 1. Python 3.9 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
 1. Windows or macOS operating system for job submission and Windows operating system for job rendering. There are some instructions below on how to setup the adaptors for job rendering on Linux but they are experimental.
 
@@ -40,19 +41,21 @@ set up, we strongly recommend that you construct a simple test scene that can be
 
 ## Submitter
 
-The Cinema 4D submitter extension creates a button in Cinema 4D (`Extensions` > `AWS Deadline Cloud Submitter`) that can be used to submit jobs to Deadline Cloud. Clicking this button reveals an interface to submit a job to Deadline Cloud.
+The Cinema 4D submitter extension creates a button in Cinema 4D (`Extensions` > `AWS Deadline Cloud Submitter`) that can be used to submit jobs to Deadline Cloud.
+Clicking this button reveals an interface to submit a job to Deadline Cloud.
 It automatically determines the files required based on the loaded scene, allows the user to specify render options, builds an
 [Open Job Description template][openjd-template] that defines the workflow, and submits the job to the farm and queue of your choosing.
+The submission will automatically include your settings, like Redshift plugin usage and multi-pass paths.
 
 There are two installation options:
 1. Windows-only: Install the submitter using the official Deadline Cloud submitter installer for Windows
 2. Windows or Mac: Manually install the submitter
 
-For most setups, you will also need to install the [Deadline Cloud monitor](deadline-cloud-monitor).
+For most setups, you will also need to install the [Deadline Cloud monitor][deadline-cloud-monitor].
 
 ## Install the submitter using the official Deadline Cloud submitter installer
 
-The [official Deadline Cloud submitter installer](deadline-cloud-submitter) for Windows includes the Cinema 4D submitter. After installing, you can access the submitter in the Cinema 4D interface via `Extensions` > `AWS Deadline Cloud Submitter`.
+The [official Deadline Cloud submitter installer][deadline-cloud-submitter] for Windows includes the Cinema 4D submitter. After installing, you can access the submitter in the Cinema 4D interface via `Extensions` > `AWS Deadline Cloud Submitter`.
 
 ## Manually installing the submitter
 
@@ -111,7 +114,7 @@ Linux support is experimental and can only be done on customer managed fleets.
 
 ### Service managed fleets
 
-On [service managed fleets](service-managed-fleets), the Cinema 4D adaptor is automatically available via the `deadline-cloud` Conda channel with the [default Queue Environment][default-queue-environment].
+On [service managed fleets][service-managed-fleets], the Cinema 4D adaptor is automatically available via the `deadline-cloud` Conda channel with the [default Queue Environment][default-queue-environment].
 
 ### Customer managed fleets
 
@@ -151,7 +154,7 @@ Though it refers to Blender, the process applies to Cinema 4D recipes as well.
 
 ### Service Managed Fleets
 
-[Usage based licensing](usage-based-licensing) for Cinema 4D 2024 and 2025 is available on Deadline Cloud service managed fleets with no additional setup.
+[Usage based licensing][usage-based-licensing] for Cinema 4D 2024 and 2025 is available on Deadline Cloud service managed fleets with no additional setup.
 
 If you prefer to use your own licensing for service managed fleets, you can also [connect service-managed fleets to a custom license server](https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/smf-byol.html).
 
@@ -177,7 +180,7 @@ We take all security reports seriously. When we receive such reports, we will
 investigate and subsequently address any potential vulnerabilities as quickly
 as possible. If you discover a potential security issue in this project, please
 notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/)
-or directly via email to [AWS Security](aws-security@amazon.com). Please do not
+or directly via email to [AWS Security](mailto:aws-security@amazon.com). Please do not
 create a public GitHub issue in this project.
 
 ## Telemetry
