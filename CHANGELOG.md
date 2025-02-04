@@ -1,11 +1,15 @@
 ## 0.7.0 (2025-02-03)
 
+### BREAKING CHANGES
+* handle custom frame ranges (#152) ([`c1b1d38`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/c1b1d38bc850c7cfdf421ae3d7b680fb2d54d9f2))
+
+The function signatures of the `Animation` and `Scene` class member functions have been updated to correctly parse frame ranges from Cinema 4D. If you have scripts that directly call the `Animation` or `Scene` class member functions, the scripts will need to be updated. 
+
 
 ### Features
 * prepopulate Windows host requirement (#150) ([`6673b17`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/6673b171f781557be7c47fac9be461098122c204))
 
 ### Bug Fixes
-* handle custom frame ranges (#152) ([`c1b1d38`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/c1b1d38bc850c7cfdf421ae3d7b680fb2d54d9f2))
 * improve error handling for sticky settings having a long path (#148) ([`99e4d53`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/99e4d53a0ff4eb820562756201339aac59ce9b3a))
 * Use Path instead of string in output paths in adaptor template. (#147) ([`ab11bdc`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/ab11bdca216e7f1b6be47d31381a565a64a319c9))
 
@@ -20,10 +24,13 @@
 
 ## 0.6.0 (2025-01-03)
 
+### BREAKING CHANGES
+* **adaptor**: Update adaptor environment variable executable to C4D_COMMANDLINE_EXE (#121) ([`206b0ad`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/206b0add6bd93ab2587508a075b350e53f1f69f1))
+
+The environment variable used to find the Cinema 4D executable in the adaptor was changed from `CINEMA4D_ADAPTOR_COMMANDLINE_EXE` to `C4D_COMMANDLINE_EXECUTABLE`. If you were setting the previous variable, you will need to update the environment set up. If you relied on the executable being on the PATH, then no change is required.
 
 ### Features
 * Implement asset path mapping for Cinema 4D scene files (#126) ([`33ac2e8`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/33ac2e8c298ac7902b1bdc1c5db87397816e1228))
-* **adaptor**: Update adaptor environment variable executable to C4D_COMMANDLINE_EXE (#121) ([`206b0ad`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/206b0add6bd93ab2587508a075b350e53f1f69f1))
 
 ### Bug Fixes
 * Fix adaptor packaging script to package dependencies. (#137) ([`b130ccc`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/b130cccfba780a5ac540a118feb38c316790c45b))
