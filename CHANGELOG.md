@@ -1,5 +1,7 @@
 ## 0.7.0 (2025-02-03)
 
+**This release has been pulled from PyPI. The use of this release can cause the submitter to fail on Cinema 4D 2024.5.1 version. Downgrade to 0.6.1 or upgrade to the next release if available.**
+
 ### BREAKING CHANGES
 * handle custom frame ranges (#152) ([`c1b1d38`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/c1b1d38bc850c7cfdf421ae3d7b680fb2d54d9f2))
 
