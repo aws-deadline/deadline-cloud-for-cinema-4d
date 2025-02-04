@@ -92,7 +92,10 @@ class Animation:
         frame_spec_type = data[c4d.RDATA_FRAMESEQUENCE]
         if frame_spec_type == c4d.RDATA_FRAMESEQUENCE_CURRENTFRAME:
             return str(FrameRange(start=cls.current_frame(data)))
-        if frame_spec_type == c4d.RDATA_FRAMESEQUENCE_CUSTOM:
+        if (
+            hasattr(c4d, "RDATA_FRAMESEQUENCE_CUSTOM")
+            and frame_spec_type == c4d.RDATA_FRAMESEQUENCE_CUSTOM
+        ):
             return cls.custom_frames(data)
         return str(
             FrameRange(
