@@ -1,3 +1,10 @@
+## 0.7.1 (2025-02-05)
+
+
+
+### Bug Fixes
+* Use RDATA_FRAMESEQUENCE_CUSTOM only if it exists. (#163) ([`7b4fb97`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/7b4fb97021a990d995c42c7e77ac1361981eeab9))
+
 ## 0.7.0 (2025-02-03)
 
 **This release has been pulled from PyPI. The use of this release can cause the submitter to fail on Cinema 4D 2024.5.1 version. Downgrade to 0.6.1 or upgrade to the next release if available.**
