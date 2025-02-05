@@ -45,7 +45,7 @@ The Cinema 4D submitter extension creates a button in Cinema 4D (`Extensions` > 
 Clicking this button reveals an interface to submit a job to Deadline Cloud.
 It automatically determines the files required based on the loaded scene, allows the user to specify render options, builds an
 [Open Job Description template][openjd-template] that defines the workflow, and submits the job to the farm and queue of your choosing.
-The submission will automatically include your settings, like Redshift plugin usage and multi-pass paths.
+The submitter includes your settings, such as Redshift plugin settings and multi-pass paths, in the submission to Deadline Cloud.
 
 There are two installation options:
 1. Windows-only: Install the submitter using the official Deadline Cloud submitter installer for Windows
