@@ -48,20 +48,14 @@ It automatically determines the files required based on the loaded scene, allows
 The submitter includes your settings, such as Redshift plugin settings and multi-pass paths, in the submission to Deadline Cloud.
 
 There are two installation options:
-1. Windows-only: Install the submitter using the official Deadline Cloud submitter installer for Windows
-2. Windows or Mac: Manually install the submitter
+1. Windows-only: the [official Deadline Cloud submitter installer][deadline-cloud-submitter]
+2. Windows or Mac: manual installation
 
-For most setups, you will also need to install the [Deadline Cloud monitor][deadline-cloud-monitor].
+After installing, you can access the submitter in the Cinema 4D interface via `Extensions` > `AWS Deadline Cloud Submitter`.
 
-## Install the submitter using the official Deadline Cloud submitter installer
+For most setups, you will also want to install the [Deadline Cloud monitor][deadline-cloud-monitor].
 
-The [official Deadline Cloud submitter installer][deadline-cloud-submitter] for Windows includes the Cinema 4D submitter. After installing, you can access the submitter in the Cinema 4D interface via `Extensions` > `AWS Deadline Cloud Submitter`.
-
-## Manually installing the submitter
-
-Manual installation is supported on Windows and Mac.
-
-### Manually install the submitter
+### Manually installing the submitter
 
 #### Windows
 
@@ -75,8 +69,6 @@ curl https://raw.githubusercontent.com/aws-deadline/deadline-cloud-for-cinema-4d
 if not defined C4DPYTHONPATH311 (setx C4DPYTHONPATH311 %SUBMITTER_LOCATION%) else (setx C4DPYTHONPATH311 %SUBMITTER_LOCATION%;%C4DPYTHONPATH311%)
 if not defined g_additionalModulePath (setx g_additionalModulePath %SUBMITTER_LOCATION%\cinema_4d_plugins) else (setx g_additionalModulePath %SUBMITTER_LOCATION%\cinema_4d_plugins;%g_additionalModulePath%)
 ```
-
-Next time you open Cinema 4D and you load a scene, click on `Extensions` > `AWS Deadline Cloud Submitter` to view the submitter.
 
 #### Mac
 
@@ -95,7 +87,7 @@ echo /Applications/Maxon\\ Cinema\\ 4D\\ 2025/Cinema\\ 4D.app/Contents/MacOS/Cin
 chmod +x ~/Desktop/Cinema4D.command
 ```
 
-To open Cinema 4D, click `Cinema4D.command` on your desktop. After you load a scene, click on `Extensions` > `AWS Deadline Cloud Submitter` to view the submitter.
+To open Cinema 4D on Mac, click `Cinema4D.command` on your desktop. After you load a scene, click on `Extensions` > `AWS Deadline Cloud Submitter` to view the submitter.
 
 ## Adaptor
 
@@ -173,6 +165,16 @@ Job Bundle to a location of your choice. If you want to submit the job from the 
 submitter plug-in then you can use the [Deadline Cloud application][deadline-cloud-client] to submit that bundle to your farm.
 
 [job-bundle]: https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/build-job-bundle.html
+
+## Versioning
+
+This package's version follows [Semantic Versioning 2.0](https://semver.org/), but is still considered to be in its
+initial development, thus backwards incompatible versions are denoted by minor version bumps. To help illustrate how
+versions will increment during this initial development stage, they are described below:
+
+1. The MAJOR version is currently 0, indicating initial development.
+2. The MINOR version is currently incremented when backwards incompatible changes are introduced to the public API.
+3. The PATCH version is currently incremented when bug fixes or backwards compatible changes are introduced to the public API.
 
 ## Security
 

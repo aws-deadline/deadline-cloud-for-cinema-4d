@@ -6,7 +6,6 @@ Table of Contents:
 
 * [Development Environment Setup](#development-environment-setup)
 * [Software Architecture](#software-architecture)
-* [Versioning](#versioning)
 * [The Development Loop](#the-development-loop)
    * [Submitter Development Workflow](#submitter-development-workflow)
       * [Pre-requisites](#running-the-plug-in)
@@ -35,16 +34,6 @@ You can develop on any Windows workstation.
 
 If you are not already familiar with the architecture of the Cinema 4D submitter extension and adaptor application in this repository
 then we suggest going over the [software architecture](docs/software_arch.md) for an overview of the components and how they function.
-
-## Versioning
-
-This package's version follows [Semantic Versioning 2.0](https://semver.org/), but is still considered to be in its
-initial development, thus backwards incompatible versions are denoted by minor version bumps. To help illustrate how
-versions will increment during this initial development stage, they are described below:
-
-1. The MAJOR version is currently 0, indicating initial development.
-2. The MINOR version is currently incremented when backwards incompatible changes are introduced to the public API.
-3. The PATCH version is currently incremented when bug fixes or backwards compatible changes are introduced to the public API.
 
 ## The Development Loop
 
