@@ -29,6 +29,8 @@ This library requires:
 1. Python 3.9 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
 1. Windows or macOS operating system for job submission and Windows operating system for job rendering. There are some instructions below on how to setup the adaptors for job rendering on Linux but they are experimental.
 
+Important: Workers hosts with GPUs that run Cinema 4D adaptor must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to unstable rendering behavior.
+
 ## Getting Started
 
 The Cinema 4D integration for Deadline Cloud has two components that you will need to install:
@@ -123,6 +125,8 @@ Jobs created by the Cinema 4D submitter require the adaptor to be installed on y
 The adaptor application is a command-line Python-based application that enhances the functionality of Cinema 4D for running within a render farm like Deadline Cloud. Its primary purpose for existing is to add a "sticky rendering" functionality where a single process instance of Cinema 4D is able to load the scene file and then dynamically be instructed to perform desired renders without needing to close and re-launch Cinema 4D between them. It also has additional benefits such as support for path mapping, and reporting the progress of your render to Deadline Cloud. The alternative to "sticky rendering" is that Cinema 4D would need to be run separately for each render that is done, and close afterwards.
 Some scenes can take 10's of minutes just to load for rendering, so being able to keep the application open and loaded between
 renders can be a significant time-saving optimization; particularly when the render itself is quick.
+
+Important: Workers hosts with GPUs must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to unstable rendering behavior.
 
 Both fleet types in Deadline Cloud support the Cinema 4D adaptor:
 1. Service managed fleets
