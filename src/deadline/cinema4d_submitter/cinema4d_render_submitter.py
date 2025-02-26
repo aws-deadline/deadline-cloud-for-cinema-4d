@@ -412,10 +412,12 @@ def create_job_bundle(
     elif settings.take_selection == TakeSelection.CURRENT:
         submit_takes = takes["current_data_list"]
 
-    # Add overrides to asset references
+    # Add overrides to asset references and update the paths with C4D render path tokens.
     if settings.output_path:
+        settings.output_path = Scene.replace_render_path_tokens(settings.output_path)
         asset_references.output_directories.add(os.path.dirname(settings.output_path))
     if settings.multi_pass_path:
+        settings.multi_pass_path = Scene.replace_render_path_tokens(settings.multi_pass_path)
         asset_references.output_directories.add(os.path.dirname(settings.multi_pass_path))
 
     # # Check if there are multiple frame ranges across the takes

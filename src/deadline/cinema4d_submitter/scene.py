@@ -139,19 +139,13 @@ class Scene:
             take_data = doc.GetTakeData()
             take = take_data.GetCurrentTake()
         render_data = Scene.get_render_data(doc=doc, take=take)
-        rbc = render_data.GetDataInstance()
-        rpd = {
-            "_doc": doc,
-            "_rData": render_data,
-            "_rBc": rbc,
-            "_frame": doc.GetTime().GetFrame(doc.GetFps()),
-        }
-        if take:
-            rpd["_take"] = take
+
         image_paths = set()
         if render_data[c4d.RDATA_SAVEIMAGE]:
             path = render_data[c4d.RDATA_PATH]
-            xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
+            xpath = Scene.replace_render_path_tokens(
+                path, doc=doc, take=take, render_data=render_data
+            )
             if not os.path.isabs(xpath):
                 if xpath.startswith("./"):
                     xpath = xpath[2:]
@@ -159,7 +153,9 @@ class Scene:
             image_paths.add(os.path.dirname(os.path.normpath(xpath)))
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
             path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
-            xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
+            xpath = Scene.replace_render_path_tokens(
+                path, doc=doc, take=take, render_data=render_data
+            )
             if not os.path.isabs(xpath):
                 if xpath.startswith("./"):
                     xpath = xpath[2:]
@@ -182,6 +178,31 @@ class Scene:
         return render_data
 
     @staticmethod
+    def replace_render_path_tokens(path, doc=None, take=None, render_data=None):
+        """
+        Replaces tokens in a path with actual values from scene and render data
+        """
+        if doc is None:
+            doc = c4d.documents.GetActiveDocument()
+
+        if take is None:
+            take_data = doc.GetTakeData()
+            take = take_data.GetCurrentTake()
+
+        if render_data is None:
+            render_data = Scene.get_render_data(doc=doc, take=take)
+
+        render_path_data = {
+            "_doc": doc,
+            "_rData": render_data,
+            "_rBc": render_data.GetDataInstance(),
+            "_frame": doc.GetTime().GetFrame(doc.GetFps()),
+            "_take": take,
+        }
+
+        return c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
+
+    @staticmethod
     def get_output_paths(take=None) -> Tuple[str, str]:
         """
         Returns the default and multi-pass output paths.
@@ -189,20 +210,14 @@ class Scene:
         doc = c4d.documents.GetActiveDocument()
         doc_path = doc.GetDocumentPath()
         render_data = Scene.get_render_data(doc=doc, take=take)
-        render_base_container_instance = render_data.GetDataInstance()
-        rpd = {
-            "_doc": doc,
-            "_rData": render_data,
-            "_rBc": render_base_container_instance,
-            "_frame": doc.GetTime().GetFrame(doc.GetFps()),
-        }
-        if take:
-            rpd["_take"] = take
+
         default_out = ""
         multi_out = ""
         if render_data[c4d.RDATA_SAVEIMAGE]:
             path = render_data[c4d.RDATA_PATH]
-            xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
+            xpath = Scene.replace_render_path_tokens(
+                path, doc=doc, take=take, render_data=render_data
+            )
             if not os.path.isabs(xpath):
                 if xpath.startswith("./"):
                     xpath = xpath[2:]
@@ -210,7 +225,9 @@ class Scene:
             default_out = os.path.normpath(xpath)
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
             path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
-            xpath = c4d.modules.tokensystem.FilenameConvertTokens(path, rpd)
+            xpath = Scene.replace_render_path_tokens(
+                path, doc=doc, take=take, render_data=render_data
+            )
             if not os.path.isabs(xpath):
                 if xpath.startswith("./"):
                     xpath = xpath[2:]
