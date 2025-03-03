@@ -61,29 +61,56 @@ For most setups, you will also want to install the [Deadline Cloud monitor][dead
 
 In Windows `cmd`
 ```
+:: Set installation location in AppData folder
 set SUBMITTER_LOCATION=%APPDATA%\DeadlineCloudSubmitter
+
+:: Install pip using Cinema 4D's bundled Python
 "C:\Program Files\Maxon Cinema 4D 2025\resource\modules\python\libs\win64\python.exe" -m ensurepip
+
+:: Install required Python packages to our custom location
 "C:\Program Files\Maxon Cinema 4D 2025\resource\modules\python\libs\win64\python.exe" -m pip install deadline-cloud-for-cinema-4d "deadline[gui]" -t %SUBMITTER_LOCATION%
+
+:: Create plugins directory
 md %SUBMITTER_LOCATION%\cinema_4d_plugins
+
+:: Download the Deadline Cloud plugin from GitHub
 curl https://raw.githubusercontent.com/aws-deadline/deadline-cloud-for-cinema-4d/refs/heads/mainline/deadline_cloud_extension/DeadlineCloud.pyp -o %SUBMITTER_LOCATION%\cinema_4d_plugins\DeadlineCloud.pyp
+
+:: Set C4DPYTHONPATH311 environment variable - if it doesn't exist, create it; if it exists, append to it
 if not defined C4DPYTHONPATH311 (setx C4DPYTHONPATH311 %SUBMITTER_LOCATION%) else (setx C4DPYTHONPATH311 %SUBMITTER_LOCATION%;%C4DPYTHONPATH311%)
+
+:: Set g_additionalModulePath environment variable for plugins - if it doesn't exist, create it; if it exists, append to it
 if not defined g_additionalModulePath (setx g_additionalModulePath %SUBMITTER_LOCATION%\cinema_4d_plugins) else (setx g_additionalModulePath %SUBMITTER_LOCATION%\cinema_4d_plugins;%g_additionalModulePath%)
+
 ```
 
 #### Mac
 
 In a Mac terminal:
 ```
-export SUBMITTER_LOCATION="/Users/$USER/DeadlineCloudSubmitter/"
-mkdir $SUBMITTER_LOCATION
+# Set the base location
+export SUBMITTER_LOCATION="/Users/$USER/DeadlineCloudSubmitter"
+
+# Create directory
+mkdir -p $SUBMITTER_LOCATION
+
+# Install Python packages
 python3 -m ensurepip
 python3 -m pip install deadline-cloud-for-cinema-4d "deadline[gui]" -t $SUBMITTER_LOCATION
-mkdir $SUBMITTER_LOCATION/cinema_4d_plugins
+
+# Create plugins directory
+mkdir -p $SUBMITTER_LOCATION/cinema_4d_plugins
+
+# Download the plugin
 curl https://raw.githubusercontent.com/aws-deadline/deadline-cloud-for-cinema-4d/refs/heads/mainline/deadline_cloud_extension/DeadlineCloud.pyp -o $SUBMITTER_LOCATION/cinema_4d_plugins/DeadlineCloud.pyp
-echo \#\!/bin/zsh > ~/Desktop/Cinema4D.command
-echo export C4DPYTHONPATH311=$SUBMITTER_LOCATION:\$C4DPYTHONPATH311 >> ~/Desktop/Cinema4D.command
-echo export g_additionalModulePath=$SUBMITTER_LOCATION/cinema_4d_plugins:\$g_additionalModulePath  >> ~/Desktop/Cinema4D.command
-echo /Applications/Maxon\\ Cinema\\ 4D\\ 2025/Cinema\\ 4D.app/Contents/MacOS/Cinema\\ 4D >> ~/Desktop/Cinema4D.command
+
+# Create the launch script
+echo "#!/bin/zsh" > ~/Desktop/Cinema4D.command
+eval echo "export C4DPYTHONPATH311=${SUBMITTER_LOCATION}\${C4DPYTHONPATH311:+:\$C4DPYTHONPATH311}" >> ~/Desktop/Cinema4D.command
+eval echo "export g_additionalModulePath=${SUBMITTER_LOCATION}/cinema_4d_plugins\${g_additionalModulePath:+:\$g_additionalModulePath}" >> ~/Desktop/Cinema4D.command
+echo '"/Applications/Maxon Cinema 4D 2025/Cinema 4D.app/Contents/MacOS/Cinema 4D"' >> ~/Desktop/Cinema4D.command
+
+# Make the launch script executable
 chmod +x ~/Desktop/Cinema4D.command
 ```
 
