@@ -29,7 +29,7 @@ This library requires:
 1. Python 3.9 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
 1. Windows or macOS operating system for job submission and Windows operating system for job rendering. There are some instructions below on how to setup the adaptors for job rendering on Linux but they are experimental.
 
-Important: Workers hosts with GPUs that run Cinema 4D adaptor must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to unstable rendering behavior.
+**Important:** Workers hosts with GPUs that run the Cinema 4D adaptor must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to [unstable rendering behavior](https://help.maxon.net/c4d/s26/de-de/Content/_REDSHIFT_/html/Dealing+with+Out-Of-RAM+situations.html).
 
 ## Getting Started
 
@@ -126,7 +126,7 @@ The adaptor application is a command-line Python-based application that enhances
 Some scenes can take 10's of minutes just to load for rendering, so being able to keep the application open and loaded between
 renders can be a significant time-saving optimization; particularly when the render itself is quick.
 
-Important: Workers hosts with GPUs must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to unstable rendering behavior.
+**Important:** Workers hosts with GPUs must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to [unstable rendering behavior](https://help.maxon.net/c4d/s26/de-de/Content/_REDSHIFT_/html/Dealing+with+Out-Of-RAM+situations.html).
 
 Both fleet types in Deadline Cloud support the Cinema 4D adaptor:
 1. Service managed fleets
