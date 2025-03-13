@@ -8,22 +8,20 @@ from pathlib import Path
 
 @pytest.fixture
 def cinema4d_location() -> Path:
-    if "C4D_LOCATION" not in os.environ:
-        print(
-            "No C4D_LOCATION set as environment variable, checking in default Cinema 4D location."
-        )
-        default_path = Path(r"C:\Program Files\Maxon Cinema 4D 2025")
-        if default_path.exists():
-            print("Detected default installation directory for Cinema 4D. Using it.")
-            return default_path
+    if "C4D_LOCATION" in os.environ:
+        return Path(os.environ["C4D_LOCATION"])
 
-        raise EnvironmentError(
-            "Environment variable 'C4D_LOCATION' not found. "
-            "Please set the C4D_LOCATION environment variable to the location of the Cinema 4D. "
-            r"The default location for Cinema 4D on Windows is 'C:\Program Files\Maxon Cinema 4D 2025\'"
-        )
+    print("No C4D_LOCATION set as environment variable, checking in default Cinema 4D location.")
+    default_path = Path(r"C:\Program Files\Maxon Cinema 4D 2025")
+    if default_path.exists():
+        print("Detected default installation directory for Cinema 4D. Using it.")
+        return default_path
 
-    return Path(os.environ["C4D_LOCATION"])
+    raise EnvironmentError(
+        "Environment variable 'C4D_LOCATION' not found. "
+        "Please set the C4D_LOCATION environment variable to the location of the Cinema 4D. "
+        r"The default location for Cinema 4D on Windows is 'C:\Program Files\Maxon Cinema 4D 2025\'"
+    )
 
 
 @pytest.fixture

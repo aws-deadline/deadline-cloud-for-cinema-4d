@@ -50,11 +50,11 @@ def create_c4d_job_bundle(
     )
 
 
-def is_openjd_run_with_cinema4d_successful(
+def assert_openjd_run_with_cinema4d_successful(
     cinema4d_location: Path,
     template_path: Path,
     params_path: Path,
-) -> bool:
+) -> None:
     """
     Runs the steps for template using Open JD run with Cinema 4D.
     Returns True if successful.
@@ -72,11 +72,16 @@ def is_openjd_run_with_cinema4d_successful(
 
         with open(params_path, encoding="utf-8") as f:
             parameter_values = safe_load(f)["parameterValues"]
-            job_params = {
-                item["name"]: item["value"]
-                for item in parameter_values
-                if item["name"] in ["Cinema4DFile", "Frames", "MultiPassPath", "OutputPath"]
-            }
+            job_params = {item["name"]: item["value"] for item in parameter_values}
+
+            # Remove the queue Env Parameters
+            job_params.pop("CondaChannels", None)
+            job_params.pop("CondaPackages", None)
+            # Remove Deadline Cloud specific parameters
+            job_params.pop("deadline:maxFailedTasksCount", None)
+            job_params.pop("deadline:priority", None)
+            job_params.pop("deadline:maxRetriesPerTask", None)
+            job_params.pop("deadline:targetTaskRunStatus", None)
 
         for step in template["steps"]:
             output = run_command(
@@ -92,8 +97,6 @@ def is_openjd_run_with_cinema4d_successful(
             )
 
             assert output.returncode == 0
-
-    return True
 
 
 def replace_backslashes(content: str) -> str:

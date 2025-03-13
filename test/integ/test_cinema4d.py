@@ -4,7 +4,7 @@ from .utils import (
     create_c4d_job_bundle,
     assert_is_valid_job_bundle,
     assert_expected_job_bundle_and_generated_job_bundle_are_equal,
-    is_openjd_run_with_cinema4d_successful,
+    assert_openjd_run_with_cinema4d_successful,
     assert_all_images_close,
 )
 
@@ -58,7 +58,7 @@ def test_integ(
         expected_job_bundle, job_bundle_generated
     )
 
-    assert is_openjd_run_with_cinema4d_successful(
+    assert_openjd_run_with_cinema4d_successful(
         cinema4d_location,
         job_bundle_generated / "template.yaml",
         job_bundle_generated / "parameter_values.yaml",
