@@ -29,3 +29,9 @@ def PluginMessage(id, data):
     if id == c4d.C4DPL_COMMANDLINEARGS:
         return parse_argv(sys.argv)
     return False
+
+# TODO: Investigate if this file is still needed. 
+# Currently, PluginMessage function is not called when the plugin is loaded in adaptor tests.
+# To unblock for tests, we check if the environment variable is set and if so, run the main function.
+if os.environ.get("CINEMA4D_ADAPTOR_TESTING", "false").lower() == "true":
+    main()

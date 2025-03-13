@@ -15,6 +15,7 @@ Table of Contents:
       * [Running the Adaptor Locally](#running-the-adaptor-locally)
       * [Running the Adaptor on a Farm](#running-the-adaptor-on-a-farm)
       * [Testing the Adaptor](#testing-the-adaptor)
+   * [Running the integration tests](#integration-tests-currently-wip)
 
 ## Development Environment Setup
 
@@ -87,49 +88,6 @@ To run the unit tests, simply use hatch:
 ```bash
 hatch run test
 ```
-
-##### Integration Tests (Currently WIP)
-
-We run submitter integration tests by running it in Cinema 4D's python i.e. c4dpy. 
-
-Test Flow for submitter
----------
-1. Scene Generation:
-   - Each test case uses scene generation scripts to create test scenes (and assets if necessary)
-   - Scenes are created with specific configurations for testing different scenarios
-
-2. Job Submission:
-   - Generated scenes are processed through the submitter code
-   - Job bundles are exported to a temporary location within the /integ folder.
-
-3. Validation:
-   - Exported bundles are compared against expected bundles
-   - Tests verify structure and content of the exports.
-
-Test Structure
--------------
-/test
-   /integ
-      /test_scenes/           
-         /scene_1
-            /expected_job_bundle/      # Reference job bundle for validation
-               asset_references.yaml
-               parameter_values.yaml
-               template.yaml 
-            /scene
-               scene.py      # Contains test scene generation scripts
-      conftest.py            # Test configuration and fixtures
-      test_cinema4d.py       # Runs all the tests scenes in a parametrized fashion.
-
-
-You would have to setup Cinema 4D licensing before you run the tests.
-
-1. Set the environment variable `C4D_PYTHON` to the location of the Cinema 4D python.
-   1. `set C4D_PYTHON=<c4dpy location>` on Windows Command or `$env:C4D_PYTHON = <c4dpy location>` on Windows Powershell.
-      1. The default location for `c4dpy` on Windows is `C:\Program Files\Maxon Cinema 4D 2025\c4dpy`
-3. Run `hatch run integ:test`
-
-
 
 ### Adaptor Development Workflow
 
@@ -226,3 +184,59 @@ To run the unit tests, simply use hatch:
 ```bash
 hatch run test
 ```
+
+
+
+### Integration Tests (Currently WIP)
+
+We run integration tests by running it in Cinema 4D's python i.e. c4dpy for submitter and using Commandline.exe for adaptor tests. 
+
+#### Test Flow
+1. Scene Generation:
+   - Each test case uses scene generation scripts to create test scenes (and assets if necessary)
+   - Scenes are created with specific configurations for testing different scenarios
+
+2. Job Bundle generation:
+   - Generated scenes are processed through the submitter code
+   - Job bundles are exported to a temporary location within the /integ folder.
+
+3. Validation of job bundle:
+   - Exported bundles are compared against expected bundles
+   - Tests verify structure and content of the exports.
+
+4. Scene rendering:
+   - The job bundles are run using OpenJD `run` command with Cinema 4D Commandline. 
+
+5. Validation of output files:
+   - The generated output files are compared with expected scene files. 
+
+#### Test Structure
+
+<pre>
+   /test
+      /integ
+         /test_scenes/           
+            /scene_1
+               /expected_job_bundle/      # Reference job bundle for validation
+                  asset_references.yaml
+                  parameter_values.yaml
+                  template.yaml 
+               /expected_job_output/
+                  renders/
+                     output files
+               /scene
+                  scene.py      # Contains test scene generation scripts
+         conftest.py            # Test configuration and fixtures
+         test_cinema4d.py       # Runs all the tests scenes in a parametrized fashion.
+</pre>
+
+You would have to setup Cinema 4D licensing before you run the tests.
+
+1. Set the environment variable `C4D_PYTHON` to the installation folder of Cinema 4D.
+   1. `set C4D_PYTHON=<Cinema 4D location>` on Windows Command or `$env:C4D_PYTHON = <Cinema 4D location>` on Windows Powershell.
+      1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2025\`. This location would be automatically used if the directory exists.
+2. For running the adaptor tests, we would need to install `pywin32` to the installation paths as its an adaptor dependency.
+   2.1 Run `pip install pywin32==308 -t <your Python site-packages location>`. 
+   During my testing, pywin32's version 308 was required because of other dependencies requiring this version.s
+3. Run `hatch run integ:test`
+

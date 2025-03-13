@@ -7,3 +7,5 @@ pytest-xdist == 3.*
 ruff == 0.9.*
 twine == 6.*
 types-pyyaml == 6.*
+numpy == 2.*  # for integ tests
+pillow == 11.*  # for integ tests
