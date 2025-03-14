@@ -58,6 +58,7 @@ def setup_render_settings(doc, frame_start, frame_end):
     render_data[c4d.RDATA_FRAMETO] = frame_end
     render_data[c4d.RDATA_RENDERENGINE] = 1036219  # redshift
     render_data[c4d.RDATA_FORMAT] = c4d.FILTER_PNG
+    render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
 
 
 def main():

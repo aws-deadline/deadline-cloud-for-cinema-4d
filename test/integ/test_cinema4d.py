@@ -9,11 +9,28 @@ from .utils import (
 )
 
 from shutil import rmtree
+import pytest
 
 
+@pytest.mark.parametrize(
+    "test_name",
+    [
+        "physical",
+        "physical_textured",
+        "redshift",
+        "redshift_takes",
+        # TODO: Currently, there is an issue with multipass
+        # not producing outputs.
+        # So we should investigate that separately.
+        # "redshift_multipass",
+        "redshift_textured",
+        "redshift_textured_with_nonascii_characters",
+    ],
+)
 def test_integ(
     cinema4d_location: Path,
     test_scenes_folder_location: Path,
+    test_name: str,
 ) -> None:
     """
     Performs integration testing for Cinema 4D rendering.
@@ -41,9 +58,7 @@ def test_integ(
     """
 
     c4dpy_location = cinema4d_location / "c4dpy"
-    test_scene_folder_location = (
-        test_scenes_folder_location / "redshift_textured_with_nonascii_characters"
-    )
+    test_scene_folder_location = test_scenes_folder_location / test_name
 
     test_scene_script_location = test_scene_folder_location / "scene" / "scene.py"
     job_bundle_generated = test_scene_folder_location / "generated_bundle"
