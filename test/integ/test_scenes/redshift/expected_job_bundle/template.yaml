@@ -94,7 +94,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
-          timeout: 600
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -114,3 +114,4 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800

@@ -36,7 +36,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/aws-deadline/deadline-cloud-for-cinema-4d"
-Source = "https://github.com/aws-deadline/deadline-cloud-for-cinimema-4d"
+Source = "https://github.com/aws-deadline/deadline-cloud-for-cinema-4d"
 
 [project.scripts]
 cinema4d-openjd = "deadline.cinema4d_adaptor.Cinema4DAdaptor:main"
