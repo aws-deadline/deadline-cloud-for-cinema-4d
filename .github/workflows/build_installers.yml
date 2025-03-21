@@ -1,0 +1,29 @@
+name: "Build Installers"
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref_type:
+        required: true
+        type: choice
+        options:
+        - heads
+        - tags
+        default: "tags"
+      ref:
+        required: true
+        type: string
+        default: "mainline"
+
+jobs:
+  BuildInstallers:
+    if: (github.repository == 'aws-deadline/deadline-cloud-for-cinema-4d')
+    name: Build Installers
+    uses: aws-deadline/.github/.github/workflows/reusable_build_installers.yml@mainline
+    secrets: inherit
+    with:
+      environment: "mainline"
+      ref_type: ${{inputs.ref_type}}
+      ref: ${{inputs.ref}}
+      oses: "['Windows', 'MacOS']"
+      project_name: "deadline-cloud-for-cinema-4d"

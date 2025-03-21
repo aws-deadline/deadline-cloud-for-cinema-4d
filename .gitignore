@@ -19,3 +19,5 @@ __pycache__/
 /scripts/dependency_bundle/
 /wheels/
 **/otls/backup
+
+DeadlineCloudForCinema4DSubmitter-*

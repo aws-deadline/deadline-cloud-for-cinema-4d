@@ -6,6 +6,7 @@ pre-install-commands = [
 [envs.default.scripts]
 sync = "pip install -r requirements-testing.txt"
 test = "pytest {args:test/unit}  -vvv"
+test-installer = "pytest --no-cov {args:test/installer} -vvv"
 typing = "mypy {args:src test}"
 style = [
   "ruff check {args:.}",
@@ -47,3 +48,6 @@ pre-install-commands = [
 
 [envs.integ.scripts]
 test = "pytest --no-cov {args:test/integ} -vvv --numprocesses=1"
+
+[envs.installer.scripts]
+build-installer = "python {root}/scripts/build_installer_cli.py --installer-source-path {root}/installer/DeadlineCloudForCinema4dSubmitter.xml {args:}"
