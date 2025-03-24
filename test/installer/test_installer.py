@@ -72,9 +72,7 @@ def test_install(installed: Path):
         assert "cinema_4d_plugins" in top_level_dir
 
         # Check the Cinema_4d plugin file is inside the plugin folder
-        plugin_file = [
-            f.name for f in (installed / "cinema_4d_plugins").iterdir()
-        ]
+        plugin_file = [f.name for f in (installed / "cinema_4d_plugins").iterdir()]
         assert len(plugin_file) == 1
         assert "DeadlineCloud.pyp" in plugin_file
 
@@ -103,4 +101,3 @@ def test_uninstall(installed: Path):
             break
         time.sleep(10)
     assert not installed.exists()
-

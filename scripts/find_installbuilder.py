@@ -182,4 +182,3 @@ def _get_default_installbuilder_location() -> Path:
     if not candidates:
         raise FileNotFoundError("Could not find a default InstallBuilder path.")
     return candidates[0].path
-
