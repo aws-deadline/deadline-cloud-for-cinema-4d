@@ -35,3 +35,4 @@ def run(cmd, cwd=None, env=None, echo=True):
     if p.returncode != 0:
         raise BadExitCodeError(f"Bad rc ({p.returncode}) for cmd '{cmd}': {output}")
     return output
+

@@ -104,3 +104,4 @@ def test_uninstall(installed: Path):
             break
         time.sleep(10)
     assert not installed.exists()
+

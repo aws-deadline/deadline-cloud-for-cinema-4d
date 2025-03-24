@@ -196,3 +196,4 @@ def main(
             output_dir.mkdir(exist_ok=True)
             output_path = output_dir / output_path
         shutil.move(installer_path, output_path)
+
