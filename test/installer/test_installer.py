@@ -44,7 +44,7 @@ def installed(installer_path, tmp_path):
         "--prefix",
         tmp_path,
         "--enable-components",
-        "deadline_cloud_for_Cinema_4d",
+        "deadline_cloud_for_cinema_4d",
     ]
     result = subprocess.run(args, check=True)
     assert result.returncode == 0
@@ -60,24 +60,23 @@ def test_install(installed: Path):
         uninstaller = "uninstall.exe"
     else:
         uninstaller = "uninstall"
-    python_dir = installed / "python"
 
     # THEN
     top_level_dir = [f.name for f in installed.iterdir()]
-    assert python_dir.name in top_level_dir
     assert "installer_version.txt" in top_level_dir
     assert uninstaller in top_level_dir
+    assert "deadline" in top_level_dir
+    assert "qtpy" in top_level_dir
 
-    # Just check that we have dependencies in this folder
-    module_dir = [f.name for f in (python_dir / "modules").iterdir()]
-    assert "deadline" in module_dir
-    assert "qtpy" in module_dir
+    if platform.system() == "Windows":
+        assert "cinema_4d_plugins" in top_level_dir
 
-    # Check the Cinema_4d module is here and there's a version file
-    addon_dir = [
-        f.name for f in (python_dir / "addons" / "deadline_cloud_Cinema_4d_submitter").iterdir()
-    ]
-    assert "_version.py" in addon_dir
+        # Check the Cinema_4d plugin file is inside the plugin folder
+        plugin_file = [
+            f.name for f in (installed / "cinema_4d_plugins").iterdir()
+        ]
+        assert len(plugin_file) == 1
+        assert "DeadlineCloud.pyp" in plugin_file
 
 
 def test_uninstall(installed: Path):
