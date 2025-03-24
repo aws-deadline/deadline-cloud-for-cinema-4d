@@ -5,8 +5,10 @@ python depsBundle.py
 
 rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-windows.zip
 rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-linux.zip
-rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos.zip
+rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-intel.zip
+rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-arm64.zip
 
 cp dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-windows.zip
 cp dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-linux.zip
-cp dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos.zip
+cp dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-intel.zip
+cp dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-arm64.zip

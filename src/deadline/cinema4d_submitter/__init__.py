@@ -24,10 +24,16 @@ def has_gui_deps():
 
 def install_gui():
     c4d_app = sys.executable
+
+    c4d_executable = "Cinema 4D.exe"
+    python_location = "resource\\modules\\python\\libs\\win64\\python.exe"
+    # If its MacOS, install it in MacOS python location.
+    if sys.platform == "darwin":
+        c4d_executable = "Cinema 4D.app/Contents/MacOS/Cinema 4D"
+        python_location = "resource/modules/python/libs/python311.macos.framework/python"
+
     # We want to install the GUI components using Cinema 4D's python.
-    c4d_python = c4d_app.replace(
-        "Cinema 4D.exe", "resource\\modules\\python\\libs\\win64\\python.exe"
-    )
+    c4d_python = c4d_app.replace(c4d_executable, python_location)
 
     # install pip if needed - C4D python doesn't come with it installed by default
     ensurepip_command = [

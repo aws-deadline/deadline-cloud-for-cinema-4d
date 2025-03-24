@@ -23,6 +23,9 @@ if sys.platform in ["win32", "cygwin"]:
     # Required due to a longstanding bug in C4D to not include the python dll library path required by many compiled libs
     #   Read more here: https://github.com/danbradham/wheels/issues/4#issuecomment-1772721170
     os.add_dll_directory(dll_path)
+elif sys.platform == "darwin": # If MacOS
+    # This path will be replaced when the installer is running
+    sys.path.append("C4D_Submitter_Installation_Dir_To_Replace")
 
 root = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root, 'modules'))
