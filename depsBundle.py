@@ -76,68 +76,74 @@ def _build_base_environment(working_directory: Path, dependencies: list[str]) ->
     return base_env_path
 
 
-def _download_native_dependencies(working_directory: Path, base_env: Path) -> list[Path]:
-    versioned_native_dependencies = [
-        f"{package_name}=={_get_package_version(package_name, base_env)}"
-        for package_name in NATIVE_DEPENDENCIES
-    ]
-    native_dependency_paths = []
-    for version in SUPPORTED_PYTHON_VERSIONS:
-        for platform in SUPPORTED_PLATFORMS:
-            native_dependency_path = (
-                working_directory / "native" / f"{version.replace('.', '_')}_{platform}"
-            )
-            native_dependency_paths.append(native_dependency_path)
-            native_dependency_path.mkdir(parents=True)
-            native_dependency_pip_args = [
-                "pip",
-                "install",
-                "--target",
-                str(native_dependency_path),
-                "--platform",
-                platform,
-                "--python-version",
-                version,
-                "--only-binary=:all:",
-                *versioned_native_dependencies,
-            ]
-            subprocess.run(native_dependency_pip_args, check=True)
-    return native_dependency_paths
-
-
-def _copy_native_to_base_env(base_env: Path, native_dependency_paths: list[Path]) -> None:
-    for native_dependency_path in native_dependency_paths:
-        for file in native_dependency_path.rglob("*"):
-            if file.is_file():
-                relative = file.relative_to(native_dependency_path)
-                in_base_env = base_env / relative
-                if not in_base_env.exists():
-                    in_base_env.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy(str(file), str(in_base_env))
-
-
-def _get_zip_path(working_directory: Path, project_dict: dict[str, Any]) -> Path:
+def _get_zip_path(working_directory: Path, project_dict: dict[str, Any], platform: str) -> Path:
     if "project" not in project_dict:
         raise Exception("pyproject.toml is missing project section")
     if "name" not in project_dict["project"]:
         raise Exception("pyproject.toml is missing name section")
-    transformed_project_name = (
-        f"{project_dict['project']['name'].replace('-', '_')}_submitter-deps.zip"
-    )
-    return working_directory / transformed_project_name
+    base_name = project_dict["project"]["name"].replace("-", "_")
+    zip_name = f"{base_name}_submitter-deps_{platform}.zip"
+    return working_directory / zip_name
 
 
-def _zip_bundle(base_env: Path, zip_path: Path) -> None:
-    shutil.make_archive(str(zip_path.with_suffix("")), "zip", str(base_env))
+def _download_and_zip_for_platform(
+    working_directory: Path, base_env: Path, project_dict: dict[str, Any], platform: str
+) -> Path:
+    print(f"Processing platform: {platform}")
 
+    # Clear pip cache
+    subprocess.run(["pip", "cache", "purge"], check=True)
+    print("Cleared pip cache")
 
-def _copy_zip_to_destination(zip_path: Path) -> None:
-    dependency_bundle_dir = Path.cwd() / "dependency_bundle"
-    dependency_bundle_dir.mkdir(exist_ok=True)
-    zip_desntination = dependency_bundle_dir / zip_path.name
-    if zip_desntination.exists():
-        zip_desntination.unlink()
-    shutil.copy(str(zip_path), str(zip_desntination))
+    native_dependency_paths = []
+    for version in SUPPORTED_PYTHON_VERSIONS:
+        native_dependency_path = (
+            working_directory / "native" / f"{version.replace('.', '_')}_{platform}"
+        )
+        native_dependency_paths.append(native_dependency_path)
+        native_dependency_path.mkdir(parents=True)
+
+        versioned_native_dependencies = [
+            f"{package_name}=={_get_package_version(package_name, base_env)}"
+            for package_name in NATIVE_DEPENDENCIES
+        ]
+
+        native_dependency_pip_args = [
+            "pip",
+            "install",
+            "--target",
+            str(native_dependency_path),
+            "--platform",
+            platform,
+            "--python-version",
+            version,
+            "--only-binary=:all:",
+            *versioned_native_dependencies,
+        ]
+        subprocess.run(native_dependency_pip_args, check=True)
+        print(f"Installed dependencies for Python {version} on {platform}")
+
+    # Create zip for this platform
+    with TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        # Copy base environment first
+        shutil.copytree(str(base_env), str(temp_path), dirs_exist_ok=True)
+
+        # Copy platform-specific files, merging with base environment
+        for native_path in native_dependency_paths:
+            for file in native_path.rglob("*"):
+                if file.is_file():
+                    relative = file.relative_to(native_path)
+                    dest_path = temp_path / relative
+                    dest_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(str(file), str(dest_path))
+
+        zip_path = _get_zip_path(working_directory, project_dict, platform)
+        shutil.make_archive(str(zip_path.with_suffix("")), "zip", str(temp_path))
+        print(f"Created zip bundle for {platform}: {zip_path}")
+
+    return zip_path
 
 
 def build_deps_bundle() -> None:
@@ -146,12 +152,23 @@ def build_deps_bundle() -> None:
         project_dict = _get_project_dict()
         dependencies = _get_dependencies(project_dict)
         base_env = _build_base_environment(working_directory, dependencies)
-        native_dependency_paths = _download_native_dependencies(working_directory, base_env)
-        _copy_native_to_base_env(base_env, native_dependency_paths)
-        zip_path = _get_zip_path(working_directory, project_dict)
-        _zip_bundle(base_env, zip_path)
-        print(list(working_directory.glob("*")))
-        _copy_zip_to_destination(zip_path)
+
+        dependency_bundle_dir = Path.cwd() / "dependency_bundle"
+        dependency_bundle_dir.mkdir(exist_ok=True)
+
+        for platform in SUPPORTED_PLATFORMS:
+            zip_path = _download_and_zip_for_platform(
+                working_directory, base_env, project_dict, platform
+            )
+
+            # Copy zip to destination
+            zip_destination = dependency_bundle_dir / zip_path.name
+            if zip_destination.exists():
+                zip_destination.unlink()
+            shutil.copy(str(zip_path), str(zip_destination))
+            print(f"Copied {platform} bundle to {zip_destination}")
+
+        print("All platforms processed and zipped.")
 
 
 if __name__ == "__main__":
