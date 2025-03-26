@@ -1,3 +1,4 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This file is used only for integration tests.
 from .cinema4d_render_submitter import (
     initialize_render_settings,
