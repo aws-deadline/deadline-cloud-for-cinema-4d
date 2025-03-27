@@ -1,3 +1,14 @@
+## 0.7.2 (2025-03-27)
+
+
+### Features
+* Add configurable GUI timeouts for jobs in submitter. (#180) ([`2b79232`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/2b79232739b2561de52b5414b60225f5f7ca82ea))
+
+### Bug Fixes
+* Avoid checked take from overriding other takes in submission (#185) ([`a015719`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/a015719dc93577fc95c7a584b23cd026bbd87fb9))
+* Replace C4D tokens with values in paths. (#183) ([`d655133`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/d6551334e63241941aa2dfa14316b62b1334ba14))
+* Add timeout for Cinema 4D jobs on EnvExit. (#173) ([`ce769c0`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/ce769c0168889c81811d575cfe12b54ddc43d76e))
+
 ## 0.7.1 (2025-02-05)
 
 
