@@ -245,7 +245,6 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             completed_regexes = [re.compile(".*Finished Rendering.*")]
             progress_regexes = [re.compile(".*Progress ([0-9]+)%.*")]
             error_regexes = [
-                re.compile(r".*CRITICAL: Stop.*", re.IGNORECASE),
                 re.compile(r".*Document not found.*", re.IGNORECASE),
                 re.compile(r".*Project not found.*", re.IGNORECASE),
                 re.compile(r".*Error rendering project.*", re.IGNORECASE),

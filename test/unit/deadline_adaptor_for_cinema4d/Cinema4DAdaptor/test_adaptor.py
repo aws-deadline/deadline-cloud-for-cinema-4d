@@ -28,8 +28,8 @@ class TestCinema4DAdaptor_on_cleanup:
     @pytest.mark.parametrize(
         "stdout,error_expected",
         [
-            # Only critical stop errors should fail the job
-            ("CRITICAL: Stop [ge_file.cpp(1172)]", True),
+            # Critical stops should not fail the job.
+            ("CRITICAL: Stop [ge_file.cpp(1172)]", False),
             # Any string with substring "Error:" should fail the job
             ("Redshift Error: Maxon licensing error: User not logged in (7)", True),
             # This error can be printed but the jobs are still successful.
