@@ -1,3 +1,10 @@
+## 0.7.3 (2025-03-31)
+
+
+
+### Bug Fixes
+* Remove 'CRITICAL: Stop' from error regexes in adaptor (#192) ([`4a959e8`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/4a959e8f26c97fe7558ea23f59514a2694014ae0))
+
 ## 0.7.2 (2025-03-27)
 
 
