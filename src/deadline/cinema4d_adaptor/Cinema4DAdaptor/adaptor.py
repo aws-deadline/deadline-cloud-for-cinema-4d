@@ -240,10 +240,12 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         if not self._regex_callbacks:
             callback_list = []
 
-            _cinema4d_license_error = "RuntimeError: Error encountered when initializing Cinema4D"
-
             completed_regexes = [re.compile(".*Finished Rendering.*")]
+            callback_list.append(RegexCallback(completed_regexes, self._handle_complete))
+
             progress_regexes = [re.compile(".*Progress ([0-9]+)%.*")]
+            callback_list.append(RegexCallback(progress_regexes, self._handle_progress))
+
             error_regexes = [
                 re.compile(r".*Document not found.*", re.IGNORECASE),
                 re.compile(r".*Project not found.*", re.IGNORECASE),
@@ -266,15 +268,13 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 re.compile(r".*Rendering was internally aborted.*", re.IGNORECASE),
                 re.compile(r'.*Cannot find procedure "rsPreference".*', re.IGNORECASE),
             ]
-
-            callback_list.append(RegexCallback(completed_regexes, self._handle_complete))
-            callback_list.append(RegexCallback(progress_regexes, self._handle_progress))
             callback_list.append(RegexCallback(error_regexes, self._handle_error))
 
+            insufficient_ram_regexes = re.compile(r".*Failed to allocate mem.*", re.IGNORECASE)
             callback_list.append(
                 RegexCallback(
-                    [re.compile(_cinema4d_license_error)],
-                    self._handle_license_error,
+                    [re.compile(insufficient_ram_regexes)],
+                    self._handle_insufficient_ram,
                 )
             )
 
@@ -323,16 +323,23 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         """
         self._exc_info = RuntimeError(f"Cinema4D Encountered an Error: {match.group(0)}")
 
-    def _handle_license_error(self, match: re.Match) -> None:
+    def _handle_insufficient_ram(self, match: re.Match) -> None:
         """
-        Callback for stdout that indicates an license error.
+        Handle insufficient RAM errors during Redshift rendering.
+
         Args:
-            match (re.Match): The match object from the regex pattern that was matched the message
+            match (re.Match): The match object containing the failed memory allocation size
 
         Raises:
-            RuntimeError: Always raises a runtime error to halt the adaptor.
+            RuntimeError: Raised when RAM allocation fails
         """
-        self._exc_info = RuntimeError(match.group(0))
+        message = (
+            "Redshift requires more RAM to render. "
+            "Please increase your worker's RAM to at least double of worker's "
+            f"GPU VRAM. Error: {match.group(0)}"
+        )
+
+        self._exc_info = RuntimeError(message)
 
     def _add_deadline_openjd_paths(self) -> None:
         # Add the openjd namespace directory to PYTHONPATH, so that adaptor_runtime_client
