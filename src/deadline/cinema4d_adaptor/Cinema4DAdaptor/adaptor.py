@@ -335,8 +335,9 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         """
         message = (
             "Redshift requires more RAM to render. "
-            "Please increase your worker's RAM to at least double of worker's "
-            f"GPU VRAM. Error: {match.group(0)}"
+            "Please increase the worker's RAM to at least double the worker's GPU VRAM. For more info: "
+            "https://help.maxon.net/c4d/s26/de-de/Content/_REDSHIFT_/html/Dealing+with+Out-Of-RAM+situations.html. "
+            f"Error: {match.group(0)}"
         )
 
         self._exc_info = RuntimeError(message)

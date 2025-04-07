@@ -103,9 +103,11 @@ class TestCinema4DAdaptor_on_cleanup:
 
         # THEN
         assert match is not None
-        assert (
-            str(adaptor._exc_info)
-            == f"Redshift requires more RAM to render. Please increase your worker's RAM to at least double of worker's GPU VRAM. Error: {stdout}"
+        assert str(adaptor._exc_info) == (
+            "Redshift requires more RAM to render. "
+            "Please increase the worker's RAM to at least double the worker's GPU VRAM. For more info: "
+            "https://help.maxon.net/c4d/s26/de-de/Content/_REDSHIFT_/html/Dealing+with+Out-Of-RAM+situations.html. "
+            f"Error: {stdout}"
         )
 
 
