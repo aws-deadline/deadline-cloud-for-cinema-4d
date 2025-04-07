@@ -1,14 +1,11 @@
 #!/bin/bash
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+# This script is called in a shell subprocess.
+# If editing this script, please see the security considerations
+# of this invocation method:
+# https://docs.python.org/3/library/subprocess.html#security-considerations
+
 set -xeuo pipefail
 
-python depsBundle.py
-
-rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-windows.zip
-rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-linux.zip
-rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-intel.zip
-rm -f dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-arm64.zip
-
-mv dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps_win_amd64.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-windows.zip
-mv dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps_manylinux2014_x86_64.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-linux.zip
-mv dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps_macosx_10_9_x86_64.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-intel.zip
-mv dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps_macosx_11_0_arm64.zip dependency_bundle/deadline_cloud_for_cinema_4d_submitter-deps-macos-arm64.zip
+python3 scripts/depsBundle.py

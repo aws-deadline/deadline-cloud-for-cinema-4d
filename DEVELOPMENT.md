@@ -44,11 +44,14 @@ from any directory of this repository:
 * `hatch build` - To build the installable Python wheel and sdist packages into the `dist/` directory.
 * `hatch run test` - To run the PyTest unit tests found in the `test/unit` directory. See [Testing](#testing).
 * `hatch run all:test` - To run the PyTest unit tests against all available supported versions of Python.
+* `hatch run integ:test` - To run all the integration tests against your current build.
 * `hatch run lint` - To check that the package's formatting adheres to our standards.
 * `hatch run fmt` - To automatically reformat all code to adhere to our formatting standards.
 * `hatch shell` - Enter a shell environment that will have Python set up to import your development version of this package.
 * `hatch env prune` - Delete all of your isolated workspace [environments](https://hatch.pypa.io/1.12/environment/)
    for this package.
+* `hatch run installer:build-installer --local-dev --platform <PLATFORM> [--install-builder-path <LOCATION> --output-dir <DIR>]` - To build a local submitter installer. 
+* `hatch run test-installer` - To run tests against your locally built installer. 
 
 Note: Hatch uses [environments](https://hatch.pypa.io/1.12/environment/) to isolate the Python development workspace
 for this package from your system or virtual environment Python. If your build/test run is not making sense, then
