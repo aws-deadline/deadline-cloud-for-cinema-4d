@@ -18,6 +18,9 @@ See [DEVELOPMENT.md](https://github.com/aws-deadline/deadline-cloud-for-cinema-4
 - Have you run the unit tests?
 *delete text ending here*
 
+- Have you run the integration tests? (Add your integration test report below)
+*delete text ending here* 
+
 ### Was this change documented?
 
 *delete text starting here*
