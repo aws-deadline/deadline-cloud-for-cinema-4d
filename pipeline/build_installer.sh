@@ -4,4 +4,4 @@
 # Set the -e option
 set -e
 
-hatch run installer:build_installer "$@"
+hatch run installer:build-installer "$@"
