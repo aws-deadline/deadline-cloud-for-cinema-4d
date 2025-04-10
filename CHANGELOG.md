@@ -1,3 +1,10 @@
+## 0.7.4 (2025-04-10)
+
+
+
+### Bug Fixes
+* Add better messaging when Redshift runs out of memory. (#196) ([`9dbea22`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/9dbea2268f4d70afede758f73b1aedceb0d100dd))
+
 ## 0.7.3 (2025-03-31)
 
 
