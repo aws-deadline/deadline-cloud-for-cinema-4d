@@ -13,7 +13,6 @@ from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 from deadline.client.exceptions import DeadlineOperationError
 from deadline.client.job_bundle._yaml import deadline_yaml_dump
 from deadline.client.job_bundle.submission import AssetReferences
-from deadline.client.ui.dataclasses import HostRequirements, OsRequirements
 from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint: disable=import-error
     JobBundlePurpose,
     SubmitJobToDeadlineDialog,
@@ -547,9 +546,6 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
         parent=parent,
         f=f,
         show_host_requirements_tab=True,
-        host_requirements=HostRequirements(
-            os_requirements=OsRequirements(operating_systems=[OsRequirements.WINDOWS])
-        ),
     )
 
     return submitter_dialog

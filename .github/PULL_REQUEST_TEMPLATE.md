@@ -21,7 +21,9 @@ See [DEVELOPMENT.md](https://github.com/aws-deadline/deadline-cloud-for-cinema-4
 - Have you run the integration tests? (Add your integration test report below)
 *delete text ending here* 
 
-- Have you made changes to the submitter? (If yes, please include the results of both the automated tests and any manual tests that you ran)
+- Have you made changes to the submitter?
+If yes, please include the results of both the automated tests and any manual tests that you ran.
+Also, check if there is a change to the `integ_test_helpers.py` file within cinema4d_submitter as a result of your submitter change.
 *delete text ending here* 
 
 ### Was this change documented?

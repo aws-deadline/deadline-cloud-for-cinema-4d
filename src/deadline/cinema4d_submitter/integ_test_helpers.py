@@ -68,17 +68,6 @@ def sample_queue_params() -> list:
     ]
 
 
-def sample_host_requirements() -> dict:
-    """
-    This is an example of host_requirements for a submission.
-    """
-    return {
-        "attributes": [
-            {"name": "attr.worker.os.family", "anyOf": ["windows"]},
-        ]
-    }
-
-
 def internal_create_job_bundle(job_bundle_dir: str):
     """
     This function mimics the call that Cinema 4D submitter does to generate the job bundle.
@@ -101,5 +90,4 @@ def internal_create_job_bundle(job_bundle_dir: str):
         asset_references=auto_detected_attachments,
         queue_parameters=sample_queue_params(),
         attachments=attachments,
-        host_requirements=sample_host_requirements(),
     )
