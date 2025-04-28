@@ -23,18 +23,9 @@ if sys.platform in ["win32", "cygwin"]:
     # Required due to a longstanding bug in C4D to not include the python dll library path required by many compiled libs
     #   Read more here: https://github.com/danbradham/wheels/issues/4#issuecomment-1772721170
     os.add_dll_directory(dll_path)
-elif sys.platform == "darwin": # If MacOS
-    # This path will be replaced when the installer is running
-    sys.path.append("C4D_Submitter_Installation_Dir_To_Replace")
 
 root = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(root, 'modules'))
-
-if 'deadline.cinema4d_submitter' not in sys.modules.keys():
-    import deadline.cinema4d_submitter
-else:
-    import importlib
-    importlib.reload(deadline.cinema4d_submitter)
 
 import c4d
 
@@ -44,8 +35,24 @@ PLUGIN_ID = 1064358
 
 class DeadlineCloudRenderCommand(c4d.plugins.CommandData):
 
-    def Execute(self, doc):
+    def _import_and_show_submitter(self):
+        import deadline.cinema4d_submitter
         deadline.cinema4d_submitter.show_submitter()
+    
+    def _execute_for_mac(self):
+        # This variable will be replaced to a path when the installer is running
+        C4D_MAC_INSTALLATION_PATH = "C4D_Submitter_Installation_Dir_To_Replace"
+        sys.path.append(C4D_MAC_INSTALLATION_PATH)
+        try:
+            self._import_and_show_submitter()
+        finally:
+            sys.path.remove(C4D_MAC_INSTALLATION_PATH)
+
+    def Execute(self, doc):
+        if sys.platform == "darwin":
+            self._execute_for_mac()
+        else:
+            self._import_and_show_submitter()
         return True
 
 
