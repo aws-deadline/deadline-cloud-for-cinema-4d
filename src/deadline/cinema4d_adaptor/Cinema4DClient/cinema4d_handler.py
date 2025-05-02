@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import os
+import traceback
 from typing import Any, Callable, Dict
 
 try:
     import c4d  # type: ignore
+    import maxon
     from c4d import bitmaps
 except ImportError:  # pragma: no cover
     raise OSError("Could not find the Cinema4D module. Are you running this inside of Cinema4D?")
@@ -60,11 +62,141 @@ class Cinema4DHandler:
             self.doc, allowDialogs=False, lastPath="", assetList=asset_list
         )
         for asset in asset_list:
-            asset_owner = asset.get("owner")
-            asset_param_id = asset.get("paramId")
-            asset_filename = asset.get("filename")
-            if asset_owner and asset_param_id and asset_filename:
-                asset_owner[asset_param_id] = self.map_path(asset_filename)
+            owner = asset.get("owner")
+            param_id = asset.get("paramId")
+            filename = asset.get("filename")
+            node_space = asset.get("nodeSpace")
+            node_path = asset.get("nodePath")
+            if not (owner and param_id and filename):
+                # unrelated asset, e.g. the main scene which is already pathmapped
+                continue
+            mapped_path = self.map_path(filename)
+            # note: we can't skip if mapped_path == filename because some internal
+            # references in the owner nodes may need to be updated
+
+            # whether we have done owner[param_id] = mapped_path
+            attempted_basic_path_mapping_approach = False
+            try:
+                print(
+                    f"Attempting to update path for asset with owner '{owner}', paramId '{param_id}', "
+                    f"new filename '{mapped_path}', nodeSpace '{node_space}', and nodePath '{node_path}'."
+                )
+                success = self._pathmap_recognized_types(
+                    owner, param_id, node_space, node_path, mapped_path
+                )
+
+                if not success:
+                    print(
+                        f"WARNING: asset wasn't recognized. Attempting to path map {owner}[{param_id}] = {mapped_path}"
+                    )
+                    attempted_basic_path_mapping_approach = True
+                    owner[param_id] = mapped_path
+
+            except Exception as e:
+                print(
+                    f"WARNING: asset with asset owner '{owner}', asset paramId {param_id}, filename "
+                    f"'{filename}', nodeSpace '{node_space}', and nodePath '{node_path}' could not be path "
+                    f"mapped. Error: {e} {traceback.format_exc()}"
+                )
+                if not attempted_basic_path_mapping_approach:
+                    print(
+                        f"Attempting to use basic path mapping {owner}[{param_id}] = {mapped_path}"
+                    )
+                    try:
+                        owner[param_id] = mapped_path
+                    except Exception as f:
+                        print(
+                            f"{owner}[{param_id}] = {mapped_path} failed. Error: {f} {traceback.format_exc()}"
+                        )
+
+    def _pathmap_recognized_types(
+        self, owner, param_id, node_space, node_path, mapped_path
+    ) -> bool:
+        """
+        Applies path mapping to recognized owner types.
+
+        Returns True if the owner is recognized and has been path mapped.
+        Returns False otherwise.
+        """
+        if isinstance(owner, c4d.BaseShader):
+            # C4D classic textures
+            return self._pathmap_base_shader(owner, param_id, mapped_path)
+
+        if isinstance(owner, c4d.BaseObject):
+            # Redshift light textures
+            return self._pathmap_base_object(owner, mapped_path)
+
+        if isinstance(owner, c4d.documents.BaseVideoPost):
+            # PostFX, e.g. LUT files or background files
+            return self._pathmap_base_video_post(owner, mapped_path)
+
+        if isinstance(owner, c4d.BaseMaterial):
+            # Redshift node-based materials
+            return self._pathmap_base_material(owner, node_space, node_path, mapped_path)
+
+        return False
+
+    def _pathmap_base_shader(self, owner, param_id, mapped_path) -> bool:
+        # C4D classic materials have a param ID other than -1
+        if param_id != -1:
+            owner[param_id] = mapped_path
+            return True
+        return False
+
+    def _pathmap_base_object(self, owner, mapped_path) -> bool:
+        # c4d.BaseObject e.g. Redshift light texture
+        mapped = False
+        for item in [
+            c4d.REDSHIFT_LIGHT_PHYSICAL_TEXTURE,
+            c4d.REDSHIFT_LIGHT_DOME_TEX0,
+            c4d.REDSHIFT_LIGHT_DOME_TEX1,
+        ]:
+            # there are three types of textures for Redshift lights.
+            # For each type of texture, we check if the texture is specified,
+            # and if it is, we override the path
+            desc_id = c4d.DescID(
+                # 1036765 is the data type for textures
+                c4d.DescLevel(item, 1036765),
+                c4d.DescLevel(c4d.REDSHIFT_FILE_PATH, c4d.DTYPE_STRING, 0),
+            )
+            existing_path = owner[desc_id]
+            if existing_path:
+                owner[desc_id] = mapped_path
+                mapped = True
+
+        return mapped
+
+    def _pathmap_base_video_post(self, owner, mapped_path) -> bool:
+        # PostFX, e.g. LUT files or background files
+        path = owner[c4d.REDSHIFT_POSTEFFECTS_LUT_FILE]
+        if path:
+            owner[c4d.REDSHIFT_POSTEFFECTS_LUT_FILE] = mapped_path
+            return True
+        return False
+
+    def _pathmap_base_material(self, owner, node_space, node_path, mapped_path) -> bool:
+        # Redshift materials
+        if not (node_path and node_space == "com.redshift3d.redshift4c4d.class.nodespace"):
+            return False
+
+        # Redshift node
+        node_material = owner.GetNodeMaterialReference()
+        graph = node_material.GetGraph(maxon.Id(node_space))
+        with graph.BeginTransaction() as transaction:
+            node = graph.GetNode(maxon.NodePath(node_path))
+            node_id = node.GetId().ToString()
+            if node_id.split("@")[0] == "texturesampler":
+                path_port = (
+                    node.GetInputs()
+                    .FindChild("com.redshift3d.redshift4c4d.nodes.core.texturesampler.tex0")
+                    .FindChild("path")
+                )
+                path_port.SetDefaultValue(mapped_path)
+            else:
+                print(f"Unrecognized nodeId {node_id}")
+                return False
+            transaction.Commit()
+        return True
 
     def start_render(self, data: dict) -> None:
         self.doc = c4d.documents.GetActiveDocument()
