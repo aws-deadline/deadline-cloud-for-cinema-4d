@@ -241,7 +241,7 @@ For redshift licensing, set the environment variable by using `$env:redshift_LIC
    1. `set C4D_PYTHON=<Cinema 4D location>` on Windows Command or `$env:C4D_PYTHON = <Cinema 4D location>` on Windows Powershell.
       1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2025\`. This location would be automatically used if the directory exists.
 2. For running the adaptor tests, we would need to install `pywin32` to the installation paths as its an adaptor dependency.
-   2.1 Run `pip install pywin32==308 -t <your Python site-packages location>`. 
+   2.1 Run `pip install pywin32==308 -t %C4D_PYTHON%\resource\modules\python\libs\win64\lib\site-packages`.
    During my testing, pywin32's version 308 was required because of other dependencies requiring this version.
 3. Run `hatch run integ:test`
 

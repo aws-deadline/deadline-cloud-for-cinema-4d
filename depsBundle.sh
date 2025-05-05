@@ -8,4 +8,4 @@
 
 set -xeuo pipefail
 
-python3 scripts/depsBundle.py
+python3 scripts/deps_bundle.py

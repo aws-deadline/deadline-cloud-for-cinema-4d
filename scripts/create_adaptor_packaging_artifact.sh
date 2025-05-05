@@ -12,7 +12,7 @@ ADAPTOR_NAME=deadline-cloud-for-$APP_WITH_HYPEN
 
 SCRIPTDIR=$(realpath $(dirname $0))
 
-SOURCE=0
+SOURCE=1
 # Python 3.11 is for https://vfxplatform.com/ CY2024
 PYTHON_VERSION=3.11
 CONDA_PLATFORM=win-64

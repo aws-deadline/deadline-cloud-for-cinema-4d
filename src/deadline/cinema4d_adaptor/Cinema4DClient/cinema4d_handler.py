@@ -2,7 +2,14 @@
 from __future__ import annotations
 
 import os
+import re
+import traceback
+from pathlib import Path
 from typing import Any, Callable, Dict
+
+from openjd.adaptor_runtime.adaptors import PathMappingRule
+from openjd.adaptor_runtime._utils import secure_open
+
 
 try:
     import c4d  # type: ignore
@@ -34,7 +41,11 @@ class Cinema4DHandler:
     render_kwargs: Dict[str, Any]
     map_path: Callable[[str], str]
 
-    def __init__(self, map_path: Callable[[str], str]) -> None:
+    def __init__(
+        self,
+        map_path: Callable[[str], str],
+        path_mapping_rules: Callable[[], list[PathMappingRule]],
+    ) -> None:
         """
         Constructor for the c4dpy handler. Initializes action_dict and render variables
         """
@@ -49,22 +60,89 @@ class Cinema4DHandler:
         self.render_kwargs = {}
         self.take = "Main"
         self.map_path = map_path
+        self.path_mapping_rules = path_mapping_rules
 
     def _remap_assets(self) -> None:
         """
         Asset references in the .c4d files are not automatically re-mapped if they are
         absolute paths. This function remaps the asset references to the new paths.
         """
+        self._set_c4d_native_asset_pathmap()
+        self._set_redshift_pathmap()
+
+    def _set_c4d_native_asset_pathmap(self) -> None:
         asset_list: list[Dict[str, Any]] = []
         c4d.documents.GetAllAssetsNew(
             self.doc, allowDialogs=False, lastPath="", assetList=asset_list
         )
         for asset in asset_list:
-            asset_owner = asset.get("owner")
-            asset_param_id = asset.get("paramId")
-            asset_filename = asset.get("filename")
-            if asset_owner and asset_param_id and asset_filename:
-                asset_owner[asset_param_id] = self.map_path(asset_filename)
+            owner = asset.get("owner")
+            param_id = asset.get("paramId")
+            filename = asset.get("filename")
+            node_space = asset.get("nodeSpace")
+            node_path = asset.get("nodePath")
+            if owner and param_id and filename:
+                if param_id != -1:
+                    try:
+                        # C4D classic assets have a param ID other than -1
+                        owner[param_id] = self.map_path(filename)
+                    except Exception as e:
+                        print(
+                            f"WARNING: asset with asset owner '{owner}', paramId {param_id}, filename "
+                            f"'{filename}', nodeSpace '{node_space}', and nodePath '{node_path}' could not be path "
+                            f"mapped. Error: {e} {traceback.format_exc()}"
+                        )
+
+    # Redshift path mapping
+    def _set_redshift_pathmap(self) -> None:
+        rules = self.path_mapping_rules()
+        if not rules:
+            print("No path mapping rules found")
+            return
+
+        print(f"Path mapping rules: {rules}")
+
+        redshift_rules: list[tuple[str, str]] = [
+            (rule.source_path.replace("\\", "/"), rule.destination_path.replace("\\", "/"))
+            for rule in rules
+        ]
+
+        # "C:/Users/AUser/Directory" "/sessions/session-abcd/"
+        redshift_rule_regex = re.compile(r"\"([^\"]*)\"\s+\"([^\"]*)\"")
+
+        # Collect any additional rules if REDSHIFT_PATHOVERRIDE_FILE is already set
+        if existing_rule_file_path := os.getenv("REDSHIFT_PATHOVERRIDE_FILE"):
+            print(
+                f"Found existing REDSHIFT_PATHOVERRIDE_FILE environment variable: {existing_rule_file_path}"
+            )
+            try:
+                with secure_open(
+                    existing_rule_file_path, "r", encoding="utf-8"
+                ) as existing_rule_file:
+                    redshift_rules.extend(redshift_rule_regex.findall(existing_rule_file.read()))
+            except FileNotFoundError:
+                print(
+                    f"The file pointed to by the REDSHIFT_PATHOVERRIDE_FILE environment variable does not exist at: {existing_rule_file_path}"
+                )
+
+        # Collect any additional rules if REDSHIFT_PATHOVERRIDE_STRING is already set
+        if existing_rule_str := os.getenv("REDSHIFT_PATHOVERRIDE_STRING"):
+            print(f"Found existing REDSHIFT_PATHOVERRIDE_STRING: {existing_rule_str}")
+            redshift_rules.extend(redshift_rule_regex.findall(existing_rule_str))
+
+        # Redshift expects double quoted space delimited "source" "destination" pairs
+        # example: "C:/Users/AUser/Directory" "/sessions/session-abcd/"
+        # https://help.maxon.net/r3d/maya/en-us/Content/html/Redshift+Environment+Variables.html
+        formatted_rules = "\n".join([f'"{rule[0]}" "{rule[1]}"' for rule in redshift_rules])
+        # Write all rules to a new temp override file and point to it
+        new_pathmap_file_path = Path(os.getcwd(), "new_redshift_pathmap_override.txt")
+        print(f"Writing path mapping rules: {formatted_rules}")
+        with secure_open(
+            new_pathmap_file_path, open_mode="w", encoding="utf-8"
+        ) as new_pathmap_file:
+            new_pathmap_file.write(formatted_rules)
+        print(f"Setting REDSHIFT_PATHOVERRIDE_FILE to: {str(new_pathmap_file_path)}")
+        os.environ["REDSHIFT_PATHOVERRIDE_FILE"] = str(new_pathmap_file_path)
 
     def start_render(self, data: dict) -> None:
         self.doc = c4d.documents.GetActiveDocument()
