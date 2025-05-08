@@ -1,3 +1,12 @@
+## 0.7.5 (2025-05-08)
+
+
+
+### Bug Fixes
+* support path mapping for RedShift assets (#211) ([`2d9a74b`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/2d9a74bb208de6eba623c36bc407c6facd6b73e7))
+* Fix failures with RS RenderView when opening Cinema 4D submitter (#207) ([`f714867`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f714867772f16b281cccb2b15f49b61c34c57db7))
+* Allow Cinema 4D to be rendered on all available machines instead of just windows. (#204) ([`2ab96aa`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/2ab96aadd260cf7b969ce2c068627419324b773d))
+
 ## 0.7.4 (2025-04-10)
 
 
