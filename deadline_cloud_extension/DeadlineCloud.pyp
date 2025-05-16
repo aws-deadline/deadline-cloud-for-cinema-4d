@@ -34,10 +34,13 @@ import c4d
 PLUGIN_ID = 1064358
 
 if sys.platform == "darwin":
-    # This command opens the RS renderview panel at
-    # Cinema 4D startup until Maxon fixes the issue 
-    # of Cinema 4D crashing due to PyQt errors on their end.
-    c4d.CallCommand(1038666)
+    try:
+        # This command opens the RS renderview panel at
+        # Cinema 4D startup until Maxon fixes the issue 
+        # of Cinema 4D crashing due to PyQt errors on their end.
+        c4d.CallCommand(1038666)
+    except Exception as e:
+        print(f"Failed to open RS renderview panel: {e}")
 
 class DeadlineCloudRenderCommand(c4d.plugins.CommandData):
 
