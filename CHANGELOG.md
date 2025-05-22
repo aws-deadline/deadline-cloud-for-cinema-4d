@@ -1,3 +1,11 @@
+## 0.7.6 (2025-05-22)
+
+
+
+### Bug Fixes
+* Add exception handling while opening RS render view. (#219) ([`c134d1a`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/c134d1a47a27dedcd67d8da698eaacc5ccfbb8ef))
+* Open RS renderview during Cinema 4D startup (#218) ([`ca6c630`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/ca6c6303cd324afa3170340a48344c5a9cc7d1c0))
+
 ## 0.7.5 (2025-05-08)
 
 
