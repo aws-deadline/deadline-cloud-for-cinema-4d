@@ -1,3 +1,10 @@
+## 0.7.7 (2025-05-23)
+
+
+
+### Bug Fixes
+* Replace backslashes to frontslashes for Mac to Win submissions. (#222) ([`c87bdcb`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/c87bdcb2db9ae906d8647d46a008bafbe2a8e559))
+
 ## 0.7.6 (2025-05-22)
 
 
