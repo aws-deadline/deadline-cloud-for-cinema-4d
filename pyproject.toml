@@ -67,7 +67,7 @@ destinations = [
 [tool.hatch.build.targets.sdist]
 include = [
     "src/*",
-    "hatch_version_hook.py",
+    "hatch_custom_hook.py",
 ]
 
 [tool.hatch.build.targets.wheel]
