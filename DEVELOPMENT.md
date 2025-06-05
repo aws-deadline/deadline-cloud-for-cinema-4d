@@ -237,8 +237,8 @@ You would have to setup Cinema 4D and Redshift licensing before you run the test
 For Cinema 4D licensing, set environment variable by using `$env:g_licenseServerURL = <your-license-server-host>:<port>` on Windows Powershell. 
 For redshift licensing, set the environment variable by using `$env:redshift_LICENSE = <port>@<your-license-server-host>` on Windows Powershell. 
 
-1. Set the environment variable `C4D_PYTHON` to the installation folder of Cinema 4D.
-   1. `set C4D_PYTHON=<Cinema 4D location>` on Windows Command or `$env:C4D_PYTHON = <Cinema 4D location>` on Windows Powershell.
+1. Set the environment variable `C4D_LOCATION` to the installation folder of Cinema 4D.
+   1. `set C4D_LOCATION=<Cinema 4D location>` on Windows Command or `$env:C4D_LOCATION = <Cinema 4D location>` on Windows Powershell.
       1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2025\`. This location would be automatically used if the directory exists.
 2. For running the adaptor tests, we would need to install `pywin32` to the installation paths as its an adaptor dependency.
    2.1 Run `pip install pywin32==308 -t <your Python site-packages location>`. 
