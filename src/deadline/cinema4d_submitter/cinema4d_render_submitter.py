@@ -415,12 +415,24 @@ def create_job_bundle(
         submit_takes = takes["current_data_list"]
 
     # Add overrides to asset references and update the paths with C4D render path tokens.
-    if settings.output_path:
-        settings.output_path = Scene.replace_render_path_tokens(settings.output_path)
-        asset_references.output_directories.add(os.path.dirname(settings.output_path))
-    if settings.multi_pass_path:
-        settings.multi_pass_path = Scene.replace_render_path_tokens(settings.multi_pass_path)
-        asset_references.output_directories.add(os.path.dirname(settings.multi_pass_path))
+    scene_output_path, scene_multi_pass_path = Scene.get_output_paths()
+    if settings.override_output_path:
+        if settings.output_path:
+            settings.output_path = Scene.replace_render_path_tokens(settings.output_path)
+            asset_references.output_directories.add(os.path.dirname(settings.output_path))
+    else:
+        if scene_output_path:
+            settings.output_path = Scene.replace_render_path_tokens(scene_output_path)
+            asset_references.output_directories.add(os.path.dirname(scene_output_path))
+
+    if settings.override_multi_pass_path:
+        if settings.multi_pass_path:
+            settings.multi_pass_path = Scene.replace_render_path_tokens(settings.multi_pass_path)
+            asset_references.output_directories.add(os.path.dirname(settings.multi_pass_path))
+    else:
+        if scene_multi_pass_path:
+            settings.multi_pass_path = Scene.replace_render_path_tokens(scene_multi_pass_path)
+            asset_references.output_directories.add(os.path.dirname(scene_multi_pass_path))
 
     # # Check if there are multiple frame ranges across the takes
     first_frame_range = submit_takes[0].frame_range

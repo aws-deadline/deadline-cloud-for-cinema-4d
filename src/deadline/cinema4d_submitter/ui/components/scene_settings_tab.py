@@ -140,10 +140,10 @@ class SceneSettingsWidget(QWidget):
         lyt.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding), 10, 0)
 
     def _configure_settings(self, settings):
-        self.op_path_chck.setChecked(False)
-        self.op_path_txt.setEnabled(False)
-        self.op_multi_path_chck.setChecked(False)
-        self.op_multi_path_txt.setEnabled(False)
+        self.op_path_chck.setChecked(settings.override_output_path)
+        self.op_path_txt.setEnabled(settings.override_output_path)
+        self.op_multi_path_chck.setChecked(settings.override_multi_pass_path)
+        self.op_multi_path_txt.setEnabled(settings.override_multi_pass_path)
         self.op_path_txt.setText(settings.output_path)
         self.op_multi_path_txt.setText(settings.multi_pass_path)
         self.frame_override_chck.setChecked(settings.override_frame_range)
@@ -163,6 +163,9 @@ class SceneSettingsWidget(QWidget):
         """
         settings.output_path = self.op_path_txt.text()
         settings.multi_pass_path = self.op_multi_path_txt.text()
+
+        settings.override_output_path = self.op_path_chck.isChecked()
+        settings.override_multi_pass_path = self.op_multi_path_chck.isChecked()
 
         settings.override_frame_range = self.frame_override_chck.isChecked()
         settings.frame_list = self.frame_override_txt.text()

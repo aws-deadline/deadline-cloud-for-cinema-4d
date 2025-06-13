@@ -51,15 +51,17 @@ class RenderSubmitterUISettings:
     description: str = field(default="", metadata={"sticky": True})
 
     override_frame_range: bool = field(default=False, metadata={"sticky": True})
+    override_output_path: bool = field(default=False, metadata={"sticky": True})
+    override_multi_pass_path: bool = field(default=False, metadata={"sticky": True})
     frame_list: str = field(default="", metadata={"sticky": True})
-    output_path: str = field(default="")
-    multi_pass_path: str = field(default="")
+    output_path: str = field(default="", metadata={"sticky": True})
+    multi_pass_path: str = field(default="", metadata={"sticky": True})
 
     input_filenames: list[str] = field(default_factory=list, metadata={"sticky": True})
     input_directories: list[str] = field(default_factory=list, metadata={"sticky": True})
     output_directories: list[str] = field(default_factory=list, metadata={"sticky": True})
 
-    take_selection: TakeSelection = field(default=TakeSelection.MAIN)
+    take_selection: TakeSelection = field(default=TakeSelection.MAIN, metadata={"sticky": True})
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )
@@ -87,6 +89,9 @@ class RenderSubmitterUISettings:
                         if name in sticky_fields:
                             if name == "timeouts":
                                 self.timeouts.update_from_sticky_settings(value)
+                            # Convert take_selection int to TakeSelection enum to access its data
+                            elif name == "take_selection":
+                                self.take_selection = TakeSelection(value)
                             else:
                                 setattr(self, name, value)
             except (OSError, json.JSONDecodeError):
