@@ -113,7 +113,12 @@ class RenderSubmitterUISettings:
                 obj = {
                     field.name: getattr(self, field.name)
                     for field in dataclasses.fields(self)
-                    if field.metadata.get("sticky") and field.name != "timeouts"
+                    if field.metadata.get("sticky")
+                    and field.name != "timeouts"
+                    and not (
+                        (field.name == "output_path" and not self.override_output_path)
+                        or (field.name == "multi_pass_path" and not self.override_multi_pass_path)
+                    )
                 }
                 obj["timeouts"] = self.timeouts.to_sticky_settings_dict()
                 json.dump(obj, fh, indent=1)
