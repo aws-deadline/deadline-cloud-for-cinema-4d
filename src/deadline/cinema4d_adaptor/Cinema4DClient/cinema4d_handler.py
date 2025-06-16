@@ -315,5 +315,13 @@ class Cinema4DHandler:
         if doc is None:
             print("Error: LoadDocument failed: %s" % scene_file)
         else:
+            # Build animations, caches and expressions for all frames in the document.
+            # This is essential for dynamic content like Pyro simulations (fluid/smoke effects)
+            # which would otherwise render as blank. The parameters ensure all necessary
+            # elements (animation, expressions, caches) are processed.
+            doc.ExecutePasses(
+                bt=None, animation=True, expressions=True, caches=True, flags=c4d.BUILDFLAGS_NONE
+            )
+
             c4d.documents.InsertBaseDocument(doc)
             c4d.documents.SetActiveDocument(doc)
