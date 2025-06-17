@@ -1,3 +1,11 @@
+## 0.7.8 (2025-06-16)
+
+
+
+### Bug Fixes
+* Execute passes for scenes to fix pyro caching issue (#232) ([`aa4f503`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/aa4f503d403e7cedeb2f6887bbaf208931625d83))
+* sdist failed to install (#227) ([`662e726`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/662e7264de1010618cfd3cb674d4ea91f22a53a3))
+
 ## 0.7.7 (2025-05-23)
 
 
