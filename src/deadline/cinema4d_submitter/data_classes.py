@@ -50,6 +50,13 @@ class RenderSubmitterUISettings:
     name: str = field(default="", metadata={"sticky": True})
     description: str = field(default="", metadata={"sticky": True})
 
+    priority: int = field(default=50, metadata={"sticky": True})
+    initial_state: str = field(default="READY", metadata={"sticky": True})
+    max_failed_tasks_count: int = field(default=20, metadata={"sticky": True})
+    max_retries_per_task: int = field(default=5, metadata={"sticky": True})
+    limited_max_worker_count: bool = field(default=False, metadata={"sticky": True})
+    max_worker_count: int = field(default=1, metadata={"sticky": True})
+
     override_frame_range: bool = field(default=False, metadata={"sticky": True})
     override_output_path: bool = field(default=False, metadata={"sticky": True})
     override_multi_pass_path: bool = field(default=False, metadata={"sticky": True})
@@ -121,6 +128,8 @@ class RenderSubmitterUISettings:
                     obj["output_path"] = self.output_path
                 if self.override_multi_pass_path:
                     obj["multi_pass_path"] = self.multi_pass_path
+                if not self.limited_max_worker_count:
+                    obj["max_worker_count"] = -1
                 json.dump(obj, fh, indent=1)
         except OSError as e:
             traceback.print_exc()
