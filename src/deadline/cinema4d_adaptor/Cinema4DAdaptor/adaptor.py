@@ -76,7 +76,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
     def _print_adaptor_version(self) -> None:
         """Prints the adaptor version information."""
-        print(f"Deadline Cloud for Cinema4D adaptor version: {adaptor_version}")
+        print(f"Deadline Cloud for Cinema 4D adaptor version: {adaptor_version}")
 
     def __init__(self, *args, **kwargs):
         if sys.platform == "linux" and "path_mapping_data" in kwargs:

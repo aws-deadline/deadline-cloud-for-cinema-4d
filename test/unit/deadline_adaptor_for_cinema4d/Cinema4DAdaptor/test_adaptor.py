@@ -193,7 +193,7 @@ def test_adaptor_prints_version_on_init(init_data, capfd):
     """
     Cinema4DAdaptor(init_data)
     captured = capfd.readouterr()
-    expected_output = f"Deadline Cloud for Cinema4D adaptor version: {adaptor_version}"
+    expected_output = f"Deadline Cloud for Cinema 4D adaptor version: {adaptor_version}"
     assert (
         expected_output in captured.out
     ), f"Expected output to contain {expected_output}, but got {captured.out}"
