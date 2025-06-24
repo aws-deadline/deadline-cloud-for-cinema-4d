@@ -26,6 +26,7 @@ import pytest
         # "redshift_multipass",
         "redshift_textured",
         "redshift_textured_with_nonascii_characters",
+        "physical_multi_takes",
     ],
 )
 def test_integ(
@@ -83,8 +84,8 @@ def test_integ(
     expected_job_output = test_scene_folder_location / "expected_job_output"
 
     assert_all_images_close(
-        job_bundle_generated / "renders",
         expected_job_output / "renders",
+        job_bundle_generated / "renders",
     )
 
     # Clean up if the test was successful

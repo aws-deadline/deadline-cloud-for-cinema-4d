@@ -8,6 +8,7 @@ from .cinema4d_render_submitter import (
     setup_auto_detected_attachments,
     create_job_bundle,
 )
+from .takes import TakeSelection
 
 import c4d
 
@@ -68,12 +69,15 @@ def sample_queue_params() -> list:
     ]
 
 
-def internal_create_job_bundle(job_bundle_dir: str):
+def internal_create_job_bundle(
+    job_bundle_dir: str, take_selection: TakeSelection = TakeSelection.MAIN
+):
     """
     This function mimics the call that Cinema 4D submitter does to generate the job bundle.
     """
 
     render_settings = initialize_render_settings()
+    render_settings.take_selection = take_selection
 
     doc = c4d.documents.GetActiveDocument()
 

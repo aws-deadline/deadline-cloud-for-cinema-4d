@@ -16,6 +16,7 @@ __pycache__/
 /job_bundle_output_tests/*/scene/*.deadline_render_settings.json
 /job_bundle_output_tests/*/scene/tex
 /job_bundle_output_tests/*/*.psd
+/test/integ/**/generated_bundle/*
 /scripts/dependency_bundle/
 /wheels/
 **/otls/backup
