@@ -526,6 +526,10 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
         if parameter_name in parameter_names:
             # example: NewTake_00001
             parameter_name = f"{parameter_name[:64 - len('Frames') - 6]}_{take_number:05}"
+            if parameter_name in parameter_names:
+                raise RuntimeError(
+                    f"Unable to generate unique parameter name for take '{take_name}', please change the take name."
+                )
         parameter_names.add(parameter_name)
         # Append "Frames"
         # example: NewTake_00001Frames
