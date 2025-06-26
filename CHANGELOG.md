@@ -1,3 +1,12 @@
+## 0.7.9 (2025-06-26)
+
+
+### Features
+* Remember last used output paths and take selection for job submissions (#231) ([`91302b7`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/91302b7b3539a0f5655b8c7c325f3572abde0de6))
+
+### Bug Fixes
+* support all takes flow for multi-take/render setting/frame range jobs (#237) ([`a107abe`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/a107abe534004d5a46bf8d95a360289efffda2d2))
+
 ## 0.7.8 (2025-06-16)
 
 
