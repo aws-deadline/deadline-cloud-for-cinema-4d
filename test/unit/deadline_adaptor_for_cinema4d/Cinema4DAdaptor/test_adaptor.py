@@ -7,6 +7,7 @@ import pytest
 from jsonschema.exceptions import ValidationError
 
 from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
+from deadline.cinema4d_adaptor._version import version as adaptor_version
 
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -184,3 +185,15 @@ def test_if_init_data_and_run_data_schema_are_changed_schema_version_is_bumped(i
         f"{semantic_version.major}.{semantic_version.minor}. When updating schemas, "
         "both the reference schemas AND the expected version should be updated together."
     )
+
+
+def test_adaptor_prints_version_on_init(init_data, capfd):
+    """
+    Test that the adaptor prints its version during initialization
+    """
+    Cinema4DAdaptor(init_data)
+    captured = capfd.readouterr()
+    expected_output = f"Deadline Cloud for Cinema 4D adaptor version: {adaptor_version}"
+    assert (
+        expected_output in captured.out
+    ), f"Expected output to contain {expected_output}, but got {captured.out}"

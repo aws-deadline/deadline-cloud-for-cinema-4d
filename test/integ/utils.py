@@ -25,6 +25,8 @@ def run_command(args: list[str]) -> subprocess.CompletedProcess[bytes]:
     print(f"\nstdout:\n\n{output.stdout.decode('utf-8', errors='replace')}")
     print(f"\nstderr:\n\n{output.stderr.decode('utf-8', errors='replace')}")
 
+    assert output.returncode == 0, f"Failed to run command {args}"
+
     return output
 
 
@@ -178,7 +180,7 @@ def assert_expected_job_bundle_and_generated_job_bundle_are_equal(
     assert "asset_references.yaml" in results["identical_files"]
 
 
-def assert_all_images_close(expected_image_directory: Path, actual_image_directory):
+def assert_all_images_close(expected_image_directory: Path, actual_image_directory: Path):
     for image in (expected_image_directory).iterdir():
         if not image.is_file():
             continue

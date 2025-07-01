@@ -19,6 +19,8 @@ from openjd.adaptor_runtime.application_ipc import ActionsQueue, AdaptorServer
 from openjd.adaptor_runtime.process import LoggingSubprocess
 from openjd.adaptor_runtime_client import Action
 
+from .._version import version as adaptor_version
+
 _logger = logging.getLogger(__name__)
 
 
@@ -72,6 +74,10 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     _expected_outputs: int = 1  # Total number of renders to perform.
     _produced_outputs: int = 0  # Counter for tracking number of complete renders.
 
+    def _print_adaptor_version(self) -> None:
+        """Prints the adaptor version information."""
+        print(f"Deadline Cloud for Cinema 4D adaptor version: {adaptor_version}")
+
     def __init__(self, *args, **kwargs):
         if sys.platform == "linux" and "path_mapping_data" in kwargs:
             # on Linux, Cinema4D interprets Windows absolute paths as relative paths
@@ -97,6 +103,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                         prefixed_rule["destination_os"] = rule["destination_os"]
                     path_mapping_rules.append(prefixed_rule)
         super().__init__(*args, **kwargs)
+        self._print_adaptor_version()
 
     @property
     def integration_data_interface_version(self) -> SemanticVersion:

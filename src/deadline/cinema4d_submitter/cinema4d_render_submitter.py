@@ -1,5 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import os
+import re
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -68,8 +69,9 @@ def show_submitter():
 
 def _get_parameter_values(
     settings: RenderSubmitterUISettings,
-    renderers: set[str],
     queue_parameters: list[dict[str, Any]],
+    per_take_frames_parameters: bool,
+    submit_takes: list[TakeData],
 ) -> list[dict[str, Any]]:
     parameter_values: list[dict[str, Any]] = []
 
@@ -78,11 +80,20 @@ def _get_parameter_values(
     parameter_values.append({"name": "OutputPath", "value": settings.output_path})
     parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
 
-    if settings.override_frame_range:
-        frame_list = settings.frame_list
+    if per_take_frames_parameters:
+        for take_data in submit_takes:
+            parameter_values.append(
+                {
+                    "name": take_data.frames_parameter_name,
+                    "value": take_data.frame_range,
+                }
+            )
     else:
-        frame_list = Animation.frame_list()
-    parameter_values.append({"name": "Frames", "value": frame_list})
+        if settings.override_frame_range:
+            frame_list = settings.frame_list
+        else:
+            frame_list = Animation.frame_list()
+        parameter_values.append({"name": "Frames", "value": frame_list})
 
     # Check for any overlap between the job parameters we've defined and the
     # queue parameters. This is an error, as we weren't synchronizing the values
@@ -336,16 +347,21 @@ def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:
     take_data_list = []
     current_data_list = []
     marked_data_list = []
+
     for take in all_takes:
         take_name = take.GetName()
+        display_name = take_name[:64]
         take_render_data = Scene.get_render_data(doc=doc, take=take)
         renderer_name = Scene.renderer(take_render_data)
         output_directories = Scene.get_output_directories(take=take)
+        label_prefix = "Take "
+        label_suffix = f" Settings ({renderer_name} renderer)"
+        characters_from_take_in_label = 64 - len(label_prefix) - len(label_suffix)
         take_data = TakeData(
             name=take_name,
-            display_name=take_name,
+            display_name=display_name,
             renderer_name=renderer_name,
-            ui_group_label=f"Take {take_name} Settings ({renderer_name} renderer)",
+            ui_group_label=f"{label_prefix}{display_name[:characters_from_take_in_label]}{label_suffix}",
             frames_parameter_name=None,
             frame_range=Animation.frame_list(take_render_data),
             output_directories=output_directories,
@@ -356,7 +372,6 @@ def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:
             current_data_list = [take_data]
         if take.IsChecked():
             marked_data_list.append(take_data)
-
     return {
         "take_data_list": take_data_list,
         "current_data_list": current_data_list,
@@ -443,12 +458,13 @@ def create_job_bundle(
     # If there are multiple frame ranges and we're not overriding the range,
     # then we create per-take Frames parameters.
     if per_take_frames_parameters:
-        for take_data in submit_takes:
-            take_data.frames_parameter_name = f"{take_data.display_name}Frames"
+        generate_take_parameter_names(submit_takes)
 
     renderers: set[str] = {take_data.renderer_name for take_data in submit_takes}
     job_template = _get_job_template(settings, renderers, submit_takes)
-    parameter_values = _get_parameter_values(settings, renderers, queue_parameters)
+    parameter_values = _get_parameter_values(
+        settings, queue_parameters, per_take_frames_parameters, submit_takes
+    )
 
     # If "HostRequirements" is provided, inject it into each of the "Step"
     if host_requirements:
@@ -463,6 +479,61 @@ def create_job_bundle(
     settings.input_directories = sorted(attachments.input_directories)
 
     settings.save_sticky_settings(Scene.name())
+
+
+def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
+    """
+    This function generates unique take frame range parameter names
+    by combining each takes name with a unique suffix (if required)
+    while still meeting the requirements (letters+numbers+underscores,
+    max 64 chars, etc.) of a parameter name.
+
+    The frame parameter names are saved to the input submit_takes.
+    """
+
+    # parameter names must start with a letter or underscore
+    allowed_first_job_parameter_chars = re.compile("[a-zA-Z_]")
+    # parameter names must only contain letters, numbers, or underscores
+    removed_job_parameter_chars = re.compile("[^a-zA-Z0-9_]")
+
+    take_names = set()
+    parameter_names = set()
+
+    for take_number in range(len(submit_takes)):
+
+        take_data = submit_takes[take_number]
+
+        # First, check for duplicate take names since this will result in overwriting files in the output
+        # or other unexpected behaviour
+        # We do this here rather than earlier in submission because we get an error popup
+        # (rather than a quieter console error) for errors here.
+        take_name = take_data.name
+        if take_name in take_names:
+            raise RuntimeError(
+                f"You have multiple takes named '{take_name}'. Please use unique take names."
+            )
+        take_names.add(take_name)
+
+        # Now, determine the frame parameter name
+        # remove all disallowed characters
+        parameter_name = removed_job_parameter_chars.sub("", take_data.display_name)[
+            : 64 - len("Frames")
+        ]
+        # ensure the first character is allowed or prefix with an _
+        if not allowed_first_job_parameter_chars.match(parameter_name):
+            parameter_name = f"_{parameter_name}"[: 64 - len("Frames")]
+        # ensure all parameter names are unique
+        if parameter_name in parameter_names:
+            # example: NewTake_00001
+            parameter_name = f"{parameter_name[:64 - len('Frames') - 6]}_{take_number:05}"
+            if parameter_name in parameter_names:
+                raise RuntimeError(
+                    f"Unable to generate unique parameter name for take '{take_name}', please change the take name."
+                )
+        parameter_names.add(parameter_name)
+        # Append "Frames"
+        # example: NewTake_00001Frames
+        take_data.frames_parameter_name = f"{parameter_name}Frames"
 
 
 def setup_auto_detected_attachments(take_data_list: list[TakeData]) -> AssetReferences:
