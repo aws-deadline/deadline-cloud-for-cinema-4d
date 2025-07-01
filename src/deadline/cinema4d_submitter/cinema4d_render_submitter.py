@@ -18,7 +18,6 @@ from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint
     JobBundlePurpose,
     SubmitJobToDeadlineDialog,
 )
-from .template_timeout_patcher import add_timeouts_to_job_template
 
 from ._version import version_tuple as adaptor_version_tuple
 from .assets import AssetIntrospector
@@ -28,6 +27,7 @@ from .data_classes import (
 from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
+from .template_timeout_patcher import add_timeouts_to_job_template
 from .ui.components.scene_settings_tab import SceneSettingsWidget
 
 LOADED = False
@@ -79,6 +79,9 @@ def _get_parameter_values(
     parameter_values.append({"name": "Cinema4DFile", "value": Scene.name()})
     parameter_values.append({"name": "OutputPath", "value": settings.output_path})
     parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
+    parameter_values.append(
+        {"name": "DisableErrorChecking", "value": settings.deactivate_error_checking}
+    )
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -194,7 +197,7 @@ def _get_job_template(
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
             init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'"
+                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\ndeactivate_error_checking: '{{Param.DisableErrorChecking}}'"
                 % take_data.name
             )
 
