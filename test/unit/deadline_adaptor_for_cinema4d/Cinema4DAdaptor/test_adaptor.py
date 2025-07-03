@@ -180,7 +180,7 @@ def test_if_init_data_and_run_data_schema_are_changed_schema_version_is_bumped(i
     """
     # Expected version for these reference schemas
     EXPECTED_MAJOR = 0
-    EXPECTED_MINOR = 1
+    EXPECTED_MINOR = 2
 
     # Get the current version from the adaptor
     adapter = Cinema4DAdaptor(init_data)
