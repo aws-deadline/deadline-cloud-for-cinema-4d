@@ -80,7 +80,7 @@ def _get_parameter_values(
     parameter_values.append({"name": "OutputPath", "value": settings.output_path})
     parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
     parameter_values.append(
-        {"name": "DeactivateErrorChecking", "value": settings.deactivate_error_checking}
+        {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
 
     if per_take_frames_parameters:
@@ -197,7 +197,7 @@ def _get_job_template(
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
             init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\ndeactivate_error_checking: '{{Param.DeactivateErrorChecking}}'"
+                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'"
                 % take_data.name
             )
 

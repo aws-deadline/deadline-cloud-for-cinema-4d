@@ -3,5 +3,5 @@ from enum import Enum
 
 
 class ErrorChecking(Enum):
-    ACTIVATE = "0"
-    DEACTIVATE = "1"
+    DEACTIVATE = "0"
+    ACTIVATE = "1"

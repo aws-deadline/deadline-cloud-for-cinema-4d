@@ -63,8 +63,8 @@ class RenderSubmitterUISettings:
     output_directories: list[str] = field(default_factory=list, metadata={"sticky": True})
 
     take_selection: TakeSelection = field(default=TakeSelection.MAIN, metadata={"sticky": True})
-    deactivate_error_checking: str = field(
-        default=ErrorChecking.DEACTIVATE.value, metadata={"sticky": True}
+    activate_error_checking: str = field(
+        default=ErrorChecking.ACTIVATE.value, metadata={"sticky": True}
     )
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}

@@ -130,8 +130,8 @@ class SceneSettingsWidget(QWidget):
         lyt.addWidget(self.frame_override_txt, 4, 1)
         self.frame_override_chck.stateChanged.connect(self.activate_frame_override_changed)
 
-        self.deactivate_error_checking_chck = QCheckBox("Deactivate automatic error checking", self)
-        lyt.addWidget(self.deactivate_error_checking_chck, 5, 0)
+        self.activate_error_checking_chck = QCheckBox("Activate automatic error checking", self)
+        lyt.addWidget(self.activate_error_checking_chck, 5, 0)
 
         self.timeout_settings_box = TimeoutTableWidget(timeouts=settings.timeouts, parent=self)
         lyt.addWidget(self.timeout_settings_box, 6, 0, 1, 2)
@@ -154,9 +154,7 @@ class SceneSettingsWidget(QWidget):
         self.frame_override_chck.setChecked(settings.override_frame_range)
         self.frame_override_txt.setEnabled(settings.override_frame_range)
         self.frame_override_txt.setText(settings.frame_list)
-        self.deactivate_error_checking_chck.setChecked(
-            bool(int(settings.deactivate_error_checking))
-        )
+        self.activate_error_checking_chck.setChecked(bool(int(settings.activate_error_checking)))
 
         index = self.layers_box.findData(settings.take_selection)
         if index >= 0:
@@ -180,10 +178,10 @@ class SceneSettingsWidget(QWidget):
 
         settings.take_selection = self.layers_box.currentData()
 
-        settings.deactivate_error_checking = (
-            ErrorChecking.DEACTIVATE.value
-            if self.deactivate_error_checking_chck.isChecked()
-            else ErrorChecking.ACTIVATE.value
+        settings.activate_error_checking = (
+            ErrorChecking.ACTIVATE.value
+            if self.activate_error_checking_chck.isChecked()
+            else ErrorChecking.DEACTIVATE.value
         )
 
         self.timeout_settings_box.update_settings(settings.timeouts)
