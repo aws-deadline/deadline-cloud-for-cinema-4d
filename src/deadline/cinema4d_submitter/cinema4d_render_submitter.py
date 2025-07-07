@@ -423,6 +423,7 @@ def create_job_bundle(
     """
 
     original_cinema4d_file = Scene.name()
+    scene_output_path, scene_multi_pass_path = Scene.get_output_paths()
 
     if settings.export_job_bundle_to_temp and temp_dir:
         export_to_temp_folder(temp_dir, asset_references)
@@ -439,7 +440,6 @@ def create_job_bundle(
         submit_takes = takes["current_data_list"]
 
     # Add overrides to asset references and update the paths with C4D render path tokens.
-    scene_output_path, scene_multi_pass_path = Scene.get_output_paths()
     if settings.override_output_path:
         if settings.output_path:
             settings.output_path = Scene.replace_render_path_tokens(settings.output_path)
