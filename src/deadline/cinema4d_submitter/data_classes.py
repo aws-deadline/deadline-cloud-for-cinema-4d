@@ -64,7 +64,7 @@ class RenderSubmitterUISettings:
 
     take_selection: TakeSelection = field(default=TakeSelection.MAIN, metadata={"sticky": True})
     deactivate_error_checking: str = field(
-        default=ErrorChecking.ACTIVATE.value, metadata={"sticky": True}
+        default=ErrorChecking.DEACTIVATE.value, metadata={"sticky": True}
     )
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
