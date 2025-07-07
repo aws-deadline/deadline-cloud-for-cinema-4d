@@ -73,8 +73,8 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     # Will be optionally changed after the scene is set.
     _expected_outputs: int = 1  # Total number of renders to perform.
     _produced_outputs: int = 0  # Counter for tracking number of complete renders.
-    _deactivate_error_checking: int = (
-        0  # 0=activate, 1=deactivate - controls whether error regex callbacks are added
+    _activate_error_checking: int = (
+        1  # 0=deactivate, 1=activate - controls whether error regex callbacks are added
     )
 
     def _print_adaptor_version(self) -> None:
@@ -280,7 +280,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             ]
 
             # Only add error regexes if error checking is not deactivated
-            if not self._deactivate_error_checking:
+            if self._activate_error_checking:
                 _logger.warning("Adding error regexes to callback list")
                 callback_list.append(RegexCallback(error_regexes, self._handle_error))
             else:
@@ -464,7 +464,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         """
         self.validators.init_data.validate(self.init_data)
 
-        self._deactivate_error_checking = int(self.init_data.get("deactivate_error_checking", "0"))
+        self._activate_error_checking = int(self.init_data.get("activate_error_checking", "1"))
 
         self.update_status(progress=0, status_message="Initializing Cinema4D")
         self._initialize_maxon_assets_db_connection()

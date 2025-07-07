@@ -43,7 +43,7 @@ REFERENCE_INIT_DATA_SCHEMA = {
         "take": {"type": "string"},
         "output_path": {"type": "string"},
         "multi_pass_path": {"type": "string"},
-        "deactivate_error_checking": {"type": "string"},
+        "activate_error_checking": {"type": "string"},
     },
     "required": ["scene_file"],
 }
@@ -69,7 +69,7 @@ def init_data() -> dict:
         "take": "Main",
         "output_path": "C:\\Users\\user123\\test_render",
         "multi_pass_path": "",
-        "deactivate_error_checking": "0",
+        "activate_error_checking": "1",
     }
 
 
@@ -227,20 +227,20 @@ def test_adaptor_prints_version_on_init(init_data, capfd):
     ), f"Expected output to contain {expected_output}, but got {captured.out}"
 
 
-@pytest.mark.parametrize("deactivate_error_checking", [0, 1])
-def test_deactivate_error_checking(init_data: dict, deactivate_error_checking: int) -> None:
+@pytest.mark.parametrize("activate_error_checking", [0, 1])
+def test_activate_error_checking(init_data: dict, activate_error_checking: int) -> None:
     """
-    Tests that the deactivate_error_checking configuration controls whether error-handling
+    Tests that the activate_error_checking configuration controls whether error-handling
     regex callbacks are included in the adaptor's callback list.
 
-    When deactivate_error_checking=0 (activate): Error regexes should be present
-    When deactivate_error_checking=1 (deactivate): Error regexes should be absent
+    When activate_error_checking=0 (deactivate): Error regexes should be absent
+    When activate_error_checking=1 (activate): Error regexes should be present
     """
     # GIVEN:
-    init_data["deactivate_error_checking"] = str(deactivate_error_checking)
+    init_data["activate_error_checking"] = str(activate_error_checking)
     adaptor = Cinema4DAdaptor(init_data)
     # Manually set the private variable to fix timing issue (normally set in on_start())
-    adaptor._deactivate_error_checking = deactivate_error_checking
+    adaptor._activate_error_checking = activate_error_checking
 
     # WHEN:
     callbacks = adaptor._get_regex_callbacks()
@@ -251,11 +251,11 @@ def test_deactivate_error_checking(init_data: dict, deactivate_error_checking: i
         EXPECTED_ERROR_REGEXES == regex_callback.regex_list for regex_callback in callbacks
     )
 
-    if deactivate_error_checking == 0:
+    if activate_error_checking == 1:
         assert (
             error_checking_present
-        ), "Error checking should be activated when deactivate_error_checking=0"
+        ), "Error checking should be activated when activate_error_checking=1"
     else:
         assert (
             not error_checking_present
-        ), "Error checking should be deactivated when deactivate_error_checking=1"
+        ), "Error checking should be deactivated when activate_error_checking=0"
