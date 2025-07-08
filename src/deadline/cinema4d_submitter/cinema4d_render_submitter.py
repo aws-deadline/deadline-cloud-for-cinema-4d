@@ -601,21 +601,17 @@ def get_conda_packages() -> str:
 def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> None:
     """
     Exports the current Cinema 4D project to a temporary folder and updates the asset references.
+    If SaveProject fails due to missing asset paths, an exception will be returned.
 
     Args:
         temp_dir: Path to the temporary directory
-        queue_parameters: List of queue parameters to update
         asset_references: Asset references to update
-
-    Returns:
-        The original Cinema4DFile value, or None if no export was performed
     """
-
     doc = c4d.documents.GetActiveDocument()
 
     # Save the project to the temporary directory
     temp_file_path = os.path.join(temp_dir, doc.GetDocumentName())
-    c4d.documents.SaveProject(
+    save_success = c4d.documents.SaveProject(
         doc,
         c4d.SAVEPROJECT_ASSETS | c4d.SAVEPROJECT_SCENEFILE,
         temp_file_path,
@@ -623,6 +619,12 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
         [],
     )
 
+    if not save_success:
+        raise RuntimeError(
+            "Exporting the scene failed. Please fix all the paths for your assets in your scene in Cinema 4D's Window menu bar > Project Asset Inspector."
+        )
+
+    # If we get here, save was successful
     # Get all files within the temp directory
     temp_assets = set()
     for root, _, files in os.walk(temp_dir):
