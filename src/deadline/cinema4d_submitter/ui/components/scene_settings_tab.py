@@ -154,13 +154,13 @@ class SceneSettingsWidget(QWidget):
         warning_label.setWordWrap(True)
         export_layout.addWidget(warning_label)
 
-        lyt.addWidget(export_group_box, 6, 0, 1, 2)
+        lyt.addWidget(export_group_box, 7, 0, 1, 2)
 
         if self.developer_options:
             self.include_adaptor_wheels = QCheckBox(
                 "Developer Option: Include Adaptor Wheels", self
             )
-            lyt.addWidget(self.include_adaptor_wheels, 7, 0)
+            lyt.addWidget(self.include_adaptor_wheels, 8, 0)
 
         lyt.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding), 10, 0)
 
