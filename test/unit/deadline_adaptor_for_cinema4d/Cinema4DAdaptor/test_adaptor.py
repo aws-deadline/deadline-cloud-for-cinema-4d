@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -11,29 +10,6 @@ from jsonschema.exceptions import ValidationError
 from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
 from deadline.cinema4d_adaptor._version import version as adaptor_version
 
-# Expected error regex patterns - should match those in the adaptor
-EXPECTED_ERROR_REGEXES = [
-    re.compile(r".*Document not found.*", re.IGNORECASE),
-    re.compile(r".*Project not found.*", re.IGNORECASE),
-    re.compile(r".*Error rendering project.*", re.IGNORECASE),
-    re.compile(r".*Error loading project.*", re.IGNORECASE),
-    re.compile(r".*Error rendering document.*", re.IGNORECASE),
-    re.compile(r".*Error loading document.*", re.IGNORECASE),
-    re.compile(r".*Rendering failed.*", re.IGNORECASE),
-    re.compile(r".*Asset missing.*", re.IGNORECASE),
-    re.compile(r".*Asset Error.*", re.IGNORECASE),
-    re.compile(r".*Invalid License.*", re.IGNORECASE),
-    re.compile(r".*licensing error.*", re.IGNORECASE),
-    re.compile(r".*License Check error.*", re.IGNORECASE),
-    re.compile(r".*Files cannot be written.*", re.IGNORECASE),
-    re.compile(r".*Enter Registration Data.*", re.IGNORECASE),
-    re.compile(r".*Unable to write file.*", re.IGNORECASE),
-    re.compile(r".*\[rlm\] abort_on_license_fail enabled.*", re.IGNORECASE),
-    re.compile(r".*RenderDocument failed with return code.*", re.IGNORECASE),
-    re.compile(r".*Frame rendering aborted.*", re.IGNORECASE),
-    re.compile(r".*Rendering was internally aborted.*", re.IGNORECASE),
-    re.compile(r'.*Cannot find procedure "rsPreference".*', re.IGNORECASE),
-]
 
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -245,17 +221,17 @@ def test_activate_error_checking(init_data: dict, activate_error_checking: int) 
     # WHEN:
     callbacks = adaptor._get_regex_callbacks()
 
-    # THEN: Check if error checking callback is present based on configuration
-    # Check if error checking callback is present by comparing regex patterns
-    error_checking_present = any(
-        EXPECTED_ERROR_REGEXES == regex_callback.regex_list for regex_callback in callbacks
+    # THEN: Check if `error_regexes` corresponding callback is present based on configuration
+    # `error_regexes` has the callback function called `_handle_error`.
+    has_handle_error_callback = any(
+        regex_callback.callback == adaptor._handle_error for regex_callback in callbacks
     )
 
     if activate_error_checking == 1:
         assert (
-            error_checking_present
+            has_handle_error_callback
         ), "Error checking should be activated when activate_error_checking=1"
     else:
         assert (
-            not error_checking_present
+            not has_handle_error_callback
         ), "Error checking should be deactivated when activate_error_checking=0"
