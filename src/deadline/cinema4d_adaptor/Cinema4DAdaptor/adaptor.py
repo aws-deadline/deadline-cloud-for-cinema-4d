@@ -279,7 +279,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 re.compile(r'.*Cannot find procedure "rsPreference".*', re.IGNORECASE),
             ]
 
-            # Only add error regexes if error checking is not deactivated
+            # Only add error regexes if error checking is activated
             if self._activate_error_checking:
                 _logger.warning("Adding error regexes to callback list")
                 callback_list.append(RegexCallback(error_regexes, self._handle_error))
