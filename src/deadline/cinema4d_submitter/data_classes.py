@@ -65,6 +65,7 @@ class RenderSubmitterUISettings:
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )
+    export_job_bundle_to_temp: bool = field(default=False, metadata={"sticky": True})
 
     # developer options
     include_adaptor_wheels: bool = field(default=False, metadata={"sticky": True})

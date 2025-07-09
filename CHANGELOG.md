@@ -1,3 +1,12 @@
+## 0.7.10 (2025-07-07)
+
+
+### Features
+* Bundle scene and assets before submission. (#243) ([`9a4d11b`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/9a4d11b00a31b2508d03d9b5872263423a1041eb))
+
+### Bug Fixes
+* Use the output paths from the scene file instead of the exported scene. (#249) ([`85bb260`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/85bb2609d0721a302d3262aedda46addc5419d3e))
+
 ## 0.7.9 (2025-06-26)
 
 
