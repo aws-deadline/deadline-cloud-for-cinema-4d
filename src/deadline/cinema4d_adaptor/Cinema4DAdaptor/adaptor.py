@@ -73,6 +73,9 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     # Will be optionally changed after the scene is set.
     _expected_outputs: int = 1  # Total number of renders to perform.
     _produced_outputs: int = 0  # Counter for tracking number of complete renders.
+    _activate_error_checking: int = (
+        1  # 0=deactivate, 1=activate - controls whether error regex callbacks are added
+    )
 
     def _print_adaptor_version(self) -> None:
         """Prints the adaptor version information."""
@@ -107,7 +110,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
     @property
     def integration_data_interface_version(self) -> SemanticVersion:
-        return SemanticVersion(major=0, minor=1)
+        return SemanticVersion(major=0, minor=2)
 
     @staticmethod
     def _get_timer(timeout: int | float) -> Callable[[], bool]:
@@ -275,7 +278,13 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 re.compile(r".*Rendering was internally aborted.*", re.IGNORECASE),
                 re.compile(r'.*Cannot find procedure "rsPreference".*', re.IGNORECASE),
             ]
-            callback_list.append(RegexCallback(error_regexes, self._handle_error))
+
+            # Only add error regexes if error checking is activated
+            if self._activate_error_checking:
+                _logger.info("Adding error regexes to callback list")
+                callback_list.append(RegexCallback(error_regexes, self._handle_error))
+            else:
+                _logger.warning("NOT adding error regexes to callback list")
 
             insufficient_ram_regexes = re.compile(r".*Failed to allocate mem.*", re.IGNORECASE)
             callback_list.append(
@@ -455,6 +464,8 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         """
         self.validators.init_data.validate(self.init_data)
 
+        self._activate_error_checking = int(self.init_data.get("activate_error_checking", "1"))
+
         self.update_status(progress=0, status_message="Initializing Cinema4D")
         self._initialize_maxon_assets_db_connection()
         self._start_cinema4d_server_thread()
@@ -481,7 +492,6 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         This starts a render in Cinema4D for the given frame, scene and layer(s) and
         performs a busy wait until the render completes.
         """
-
         self.validators.run_data.validate(run_data)
 
         if not self._cinema4d_is_running:
