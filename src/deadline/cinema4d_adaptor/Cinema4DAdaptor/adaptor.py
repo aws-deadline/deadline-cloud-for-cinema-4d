@@ -413,7 +413,8 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         if not module_path:
             new_module_path = plugin_dir
         else:
-            new_module_path = plugin_dir + os.pathsep + module_path
+            # This has to use semicolons because that's what C4D requires, even on Linux
+            new_module_path = f"{plugin_dir};{module_path}"
         os.environ[module_path_key] = new_module_path
 
         arguments = [c4d_exe, "-nogui", "-DeadlineCloudClient"]
