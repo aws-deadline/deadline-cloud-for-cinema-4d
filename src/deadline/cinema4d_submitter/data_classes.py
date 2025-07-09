@@ -11,6 +11,7 @@ from pathlib import Path
 from deadline.client.ui.dataclasses.timeouts import TimeoutEntry, TimeoutTableEntries
 
 from .takes import TakeSelection  # type: ignore
+from .error_checking import ErrorChecking
 from datetime import timedelta
 
 RENDER_SUBMITTER_SETTINGS_FILE_EXT = ".deadline_render_settings.json"
@@ -62,9 +63,13 @@ class RenderSubmitterUISettings:
     output_directories: list[str] = field(default_factory=list, metadata={"sticky": True})
 
     take_selection: TakeSelection = field(default=TakeSelection.MAIN, metadata={"sticky": True})
+    activate_error_checking: str = field(
+        default=ErrorChecking.ACTIVATE.value, metadata={"sticky": True}
+    )
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )
+    export_job_bundle_to_temp: bool = field(default=False, metadata={"sticky": True})
 
     # developer options
     include_adaptor_wheels: bool = field(default=False, metadata={"sticky": True})

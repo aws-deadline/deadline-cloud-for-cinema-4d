@@ -44,6 +44,17 @@ parameterDefinitions:
     label: Multi-pass output path
     groupLabel: Cinema4D Settings
   description: Multi-pass image output
+- name: ActivateErrorChecking
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Activate automatic error checking
+    groupLabel: Cinema4D Settings
+  description: Fail when errors occur.
+  default: '1'
+  allowedValues:
+  - '0'
+  - '1'
 steps:
 - name: Render
   parameterSpace:
@@ -67,6 +78,7 @@ steps:
           take: 'Main'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
