@@ -281,7 +281,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
             # Only add error regexes if error checking is activated
             if self._activate_error_checking:
-                _logger.warning("Adding error regexes to callback list")
+                _logger.info("Adding error regexes to callback list")
                 callback_list.append(RegexCallback(error_regexes, self._handle_error))
             else:
                 _logger.warning("NOT adding error regexes to callback list")
