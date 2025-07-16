@@ -57,8 +57,18 @@ def show_submitter():
             app = QtWidgets.QApplication([])
             app.setQuitOnLastWindowClosed(False)
             app.aboutToQuit.connect(app.deleteLater)
+
+        # Get the scene file's directory path to create the temporary directory
+        # in the same location as the original scene file. This ensures consistent
+        # path resolution across platforms and avoids path mapping errors,
+        # particularly on Linux systems.
+        scene = c4d.documents.GetActiveDocument()
+        scene_dir_path = scene.GetDocumentPath()
+
         # Create a temporary directory that will be automatically cleaned up after submission
-        with tempfile.TemporaryDirectory(prefix="c4d_job_bundle_") as temp_dir:
+        with tempfile.TemporaryDirectory(
+            prefix="scene_with_assets_", dir=scene_dir_path
+        ) as temp_dir:
             app.setStyleSheet(C4D_STYLE)
             w = _show_submitter(temp_dir, None)
             w.setStyleSheet(C4D_STYLE)
