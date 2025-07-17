@@ -85,6 +85,7 @@ def _get_parameter_values(
     parameter_values.append(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
+    parameter_values.append({"name": "TilesPerAxis", "value": settings.tiles_per_axis})
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -179,6 +180,8 @@ def _get_job_template(
 
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
+    if settings.use_tile_rendering:
+        tile_rendering_step = job_template["steps"][1]
     job_template["steps"] = []
     for take_data in takes:
         step = deepcopy(default_step)
@@ -203,6 +206,15 @@ def _get_job_template(
                 "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'"
                 % take_data.name
             )
+
+    # For tile rendering, preserve tile assembly step
+    if settings.use_tile_rendering and len(job_template["steps"]) >= 1:
+        tile_rendering_step_copy = deepcopy(tile_rendering_step)
+        if "dependencies" in tile_rendering_step_copy:
+            for dependency in tile_rendering_step_copy["dependencies"]:
+                if "dependsOn" in dependency:
+                    dependency["dependsOn"] = take_data.display_name
+        job_template["steps"].append(tile_rendering_step_copy)
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
@@ -483,6 +495,12 @@ def create_job_bundle(
         # for each step in the template, append the same host requirements.
         for step in job_template["steps"]:
             step["hostRequirements"] = host_requirements
+
+    if settings.use_tile_rendering:
+        for step in job_template["steps"]:
+            step["hostRequirements"] = {
+                "attributes": [{"name": "attr.worker.os.family", "anyOf": ["windows"]}]
+            }
 
     save_job_bundle_files(job_bundle_path, job_template, parameter_values, asset_references)
 

@@ -14,6 +14,7 @@ from qtpy.QtWidgets import (  # type: ignore
     QPushButton,
     QSizePolicy,
     QSpacerItem,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -156,6 +157,18 @@ class SceneSettingsWidget(QWidget):
 
         lyt.addWidget(export_group_box, 7, 0, 1, 2)
 
+        tile_rendering_group_box = QGroupBox("Tile Rendering Settings", self)
+        tile_rendering_layout = QHBoxLayout(tile_rendering_group_box)
+        self.use_tile_rendering_chk = QCheckBox("Use Tile Rendering", self)
+        tile_rendering_layout.addWidget(self.use_tile_rendering_chk)
+        self.tiles_per_axis = QSpinBox(self)
+        self.tiles_per_axis.setRange(2, 5)
+        self.tiles_per_axis.setSuffix(" tiles per axis")
+        self.tiles_per_axis.setEnabled(False)
+        tile_rendering_layout.addWidget(self.tiles_per_axis)
+        lyt.addWidget(tile_rendering_group_box, 8, 0, 1, 2)
+        self.use_tile_rendering_chk.stateChanged.connect(self.activate_tiles_per_axis_changed)
+
         if self.developer_options:
             self.include_adaptor_wheels = QCheckBox(
                 "Developer Option: Include Adaptor Wheels", self
@@ -175,6 +188,9 @@ class SceneSettingsWidget(QWidget):
         self.frame_override_txt.setEnabled(settings.override_frame_range)
         self.frame_override_txt.setText(settings.frame_list)
         self.activate_error_checking_chck.setChecked(bool(int(settings.activate_error_checking)))
+        self.use_tile_rendering_chk.setChecked(settings.use_tile_rendering)
+        self.tiles_per_axis.setValue(settings.tiles_per_axis)
+        self.tiles_per_axis.setEnabled(settings.use_tile_rendering)
 
         index = self.layers_box.findData(settings.take_selection)
         if index >= 0:
@@ -208,6 +224,9 @@ class SceneSettingsWidget(QWidget):
 
         self.timeout_settings_box.update_settings(settings.timeouts)
 
+        settings.use_tile_rendering = self.use_tile_rendering_chk.isChecked()
+        settings.tiles_per_axis = self.tiles_per_axis.value()
+
         settings.export_job_bundle_to_temp = self.export_job_bundle_chck.isChecked()
 
         if self.developer_options:
@@ -226,3 +245,6 @@ class SceneSettingsWidget(QWidget):
 
     def activate_multi_path_changed(self, state):
         self.op_multi_path_txt.setEnabled(Qt.CheckState(state) == Qt.Checked)
+
+    def activate_tiles_per_axis_changed(self, state):
+        self.tiles_per_axis.setEnabled(Qt.CheckState(state) == Qt.Checked)
