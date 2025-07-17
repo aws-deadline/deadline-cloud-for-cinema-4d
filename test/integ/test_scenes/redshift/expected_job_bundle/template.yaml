@@ -54,6 +54,16 @@ parameterDefinitions:
   allowedValues:
   - '0'
   - '1'
+- name: TilesPerAxis
+  type: INT
+  userInterface:
+    control: SPIN_BOX
+    label: Tiles per axis
+    groupLabel: Tile Rendering Settings
+  minValue: 2
+  maxValue: 5
+  default: 2
+  description: The number of tiles across the x and y axis.
 steps:
 - name: Main
   parameterSpace:
