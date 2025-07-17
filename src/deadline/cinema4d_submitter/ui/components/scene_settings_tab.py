@@ -143,7 +143,7 @@ class SceneSettingsWidget(QWidget):
         export_layout = QVBoxLayout(export_group_box)
 
         self.export_job_bundle_chck = QCheckBox(
-            "Save Cinema 4D project with Assets before submission", self
+            "Save Cinema 4D project with assets before submission", self
         )
         export_layout.addWidget(self.export_job_bundle_chck)
 
