@@ -131,14 +131,9 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
-- name: tile assembly
+- name: Tile Assembly
   dependencies:
   - dependsOn: Render
-  hostRequirements:
-    attributes:
-    - name: attr.worker.os.family
-      anyOf:
-      - windows
   script:
     actions:
       onRun:
@@ -167,9 +162,10 @@ steps:
         #
         # ASSUMPTIONS:
         # - Tiles are rendered as separate files in the assetroot directory
-        # - Tiles are named sequentially and sorted alphabetically
+        # - Tiles are named sequentially and sorted alphabetically - CRITICAL: regular outputs MUST
+        #   come first alphabetically as the script selects the first N images for stitched_output
         # - Grid layout is determined by TilesPerAxis × TilesPerAxis parameters
-        # - Uses ffmpeg concat demuxer + tile filter for Windows compatibility
+        # - Uses ffmpeg concat demuxer + tile filter
         # =============================================================================
 
         # Extract frame range from job parameters
@@ -223,7 +219,10 @@ steps:
               local current_count=0
               
               for file in "${files[@]}"; do
-                if [ $current_count -lt $skip_count ]; then
+                # Skip if file matches any of the output file names
+                if [[ "$file" == *"stitched_output"* || "$file" == *"stitched_multipass"* ]]; then
+                  continue
+                elif [ $current_count -lt $skip_count ]; then
                   # Skip files already processed in main output
                   current_count=$((current_count + 1))
                   continue
@@ -277,6 +276,8 @@ steps:
               # Parameters:
               # -y                : Overwrite output file without asking
               # -f concat -safe 0 : Use concat demuxer with relaxed path safety
+              #    -f concat: Combines multiple image files into a single input stream for the tile filter
+              #    -safe 0: Allows absolute file paths in the concat file
               # -filter_complex   : Apply tile filter to arrange images in grid
               ffmpeg -y -f concat -safe 0 -i "$concat_file" -filter_complex tile={{Param.TilesPerAxis}}x{{Param.TilesPerAxis}} "$output_file"
               
@@ -315,3 +316,4 @@ steps:
           MULTIPASS_ASSETROOT=$(dirname "{{Param.MultiPassPath}}")  # Extract multi-pass directory
           stitch_tiles "$MULTIPASS_ASSETROOT" "stitched_multipass"  # Stitch multi-pass tiles
         fi
+        

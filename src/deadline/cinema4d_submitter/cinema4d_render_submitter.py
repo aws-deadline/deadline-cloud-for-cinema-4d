@@ -207,14 +207,15 @@ def _get_job_template(
                 % take_data.name
             )
 
-    # For tile rendering, preserve tile assembly step
-    if settings.use_tile_rendering and len(job_template["steps"]) >= 1:
-        tile_rendering_step_copy = deepcopy(tile_rendering_step)
-        if "dependencies" in tile_rendering_step_copy:
-            for dependency in tile_rendering_step_copy["dependencies"]:
-                if "dependsOn" in dependency:
-                    dependency["dependsOn"] = take_data.display_name
-        job_template["steps"].append(tile_rendering_step_copy)
+        # For tile rendering, preserve tile assembly step
+        if settings.use_tile_rendering and len(job_template["steps"]) >= 1:
+            tile_rendering_step_copy = deepcopy(tile_rendering_step)
+            tile_rendering_step_copy["name"] = "Tile Assembly - " + take_data.display_name
+            if "dependencies" in tile_rendering_step_copy:
+                for dependency in tile_rendering_step_copy["dependencies"]:
+                    if "dependsOn" in dependency:
+                        dependency["dependsOn"] = take_data.display_name
+            job_template["steps"].append(tile_rendering_step_copy)
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
@@ -495,12 +496,6 @@ def create_job_bundle(
         # for each step in the template, append the same host requirements.
         for step in job_template["steps"]:
             step["hostRequirements"] = host_requirements
-
-    if settings.use_tile_rendering:
-        for step in job_template["steps"]:
-            step["hostRequirements"] = {
-                "attributes": [{"name": "attr.worker.os.family", "anyOf": ["windows"]}]
-            }
 
     save_job_bundle_files(job_bundle_path, job_template, parameter_values, asset_references)
 
