@@ -158,14 +158,28 @@ class SceneSettingsWidget(QWidget):
         lyt.addWidget(export_group_box, 7, 0, 1, 2)
 
         tile_rendering_group_box = QGroupBox("Tile Rendering Settings", self)
-        tile_rendering_layout = QHBoxLayout(tile_rendering_group_box)
+        tile_rendering_layout = QVBoxLayout(tile_rendering_group_box)
+
+        # Create horizontal layout for checkbox and spinbox
+        controls_layout = QHBoxLayout()
         self.use_tile_rendering_chk = QCheckBox("Use Tile Rendering", self)
-        tile_rendering_layout.addWidget(self.use_tile_rendering_chk)
+        controls_layout.addWidget(self.use_tile_rendering_chk)
         self.tiles_per_axis = QSpinBox(self)
         self.tiles_per_axis.setRange(2, 5)
         self.tiles_per_axis.setSuffix(" tiles per axis")
         self.tiles_per_axis.setEnabled(False)
-        tile_rendering_layout.addWidget(self.tiles_per_axis)
+        controls_layout.addWidget(self.tiles_per_axis)
+        controls_layout.addStretch(1)
+
+        # Add controls layout to main vertical layout
+        tile_rendering_layout.addLayout(controls_layout)
+
+        tile_rendering_warning_label = QLabel(
+            "Note: Tile rendering requires ffmpeg and the conda-forge channel, which will be automatically added to your job configuration."
+        )
+        tile_rendering_warning_label.setWordWrap(True)
+        tile_rendering_layout.addWidget(tile_rendering_warning_label)
+
         lyt.addWidget(tile_rendering_group_box, 8, 0, 1, 2)
         self.use_tile_rendering_chk.stateChanged.connect(self.activate_tiles_per_axis_changed)
 

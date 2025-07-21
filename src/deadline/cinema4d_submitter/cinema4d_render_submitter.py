@@ -85,7 +85,8 @@ def _get_parameter_values(
     parameter_values.append(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
-    parameter_values.append({"name": "TilesPerAxis", "value": settings.tiles_per_axis})
+    if settings.use_tile_rendering:
+        parameter_values.append({"name": "TilesPerAxis", "value": settings.tiles_per_axis})
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -160,6 +161,13 @@ def _get_job_template(
         # remove description field since it can't be empty
         # ignore if description is missing from template
         job_template.pop("description", None)
+
+    if not settings.use_tile_rendering:
+        job_template["parameterDefinitions"] = [
+            param
+            for param in job_template["parameterDefinitions"]
+            if param["name"] != "TilesPerAxis"
+        ]
 
     # If there are multiple frame ranges, split up the Frames parameter by take
     if takes[0].frames_parameter_name:
@@ -684,6 +692,21 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
+
+        # If `use_tile_rendering` is checked, ffmpeg and conda-forge must be added to its corresponding parameter.
+        # This allows tile rendering support to work.
+        for param in queue_parameters:
+            if param["name"] == "CondaChannels" and settings.use_tile_rendering:
+                existing_channels = param["value"].split() if param["value"] else []
+                if "conda-forge" not in existing_channels:
+                    existing_channels.append("conda-forge")
+                param["value"] = " ".join(existing_channels)
+            if param["name"] == "CondaPackages" and settings.use_tile_rendering:
+                existing_packages = param["value"].split() if param["value"] else []
+                if "ffmpeg" not in existing_packages:
+                    existing_packages.append("ffmpeg")
+                param["value"] = " ".join(existing_packages)
+
         create_job_bundle(
             settings,
             takes,
