@@ -57,8 +57,18 @@ def show_submitter():
             app = QtWidgets.QApplication([])
             app.setQuitOnLastWindowClosed(False)
             app.aboutToQuit.connect(app.deleteLater)
+
+        # Get the scene file's directory path to create the temporary directory
+        # in the same location as the original scene file. This ensures consistent
+        # path resolution across platforms and avoids path mapping errors,
+        # particularly on Linux systems.
+        scene = c4d.documents.GetActiveDocument()
+        scene_dir_path = scene.GetDocumentPath()
+
         # Create a temporary directory that will be automatically cleaned up after submission
-        with tempfile.TemporaryDirectory(prefix="c4d_job_bundle_") as temp_dir:
+        with tempfile.TemporaryDirectory(
+            prefix="scene_with_assets_", dir=scene_dir_path
+        ) as temp_dir:
             app.setStyleSheet(C4D_STYLE)
             w = _show_submitter(temp_dir, None)
             w.setStyleSheet(C4D_STYLE)
@@ -622,21 +632,17 @@ def get_conda_packages() -> str:
 def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> None:
     """
     Exports the current Cinema 4D project to a temporary folder and updates the asset references.
+    If SaveProject fails due to missing asset paths, an exception will be returned.
 
     Args:
         temp_dir: Path to the temporary directory
-        queue_parameters: List of queue parameters to update
         asset_references: Asset references to update
-
-    Returns:
-        The original Cinema4DFile value, or None if no export was performed
     """
-
     doc = c4d.documents.GetActiveDocument()
 
     # Save the project to the temporary directory
     temp_file_path = os.path.join(temp_dir, doc.GetDocumentName())
-    c4d.documents.SaveProject(
+    save_success = c4d.documents.SaveProject(
         doc,
         c4d.SAVEPROJECT_ASSETS | c4d.SAVEPROJECT_SCENEFILE,
         temp_file_path,
@@ -644,6 +650,12 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
         [],
     )
 
+    if not save_success:
+        raise RuntimeError(
+            "Exporting the scene failed. Please fix all the paths for your assets in your scene in Cinema 4D's Window menu bar > Project Asset Inspector."
+        )
+
+    # If we get here, save was successful
     # Get all files within the temp directory
     temp_assets = set()
     for root, _, files in os.walk(temp_dir):
