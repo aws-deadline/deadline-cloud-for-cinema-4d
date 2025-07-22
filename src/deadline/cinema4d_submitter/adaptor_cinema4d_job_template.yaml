@@ -55,16 +55,6 @@ parameterDefinitions:
   allowedValues:
   - '0'
   - '1'
-- name: TilesPerAxis
-  type: INT
-  userInterface:
-    control: SPIN_BOX
-    label: Tiles per axis
-    groupLabel: Tile Rendering Settings
-  minValue: 2
-  maxValue: 5
-  default: 2
-  description: The number of tiles across the x and y axis.
 steps:
 - name: Render
   parameterSpace:
@@ -275,9 +265,8 @@ steps:
               # Execute ffmpeg to stitch tiles together
               # Parameters:
               # -y                : Overwrite output file without asking
-              # -f concat -safe 0 : Use concat demuxer with relaxed path safety
-              #    -f concat: Combines multiple image files into a single input stream for the tile filter
-              #    -safe 0: Allows absolute file paths in the concat file
+              # -f concat: Combines multiple image files into a single input stream for the tile filter
+              # -safe 0: Allows absolute file paths in the concat file
               # -filter_complex   : Apply tile filter to arrange images in grid
               ffmpeg -y -f concat -safe 0 -i "$concat_file" -filter_complex tile={{Param.TilesPerAxis}}x{{Param.TilesPerAxis}} "$output_file"
               

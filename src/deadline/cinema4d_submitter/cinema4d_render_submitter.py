@@ -148,6 +148,18 @@ def _get_parameter_values(
     return parameter_values
 
 
+def _add_tile_assembly_step(
+    job_template: dict[str, Any], tile_rendering_step: dict[str, Any], take_data: TakeData
+) -> None:
+    tile_rendering_step_copy = deepcopy(tile_rendering_step)
+    tile_rendering_step_copy["name"] = "Tile Assembly - " + take_data.display_name
+    if "dependencies" in tile_rendering_step_copy:
+        for dependency in tile_rendering_step_copy["dependencies"]:
+            if "dependsOn" in dependency:
+                dependency["dependsOn"] = take_data.display_name
+    job_template["steps"].append(tile_rendering_step_copy)
+
+
 def _get_job_template(
     settings: RenderSubmitterUISettings,
     renderers: set[str],
@@ -172,12 +184,22 @@ def _get_job_template(
         # ignore if description is missing from template
         job_template.pop("description", None)
 
-    if not settings.use_tile_rendering:
-        job_template["parameterDefinitions"] = [
-            param
-            for param in job_template["parameterDefinitions"]
-            if param["name"] != "TilesPerAxis"
-        ]
+    if settings.use_tile_rendering:
+        job_template["parameterDefinitions"].append(
+            {
+                "name": "TilesPerAxis",
+                "type": "INT",
+                "userInterface": {
+                    "control": "SPIN_BOX",
+                    "label": "Tiles per axis",
+                    "groupLabel": "Tile Rendering Settings",
+                },
+                "minValue": 2,
+                "maxValue": 5,
+                "default": 2,
+                "description": "The number of tiles across the x and y axis.",
+            }
+        )
 
     # If there are multiple frame ranges, split up the Frames parameter by take
     if takes[0].frames_parameter_name:
@@ -227,13 +249,7 @@ def _get_job_template(
 
         # For tile rendering, preserve tile assembly step
         if settings.use_tile_rendering and len(job_template["steps"]) >= 1:
-            tile_rendering_step_copy = deepcopy(tile_rendering_step)
-            tile_rendering_step_copy["name"] = "Tile Assembly - " + take_data.display_name
-            if "dependencies" in tile_rendering_step_copy:
-                for dependency in tile_rendering_step_copy["dependencies"]:
-                    if "dependsOn" in dependency:
-                        dependency["dependsOn"] = take_data.display_name
-            job_template["steps"].append(tile_rendering_step_copy)
+            _add_tile_assembly_step(job_template, tile_rendering_step, take_data)
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
