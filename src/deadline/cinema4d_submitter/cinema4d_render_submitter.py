@@ -29,6 +29,7 @@ from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
 from .template_timeout_patcher import add_timeouts_to_job_template
+from .tile_assembly_step import TILE_ASSEMBLY_STEP
 from .ui.components.scene_settings_tab import SceneSettingsWidget
 
 LOADED = False
@@ -80,6 +81,56 @@ def show_submitter():
         traceback.print_exc()
 
 
+def is_valid_tile_rendering_data(camera_obj):
+    """
+    Check if the Tile Rendering camera has valid user data.
+    """
+    try:
+        # Use the correct DescID for the Reference camera
+        reference_camera_desc_id = c4d.DescID(c4d.DescLevel(700, 5, 0), c4d.DescLevel(4, 133, 0))
+        reference_camera_obj = camera_obj[reference_camera_desc_id]
+
+        # Use the correct DescID for the "Use Tiling" checkbox
+        use_tiling_desc_id = c4d.DescID(c4d.DescLevel(700, 5, 0), c4d.DescLevel(1, 400006001, 0))
+        use_tiling_state = camera_obj[
+            use_tiling_desc_id
+        ]  # Value is either 1 for checked or 0 for unchecked
+
+        # Check if the camera has the valid tile rendering data
+        return use_tiling_state and isinstance(reference_camera_obj, c4d.CameraObject)
+    except Exception:
+        return False
+
+
+def get_tiles_per_axis_value():
+    """
+    Get the Tiles Per Axis value that is needed for Tile Rendering.
+    """
+    doc = c4d.documents.GetActiveDocument()
+    objects = doc.GetObjects()
+
+    for obj in objects:
+        if isinstance(obj, c4d.CameraObject):
+            try:
+                # Create a DescID for the Tiles per Axis parameter
+                tiles_per_axis_desc_id = c4d.DescID(
+                    c4d.DescLevel(700, 5, 0), c4d.DescLevel(3, 15, 0)
+                )
+                tiles_per_axis_value = obj[tiles_per_axis_desc_id]
+            except Exception:
+                continue
+            if tiles_per_axis_value and is_valid_tile_rendering_data(obj):
+                return tiles_per_axis_value
+            else:
+                raise ValueError(
+                    "Tile rendering is checked and Render Tiles camera object was found but the Render Tiles camera configuration was invalid.\nAdd a Reference camera and check `Use Tiling`"
+                )
+
+    raise ValueError(
+        "Tile rendering is checked but no Render Tiles camera object was found in the scene.\nRefer to the tile rendering instructions in the Cinema 4D GitHub repository: https://github.com/aws-deadline/deadline-cloud-for-cinema-4d"
+    )
+
+
 def _get_parameter_values(
     settings: RenderSubmitterUISettings,
     queue_parameters: list[dict[str, Any]],
@@ -96,7 +147,7 @@ def _get_parameter_values(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
     if settings.use_tile_rendering:
-        parameter_values.append({"name": "TilesPerAxis", "value": settings.tiles_per_axis})
+        parameter_values.append({"name": "TilesPerAxis", "value": get_tiles_per_axis_value()})
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -189,15 +240,10 @@ def _get_job_template(
             {
                 "name": "TilesPerAxis",
                 "type": "INT",
-                "userInterface": {
-                    "control": "SPIN_BOX",
-                    "label": "Tiles per axis",
-                    "groupLabel": "Tile Rendering Settings",
-                },
+                "description": "The number of tiles across the x and y axis.",
                 "minValue": 2,
                 "maxValue": 5,
                 "default": 2,
-                "description": "The number of tiles across the x and y axis.",
             }
         )
 
@@ -220,8 +266,6 @@ def _get_job_template(
 
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
-    if settings.use_tile_rendering:
-        tile_rendering_step = job_template["steps"][1]
     job_template["steps"] = []
     for take_data in takes:
         step = deepcopy(default_step)
@@ -249,7 +293,7 @@ def _get_job_template(
 
         # For tile rendering, preserve tile assembly step
         if settings.use_tile_rendering and len(job_template["steps"]) >= 1:
-            _add_tile_assembly_step(job_template, tile_rendering_step, take_data)
+            _add_tile_assembly_step(job_template, TILE_ASSEMBLY_STEP, take_data)
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:

@@ -70,7 +70,6 @@ class RenderSubmitterUISettings:
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )
     use_tile_rendering: bool = field(default=False, metadata={"sticky": True})
-    tiles_per_axis: int = field(default=2, metadata={"sticky": True})
     export_job_bundle_to_temp: bool = field(default=False, metadata={"sticky": True})
 
     # developer options
