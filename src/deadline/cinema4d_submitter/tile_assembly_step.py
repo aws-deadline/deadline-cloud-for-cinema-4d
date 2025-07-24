@@ -70,8 +70,6 @@ stitch_tiles() {
   local output_name="$2"   # Base name for output file
   
   # Find all supported image files in the asset directory
-  # Supported formats: tif, png, jpg, jpeg, tga, bmp, hdr, dpx (Cinema 4D compatible)
- 
   local supported_extensions=("tif" "png" "jpg" "jpeg" "tga" "bmp" "hdr" "dpx")
     
   # Build the find command with supported extensions

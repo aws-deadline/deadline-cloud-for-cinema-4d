@@ -111,20 +111,17 @@ def get_tiles_per_axis_value():
 
     for obj in objects:
         if isinstance(obj, c4d.CameraObject):
+            # Create a DescID for the Tiles per Axis parameter
+            tiles_per_axis_desc_id = c4d.DescID(c4d.DescLevel(700, 5, 0), c4d.DescLevel(3, 15, 0))
             try:
-                # Create a DescID for the Tiles per Axis parameter
-                tiles_per_axis_desc_id = c4d.DescID(
-                    c4d.DescLevel(700, 5, 0), c4d.DescLevel(3, 15, 0)
-                )
                 tiles_per_axis_value = obj[tiles_per_axis_desc_id]
-            except Exception:
+            except AttributeError:
                 continue
             if tiles_per_axis_value and is_valid_tile_rendering_data(obj):
                 return tiles_per_axis_value
-            else:
-                raise ValueError(
-                    "Tile rendering is checked and Render Tiles camera object was found but the Render Tiles camera configuration was invalid.\nAdd a Reference camera and check `Use Tiling`"
-                )
+            raise ValueError(
+                "Tile rendering is checked and Render Tiles camera object was found but the Render Tiles camera configuration was invalid.\nAdd a Reference camera and check `Use Tiling`"
+            )
 
     raise ValueError(
         "Tile rendering is checked but no Render Tiles camera object was found in the scene.\nRefer to the tile rendering instructions in the Cinema 4D GitHub repository: https://github.com/aws-deadline/deadline-cloud-for-cinema-4d"
@@ -243,7 +240,7 @@ def _get_job_template(
                 "description": "The number of tiles across the x and y axis.",
                 "minValue": 2,
                 "maxValue": 5,
-                "default": 2,
+                "default": get_tiles_per_axis_value(),
             }
         )
 
@@ -767,17 +764,18 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
         # If `use_tile_rendering` is checked, ffmpeg and conda-forge must be added to its corresponding parameter.
         # This allows tile rendering support to work.
-        for param in queue_parameters:
-            if param["name"] == "CondaChannels" and settings.use_tile_rendering:
-                existing_channels = param["value"].split() if param["value"] else []
-                if "conda-forge" not in existing_channels:
-                    existing_channels.append("conda-forge")
-                param["value"] = " ".join(existing_channels)
-            if param["name"] == "CondaPackages" and settings.use_tile_rendering:
-                existing_packages = param["value"].split() if param["value"] else []
-                if "ffmpeg" not in existing_packages:
-                    existing_packages.append("ffmpeg")
-                param["value"] = " ".join(existing_packages)
+        if settings.use_tile_rendering:
+            for param in queue_parameters:
+                if param["name"] == "CondaChannels":
+                    existing_channels = param["value"].split() if param["value"] else []
+                    if "conda-forge" not in existing_channels:
+                        existing_channels.append("conda-forge")
+                    param["value"] = " ".join(existing_channels)
+                if param["name"] == "CondaPackages":
+                    existing_packages = param["value"].split() if param["value"] else []
+                    if "ffmpeg" not in existing_packages:
+                        existing_packages.append("ffmpeg")
+                    param["value"] = " ".join(existing_packages)
 
         create_job_bundle(
             settings,
