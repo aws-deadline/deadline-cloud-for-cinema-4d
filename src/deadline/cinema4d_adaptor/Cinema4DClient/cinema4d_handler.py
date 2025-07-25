@@ -77,10 +77,6 @@ class Cinema4DHandler:
             # whether we have done owner[param_id] = mapped_path
             attempted_basic_path_mapping_approach = False
             try:
-                print(
-                    f"Attempting to update path for asset with owner '{owner}', paramId '{param_id}', "
-                    f"new filename '{mapped_path}', nodeSpace '{node_space}', and nodePath '{node_path}'."
-                )
                 success = self._pathmap_recognized_types(
                     owner, param_id, node_space, node_path, mapped_path
                 )

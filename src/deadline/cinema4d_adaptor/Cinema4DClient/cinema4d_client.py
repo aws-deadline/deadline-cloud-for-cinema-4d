@@ -88,20 +88,17 @@ class Cinema4DClient(ClientInterface):
             # If submission was not from Mac (i.e. not posix source format), just do normal path mapping
             if not has_posix_format:
                 mapped_path = super().map_path(path)
-                print(f"Using normal path mapping (non-POSIX): '{path}' -> '{mapped_path}'")
                 return mapped_path
 
             print(
                 "Found POSIX format rule, converting path separators for Mac to Windows compatibility"
             )
-            print(f"Original path: '{path}'")
 
             # Convert backslashes to forward slashes for consistency with POSIX paths.
             # This is safe because:
             # 1. When submitting from Mac, backslashes can only appear as path separators
             # 2. Windows accepts both '\' and '/' as valid path separators
             converted_path = path.replace("\\", "/")
-            print(f"Converted path: '{converted_path}'")
 
             # Try path mapping with converted path
             mapped_path = super().map_path(converted_path)
@@ -109,9 +106,7 @@ class Cinema4DClient(ClientInterface):
             # If mapped path is the same as converted path, mapping failed
             # so try with original path instead
             if mapped_path == converted_path:
-                print("Path mapping with converted path failed (no rules matched)")
                 mapped_path = super().map_path(path)
-                print(f"Using original path mapping: '{path}' -> '{mapped_path}'")
                 return mapped_path
 
             print(f"Successfully mapped converted path: '{converted_path}' -> '{mapped_path}'")
