@@ -128,6 +128,20 @@ def get_tiles_per_axis_value():
     )
 
 
+def set_tile_rendering_frame_range():
+    """
+    Set the frame range for Tile Rendering.
+    """
+    tiles_per_axis = get_tiles_per_axis_value()
+    doc = c4d.documents.GetActiveDocument()
+    render_data = doc.GetActiveRenderData()
+    frame_start = c4d.BaseTime(0, doc.GetFps())
+    frame_end = c4d.BaseTime((tiles_per_axis * tiles_per_axis) - 1, doc.GetFps())
+    render_data[c4d.RDATA_FRAMEFROM] = frame_start
+    render_data[c4d.RDATA_FRAMETO] = frame_end
+    return f"0-{(tiles_per_axis*tiles_per_axis) - 1}"
+
+
 def _get_parameter_values(
     settings: RenderSubmitterUISettings,
     queue_parameters: list[dict[str, Any]],
@@ -148,14 +162,22 @@ def _get_parameter_values(
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
+            # Override frame range if tile rendering is enabled
+            frame_range = (
+                set_tile_rendering_frame_range()
+                if settings.use_tile_rendering
+                else take_data.frame_range
+            )
             parameter_values.append(
                 {
                     "name": take_data.frames_parameter_name,
-                    "value": take_data.frame_range,
+                    "value": frame_range,
                 }
             )
     else:
-        if settings.override_frame_range:
+        if settings.use_tile_rendering:
+            frame_list = set_tile_rendering_frame_range()
+        elif settings.override_frame_range:
             frame_list = settings.frame_list
         else:
             frame_list = Animation.frame_list()
@@ -200,7 +222,10 @@ def _add_tile_assembly_step(
     job_template: dict[str, Any], tile_rendering_step: dict[str, Any], take_data: TakeData
 ) -> None:
     tile_rendering_step_copy = deepcopy(tile_rendering_step)
-    tile_rendering_step_copy["name"] = "Tile Assembly - " + take_data.display_name
+    prefix = "Tile Assembly - "
+    max_name_length = 64 - len(prefix)
+    truncated_name = take_data.display_name[:max_name_length]
+    tile_rendering_step_copy["name"] = prefix + truncated_name
     if "dependencies" in tile_rendering_step_copy:
         for dependency in tile_rendering_step_copy["dependencies"]:
             if "dependsOn" in dependency:

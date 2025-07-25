@@ -60,30 +60,32 @@ EXPECTED_TILES=$(({{Param.TilesPerAxis}} * {{Param.TilesPerAxis}}))
 # =============================================================================
 # Function: stitch_tiles
 # Parameters:
-#   $1 (asset_root): Directory containing the rendered tile images
-#   $2 (output_name): Base name for the output stitched image
+#   $1 (stitched_output_name): Base name for the output stitched image
+#   $2 (output_file_path): Full path to the output file for filename matching
 # Returns:
 #   0 on success, 1 on failure
 # =============================================================================
 stitch_tiles() {
-  local asset_root="$1"    # Directory containing tile images
-  local output_name="$2"   # Base name for output file
+  local stitched_output_name="$1"   # Base name for output file (e.g., "stitched_output")
+  local output_file_path="$2"        # Full output path for filename matching
+  local asset_root=$(dirname "$output_file_path") # Extract directory from output path
   
-  # Find all supported image files in the asset directory
+  # Find all image files in the asset directory
+  local files=()
   local supported_extensions=("tif" "png" "jpg" "jpeg" "tga" "bmp" "hdr" "dpx")
-    
-  # Build the find command with supported extensions
-  local find_cmd="find \"$asset_root\" -type f \\( "
-  for i in "${!supported_extensions[@]}"; do
-    if [ $i -gt 0 ]; then
-      find_cmd="$find_cmd -o "
-    fi
-    find_cmd="$find_cmd-iname \"*.${supported_extensions[$i]}\""
-  done
-  find_cmd="$find_cmd \\) 2>/dev/null | sort"
-    
-  # Execute the find command
-  local files=($(eval $find_cmd))
+  
+  if [ -d "$asset_root" ]; then
+    for ext in "${supported_extensions[@]}"; do
+      for file in "$asset_root"/*.$ext "$asset_root"/*.${ext^^}; do
+        if [ -f "$file" ]; then
+          files+=("$file")
+        fi
+      done
+    done
+    # Sort files
+    IFS=$'\n' files=($(printf '%s\n' "${files[@]}" | sort))
+    unset IFS
+  fi
 
   if [ ${#files[@]} -gt 0 ]; then
     printf "Found %d image files in %s:\n" "${#files[@]}" "$asset_root"
@@ -92,10 +94,10 @@ stitch_tiles() {
     local selected=()
     local count=0
 
-    # Special handling for multi-pass renders when output and multi-pass paths are in same directory
-    if [ "$output_name" = "stitched_multipass" ] && [ "$(dirname "{{Param.OutputPath}}")" = "$(dirname "{{Param.MultiPassPath}}")" ]; then
-      # Skip the first batch of tiles (already processed in output path)
-      # This prevents duplicate processing when multi-pass files are in same directory
+    # Special handling for multi-pass renders when output and multi-pass paths are identical
+    if [ "$stitched_output_name" = "stitched_multipass" ] && [ "{{Param.OutputPath}}" = "{{Param.MultiPassPath}}" ]; then
+      # Skip the first batch of tiles (already processed in main output)
+      # This prevents duplicate processing when both outputs point to the same file.
       local skip_count=$EXPECTED_TILES
       local current_count=0
       
@@ -105,22 +107,28 @@ stitch_tiles() {
           continue
         elif [ $current_count -lt $skip_count ]; then
           # Skip files already processed in main output
+          printf "Skipping file %d/%d: %s\n" "$current_count" "$skip_count" "$file"
           current_count=$((current_count + 1))
           continue
         elif [ $count -lt $EXPECTED_TILES ]; then
-          # Add this file to selection (after skipping duplicates)
-          selected+=("$file")
-          count=$((count + 1))
+          # Match files containing the base filename (without extension)
+          if [[ "$file" == *"$(basename "$output_file_path" | cut -d. -f1)"* ]]; then
+            selected+=("$file")
+            count=$((count + 1))
+          fi
         else
           break
         fi
       done
     else
-      # Standard case - select only the first N tiles needed for the grid
+      # Standard case - select tiles that match the output filename pattern
       for file in "${files[@]}"; do
         if [ $count -lt $EXPECTED_TILES ]; then
-          selected+=("$file")
-          count=$((count + 1))
+          # Match files containing the base filename (without extension)
+          if [[ "$file" == *"$(basename "$output_file_path" | cut -d. -f1)"* ]]; then
+            selected+=("$file")
+            count=$((count + 1))
+          fi
         else
           break
         fi
@@ -130,7 +138,7 @@ stitch_tiles() {
     # Log information about selected tiles
     if [ ${#files[@]} -gt $EXPECTED_TILES ]; then
       printf "Using first %d tiles out of %d found:\n" "$EXPECTED_TILES" "${#files[@]}"
-      printf '%s\n' "${SELECTED_FILES[@]}"
+      printf '%s\n' "${selected[@]}"
       printf "\n"
     fi
     
@@ -143,8 +151,8 @@ stitch_tiles() {
       local file_ext="${first_file##*.}"
       
       # Configure output paths
-      local output_file="$asset_root/${output_name}.$file_ext"  # Final stitched image
-      local concat_file="$asset_root/${output_name}_concat.txt" # Temporary file list for ffmpeg
+      local output_file="$asset_root/${stitched_output_name}.$file_ext"  # Final stitched image
+      local concat_file="$asset_root/${stitched_output_name}_concat.txt" # Temporary file list for ffmpeg
 
       # Create ffmpeg concat demuxer file
       # Format required by ffmpeg: "file '/path/to/file.ext'" (one per line)
@@ -186,15 +194,13 @@ stitch_tiles() {
 # Process standard output tiles first
 if [ ! -z "{{Param.OutputPath}}" ]; then
   printf "\n========== MAIN TILE ASSEMBLY ===================\n"
-  MAIN_ASSETROOT=$(dirname "{{Param.OutputPath}}")  # Extract directory from output path
-  stitch_tiles "$MAIN_ASSETROOT" "stitched_output"   # Stitch main output tiles
+  stitch_tiles "stitched_output" "{{Param.OutputPath}}" # Stitch main output tiles
 fi
 
 # Process multi-pass output tiles if a multi-pass path was specified
 if [ ! -z "{{Param.MultiPassPath}}" ]; then
   printf "\n========== MULTI-PASS TILE ASSEMBLY ===================\n"
-  MULTIPASS_ASSETROOT=$(dirname "{{Param.MultiPassPath}}")  # Extract multi-pass directory
-  stitch_tiles "$MULTIPASS_ASSETROOT" "stitched_multipass"  # Stitch multi-pass tiles
+  stitch_tiles "stitched_multipass" "{{Param.MultiPassPath}}" # Stitch multi-pass tiles
 fi""",
             }
         ],
