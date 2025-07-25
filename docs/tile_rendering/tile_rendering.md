@@ -48,6 +48,9 @@ When you enable tile rendering, the submitter automatically:
 1. Locate the "Render Tiles" camera in the Asset Browser (under "Model" section)
 2. Add it to your scene
 3. Select the Render Tiles camera by clicking on the camera selection box
+
+**Why two cameras?** The Render Tiles camera uses your default camera as a reference to know what scene view to divide into tiles. The default camera defines the composition and framing, while the Render Tiles camera handles the technical process of splitting that view into smaller sections.
+
 ![Render Tiles camera](images/render_tiles_camera.png)
 
 ### Configure Tile Rendering
@@ -66,7 +69,7 @@ When you enable tile rendering, the submitter automatically:
 1. In the "Save" tab:
     * Set the file path to your desired output folder
     * Choose either "REGULAR IMAGE", "MULTI-PASS IMAGE", or both
-        * When using "MULTI-PASS IMAGE" output, you must check the "Multi-Layer file" option. This ensures proper processing of multi-pass data during tile stitching.
+        * When using "MULTI-PASS IMAGE" output, you must check the "Multi-Layer file" option. Multi-Layer files store different render passes (like diffuse, specular, shadows) as separate layers within a single file, which is required for the tile stitching process to properly combine multi-pass data from all tiles.
         * If you select both "REGULAR IMAGE" and "MULTI-PASS IMAGE" as save options:
             * Both outputs will be stitched separately, resulting in two final images
     * Select a supported format: tif, png, jpg, jpeg, tga, bmp, hdr, or dpx
@@ -86,4 +89,7 @@ When you enable tile rendering, the submitter automatically:
 
 1. Once the job completes, download the output
 2. Open the output folder to find the "stitched_output.tif" file containing your final rendered image
+
+**File Size:** The final stitched image maintains the same dimensions and file size as a normal render - tile rendering doesn't affect the final image quality or size, only the rendering process.
+
 ![Tile rendering outputs](images/tile_rendering_outputs.png)
