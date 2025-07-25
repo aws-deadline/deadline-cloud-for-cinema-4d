@@ -199,7 +199,6 @@ class Cinema4DHandler:
         return True
 
     def start_render(self, data: dict) -> None:
-        self.doc = c4d.documents.GetActiveDocument()
         self.render_data = self.doc.GetActiveRenderData()
         self.render_data[c4d.RDATA_FRAMESEQUENCE] = c4d.RDATA_FRAMESEQUENCE_MANUAL
         frame = int(self.render_kwargs.get("frame", data["frame"]))
@@ -217,8 +216,6 @@ class Cinema4DHandler:
             self.render_data[c4d.RDATA_MULTIPASS_FILENAME] = self.map_path(
                 self.render_data[c4d.RDATA_MULTIPASS_FILENAME]
             )
-
-        self._remap_assets()
 
         bm = bitmaps.MultipassBitmap(
             int(self.render_data[c4d.RDATA_XRES]),
@@ -325,3 +322,5 @@ class Cinema4DHandler:
 
             c4d.documents.InsertBaseDocument(doc)
             c4d.documents.SetActiveDocument(doc)
+            self.doc = doc
+            self._remap_assets()
