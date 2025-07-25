@@ -2,32 +2,28 @@
 
 *These instructions include a 3x3 tile render as an example.*
 
+Tile rendering divides a single image into smaller sections (tiles) that are rendered separately across multiple workers, then automatically stitched back together into the final image. This approach can significantly reduce render times for large or complex scenes by distributing the workload.
+
 ## Important Notes About Tile Rendering
 
-### Platform Compatibility
+### Supported Features
 
-* Tile rendering works on both Windows and Linux environments
-
-### Multi-Pass Configuration
-
-* When using "MULTI-PASS IMAGE" output, you must check the "Multi-Layer file" option. This ensures proper processing of multi-pass data during tile stitching
-
-### Using Multiple Output Types
-
-* If you select both "REGULAR IMAGE" and "MULTI-PASS IMAGE" as save options: 
-    * Both outputs will be stitched separately, resulting in two final images
-    * File naming is critical: ensure regular image filenames alphabetically precede multi-pass filenames
-    * If naming order is incorrect, the stitched output labels may be reversed
-
-### Supported File Formats
-
+* Job submission is supported from Windows and Mac workstations
+* Tile rendering execution is supported on both Windows and Linux worker environments
 * Use standard formats compatible with both Cinema 4D and ffmpeg:
     * TIF (recommended for highest quality)
     * PNG (good balance of quality and file size)
     * JPG/JPEG (smaller files, lossy compression)
     * TGA, BMP, HDR, DPX (also supported)
 
-### Not Supported/Will Cause Errors:
+### Automatic Configuration
+
+When you enable tile rendering, the submitter automatically:
+* Adds `conda-forge` to the Conda channels
+* Adds `ffmpeg` to the Conda packages (required for tile stitching)
+* Sets the frame range in render settings based on your "Tiles per Axis" value (e.g., 3x3 tiles = frames 0-8)
+
+### Current Limitations
 
 * Using a Redshift renderer and camera
 * Adding Render Tokens to the output paths
@@ -39,7 +35,7 @@
 #### Configure Render Settings
 
 1. Go to "Render Settings" and set "Renderer" to "Physical"
-    * ![Add Physical Renderer](images/physical_renderer.png)
+![Add Physical Renderer](images/physical_renderer.png)
 
 #### Set Up Camera
 
@@ -63,22 +59,18 @@
     * Set "Tiles per Axis" (between 2-5, where 5x5 creates 25 tiles)
     * Set "Reference Camera" by dragging your default camera to this field
     * Check "Use Tiling" to enable tile rendering
-    * ![Render Tiles attributes](images/render_tiles_attributes.png)
+![Render Tiles attributes](images/render_tiles_attributes.png)
 
 #### Adjust Render Settings
 
-1. Go to Render → Render Settings
-2. In the "Output" tab:
-    * Set "Frame Range" to Manual
-    * Set "From" to 0
-    * Set "To" to (number of tiles - 1)
-    * ![Render settings frame configuration](images/render_settings_frames.png)
-3. In the "Save" tab:
+1. In the "Save" tab:
     * Set the file path to your desired output folder
-    * Choose either "REGULAR IMAGE" or "MULTI-PASS IMAGE"
-        * If using "MULTI-PASS IMAGE", check "Multi-Layer file"
+    * Choose either "REGULAR IMAGE", "MULTI-PASS IMAGE", or both
+        * When using "MULTI-PASS IMAGE" output, you must check the "Multi-Layer file" option. This ensures proper processing of multi-pass data during tile stitching.
+        * If you select both "REGULAR IMAGE" and "MULTI-PASS IMAGE" as save options:
+            * Both outputs will be stitched separately, resulting in two final images
     * Select a supported format: tif, png, jpg, jpeg, tga, bmp, hdr, or dpx
-    * ![Render settings Save tab](images/render_settings_save_tab.png)
+![Render settings Save tab](images/render_settings_save_tab.png)
 
 ### Submit to Deadline Cloud
 
@@ -87,7 +79,7 @@
 1. Go to Extensions → AWS Deadline Cloud Submitter
     * In the "Job-specific settings" tab → "Tile Rendering Settings":
         * Check "Use Tile Rendering"
-        * ![Tile rendering checkbox](images/use_tile_rendering_checkbox.png)
+![Tile rendering checkbox](images/use_tile_rendering_checkbox.png)
 2. Submit the job
 
 ### Access Results
