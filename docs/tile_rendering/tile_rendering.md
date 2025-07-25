@@ -2,7 +2,7 @@
 
 *These instructions include a 3x3 tile render as an example.*
 
-Tile rendering divides a single image into smaller sections (tiles) that are rendered separately across multiple workers, then automatically stitched back together into the final image. This approach can significantly reduce render times for large or complex scenes by distributing the workload.
+Tile rendering divides a single image into smaller sections (tiles) that are rendered separately across multiple workers, then automatically stitched back together into the final image using ffmpeg (a multimedia processing tool). This approach can significantly reduce render times for large or complex scenes by distributing the workload.
 
 ## Important Notes About Tile Rendering
 
@@ -19,8 +19,8 @@ Tile rendering divides a single image into smaller sections (tiles) that are ren
 ### Automatic Configuration
 
 When you enable tile rendering, the submitter automatically:
-* Adds `conda-forge` to the Conda channels
-* Adds `ffmpeg` to the Conda packages (required for tile stitching)
+* Adds `conda-forge` to the Conda channels (a community-maintained package repository that provides ffmpeg)
+* Adds `ffmpeg` to the Conda packages (a multimedia processing tool required to stitch the individual tiles back into the final image)
 * Sets the frame range in render settings based on your "Tiles per Axis" value (e.g., 3x3 tiles = frames 0-8)
 
 ### Current Limitations
