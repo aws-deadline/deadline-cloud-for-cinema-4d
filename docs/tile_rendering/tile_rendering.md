@@ -15,12 +15,14 @@ Tile rendering divides a single image into smaller sections (tiles) that are ren
 
 #### Set Up Camera
 
-1. Add a default physical camera object to your scene
+1. Add a physical camera object to your scene by clicking the camera icon (highlighted in the red box below). Verify in the camera's attributes that the type is set to "Physical"
 2. Position the camera to properly frame the objects you want to render
+![Physical camera](images/physical_camera.png)
 
 #### Add Render Tiles Camera
 
 1. Locate the "Render Tiles" camera in the Asset Browser (under "Model" section)
+![Locating Render Tiles camera](images/render_tiles_camera_find.png)
 2. Add it to your scene
 3. Select the Render Tiles camera by clicking on the camera selection box
 
@@ -45,9 +47,10 @@ If you need more than 5 tiles per axis, you can modify the limit:
 
 1. Select the Render Tiles camera
 2. Go to Attributes → Manage User Data
+![Manage User Data](images/tile_rendering_manage_user_data.png)
 3. Find "Tiles per Axis" and modify the maximum value
 4. Click OK to apply the changes
-
+![Tiles per axis max limit change](images/tiles_per_axis_limit_change.png)
 #### Adjust Render Settings
 
 1. Go to Render → Render Settings
