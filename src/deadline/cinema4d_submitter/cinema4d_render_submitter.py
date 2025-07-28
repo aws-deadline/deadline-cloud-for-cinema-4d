@@ -81,32 +81,49 @@ def show_submitter():
         traceback.print_exc()
 
 
-def is_valid_tile_rendering_data(camera_obj):
+def has_valid_tile_rendering_configuration(tile_render_camera):
     """
-    Check if the Tile Rendering camera has valid user data.
+    Validates that a Tile Rendering camera object has proper configuration.
+
+    Checks that the camera has:
+    - 'Use Tiling' checkbox enabled
+    - Valid reference camera assigned
+
+    Args:
+        tile_render_camera: Cinema 4D camera object with tile rendering user data
+
+    Returns:
+        bool: True if camera is properly configured for tile rendering
     """
     try:
         # Use the correct DescID for the Reference camera
         reference_camera_desc_id = c4d.DescID(c4d.DescLevel(700, 5, 0), c4d.DescLevel(4, 133, 0))
-        reference_camera_obj = camera_obj[reference_camera_desc_id]
+        reference_camera_obj = tile_render_camera[reference_camera_desc_id]
 
         # Use the correct DescID for the "Use Tiling" checkbox
         use_tiling_desc_id = c4d.DescID(c4d.DescLevel(700, 5, 0), c4d.DescLevel(1, 400006001, 0))
-        use_tiling_state = camera_obj[
+        use_tiling_state = tile_render_camera[
             use_tiling_desc_id
         ]  # Value is either 1 for checked or 0 for unchecked
 
         # Check if the camera has the valid tile rendering data
         return use_tiling_state and isinstance(reference_camera_obj, c4d.CameraObject)
-    except Exception:
+    except Exception as e:
+        print(
+            f"Warning: Failed to validate tile rendering configuration for camera {tile_render_camera.GetName()}: {e}"
+        )
         return False
 
 
-def get_tiles_per_axis_value():
+def get_tiles_per_axis_value(doc=None):
     """
     Get the Tiles Per Axis value that is needed for Tile Rendering.
+
+    Args:
+        doc: Cinema 4D document object. If None, gets the active document.
     """
-    doc = c4d.documents.GetActiveDocument()
+    if doc is None:
+        doc = c4d.documents.GetActiveDocument()
     objects = doc.GetObjects()
 
     for obj in objects:
@@ -117,14 +134,14 @@ def get_tiles_per_axis_value():
                 tiles_per_axis_value = obj[tiles_per_axis_desc_id]
             except AttributeError:
                 continue
-            if tiles_per_axis_value and is_valid_tile_rendering_data(obj):
+            if tiles_per_axis_value and has_valid_tile_rendering_configuration(obj):
                 return tiles_per_axis_value
             raise ValueError(
-                "Tile rendering is checked and Render Tiles camera object was found but the Render Tiles camera configuration was invalid.\nAdd a Reference camera and check `Use Tiling`"
+                "Tile rendering is checked and Render Tiles camera object was found but the Render Tiles camera configuration was non valid.\nAdd a Reference camera and check `Use Tiling`"
             )
 
     raise ValueError(
-        "Tile rendering is checked but no Render Tiles camera object was found in the scene.\nRefer to the tile rendering instructions in the Cinema 4D GitHub repository: https://github.com/aws-deadline/deadline-cloud-for-cinema-4d"
+        "Tile rendering is checked but no Render Tiles camera object was found in the scene.\nRefer to the tile rendering instructions in the Cinema 4D GitHub repository: https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/docs/tile_rendering"
     )
 
 
@@ -132,8 +149,8 @@ def set_tile_rendering_frame_range():
     """
     Set the frame range for Tile Rendering.
     """
-    tiles_per_axis = get_tiles_per_axis_value()
     doc = c4d.documents.GetActiveDocument()
+    tiles_per_axis = get_tiles_per_axis_value(doc)
     render_data = doc.GetActiveRenderData()
     frame_start = c4d.BaseTime(0, doc.GetFps())
     frame_end = c4d.BaseTime((tiles_per_axis * tiles_per_axis) - 1, doc.GetFps())
@@ -158,7 +175,8 @@ def _get_parameter_values(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
     if settings.use_tile_rendering:
-        parameter_values.append({"name": "TilesPerAxis", "value": get_tiles_per_axis_value()})
+        doc = c4d.documents.GetActiveDocument()
+        parameter_values.append({"name": "TilesPerAxis", "value": get_tiles_per_axis_value(doc)})
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
