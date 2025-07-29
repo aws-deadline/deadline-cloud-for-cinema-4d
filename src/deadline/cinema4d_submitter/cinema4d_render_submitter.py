@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import os
 import re
+import tempfile
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,7 +19,6 @@ from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint
     JobBundlePurpose,
     SubmitJobToDeadlineDialog,
 )
-from .template_timeout_patcher import add_timeouts_to_job_template
 
 from ._version import version_tuple as adaptor_version_tuple
 from .assets import AssetIntrospector
@@ -28,6 +28,7 @@ from .data_classes import (
 from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
+from .template_timeout_patcher import add_timeouts_to_job_template
 from .ui.components.scene_settings_tab import SceneSettingsWidget
 
 LOADED = False
@@ -56,10 +57,22 @@ def show_submitter():
             app = QtWidgets.QApplication([])
             app.setQuitOnLastWindowClosed(False)
             app.aboutToQuit.connect(app.deleteLater)
-        app.setStyleSheet(C4D_STYLE)
-        w = _show_submitter(None)
-        w.setStyleSheet(C4D_STYLE)
-        w.exec_()
+
+        # Get the scene file's directory path to create the temporary directory
+        # in the same location as the original scene file. This ensures consistent
+        # path resolution across platforms and avoids path mapping errors,
+        # particularly on Linux systems.
+        scene = c4d.documents.GetActiveDocument()
+        scene_dir_path = scene.GetDocumentPath()
+
+        # Create a temporary directory that will be automatically cleaned up after submission
+        with tempfile.TemporaryDirectory(
+            prefix="scene_with_assets_", dir=scene_dir_path
+        ) as temp_dir:
+            app.setStyleSheet(C4D_STYLE)
+            w = _show_submitter(temp_dir, None)
+            w.setStyleSheet(C4D_STYLE)
+            w.exec_()
     except Exception:
         print("Deadline UI launch failed")
         import traceback
@@ -79,6 +92,9 @@ def _get_parameter_values(
     parameter_values.append({"name": "Cinema4DFile", "value": Scene.name()})
     parameter_values.append({"name": "OutputPath", "value": settings.output_path})
     parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
+    parameter_values.append(
+        {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
+    )
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -194,7 +210,7 @@ def _get_job_template(
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
             init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'"
+                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'"
                 % take_data.name
             )
 
@@ -408,6 +424,7 @@ def create_job_bundle(
     asset_references: AssetReferences,
     queue_parameters: list[dict[str, Any]],
     attachments: AssetReferences,
+    temp_dir: Optional[str] = None,
     host_requirements: Optional[dict] = None,
 ):
     """
@@ -417,6 +434,12 @@ def create_job_bundle(
     a job bundle for submission. It handles different take selection modes, manages
     frame ranges, and prepares job templates with the necessary parameters.
     """
+
+    original_cinema4d_file = Scene.name()
+    scene_output_path, scene_multi_pass_path = Scene.get_output_paths()
+
+    if settings.export_job_bundle_to_temp and temp_dir:
+        export_to_temp_folder(temp_dir, asset_references)
 
     submit_takes = takes["main_data_list"]
     job_bundle_path = Path(job_bundle_dir)
@@ -430,7 +453,6 @@ def create_job_bundle(
         submit_takes = takes["current_data_list"]
 
     # Add overrides to asset references and update the paths with C4D render path tokens.
-    scene_output_path, scene_multi_pass_path = Scene.get_output_paths()
     if settings.override_output_path:
         if settings.output_path:
             settings.output_path = Scene.replace_render_path_tokens(settings.output_path)
@@ -475,6 +497,17 @@ def create_job_bundle(
     save_job_bundle_files(job_bundle_path, job_template, parameter_values, asset_references)
 
     # Save Sticky Settings
+    if settings.export_job_bundle_to_temp:
+        # Close temporary document
+        c4d.documents.KillDocument(c4d.documents.GetActiveDocument())
+
+        # Restore the original Cinema4DFile to be the active document.
+        doc = c4d.documents.LoadDocument(
+            original_cinema4d_file, c4d.SCENEFILTER_OBJECTS | c4d.SCENEFILTER_MATERIALS
+        )
+        c4d.documents.InsertBaseDocument(doc)
+        c4d.documents.SetActiveDocument(doc)
+
     settings.input_filenames = sorted(attachments.input_filenames)
     settings.input_directories = sorted(attachments.input_directories)
 
@@ -575,13 +608,56 @@ def get_conda_packages() -> str:
     return f"cinema4d={c4d_major_version}.* cinema4d-openjd={adaptor_version}.*"
 
 
-def _show_submitter(parent=None, f=Qt.WindowFlags()):
+def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> None:
+    """
+    Exports the current Cinema 4D project to a temporary folder and updates the asset references.
+    If SaveProject fails due to missing asset paths, an exception will be returned.
+
+    Args:
+        temp_dir: Path to the temporary directory
+        asset_references: Asset references to update
+    """
+    doc = c4d.documents.GetActiveDocument()
+
+    # Save the project to the temporary directory
+    temp_file_path = os.path.join(temp_dir, doc.GetDocumentName())
+    save_success = c4d.documents.SaveProject(
+        doc,
+        c4d.SAVEPROJECT_ASSETS | c4d.SAVEPROJECT_SCENEFILE,
+        temp_file_path,
+        [],
+        [],
+    )
+
+    if not save_success:
+        raise RuntimeError(
+            "Exporting the scene failed. Please fix all the paths for your assets in your scene in Cinema 4D's Window menu bar > Project Asset Inspector."
+        )
+
+    # If we get here, save was successful
+    # Get all files within the temp directory
+    temp_assets = set()
+    for root, _, files in os.walk(temp_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+            temp_assets.add(os.path.normpath(file_path))
+
+    # Add all assets to the asset references
+    asset_references.input_filenames = temp_assets
+
+
+def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
     """
     Creates and returns a submission dialog for rendering jobs.
 
     This function initializes render settings, processes takes from the active document,
     sets up attachments, and configures a submission dialog with necessary callbacks
     and requirements for job submission.
+
+    Args:
+        temp_dir: Path to a temporary directory for job bundle export
+        parent: The parent widget
+        f: Window flags
     """
 
     render_settings = initialize_render_settings()
@@ -614,6 +690,7 @@ def _show_submitter(parent=None, f=Qt.WindowFlags()):
             asset_references,
             queue_parameters,
             widget.job_attachments.attachments,
+            temp_dir,
             host_requirements,
         )
 

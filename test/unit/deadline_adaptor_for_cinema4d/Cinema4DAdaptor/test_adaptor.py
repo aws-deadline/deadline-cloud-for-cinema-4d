@@ -1,5 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 from __future__ import annotations
+
 import json
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from jsonschema.exceptions import ValidationError
 from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
 from deadline.cinema4d_adaptor._version import version as adaptor_version
 
+
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -17,6 +19,7 @@ REFERENCE_INIT_DATA_SCHEMA = {
         "take": {"type": "string"},
         "output_path": {"type": "string"},
         "multi_pass_path": {"type": "string"},
+        "activate_error_checking": {"type": "string"},
     },
     "required": ["scene_file"],
 }
@@ -42,6 +45,7 @@ def init_data() -> dict:
         "take": "Main",
         "output_path": "C:\\Users\\user123\\test_render",
         "multi_pass_path": "",
+        "activate_error_checking": "1",
     }
 
 
@@ -152,7 +156,7 @@ def test_if_init_data_and_run_data_schema_are_changed_schema_version_is_bumped(i
     """
     # Expected version for these reference schemas
     EXPECTED_MAJOR = 0
-    EXPECTED_MINOR = 1
+    EXPECTED_MINOR = 2
 
     # Get the current version from the adaptor
     adapter = Cinema4DAdaptor(init_data)
@@ -197,3 +201,37 @@ def test_adaptor_prints_version_on_init(init_data, capfd):
     assert (
         expected_output in captured.out
     ), f"Expected output to contain {expected_output}, but got {captured.out}"
+
+
+@pytest.mark.parametrize("activate_error_checking", [0, 1])
+def test_activate_error_checking(init_data: dict, activate_error_checking: int) -> None:
+    """
+    Tests that the activate_error_checking configuration controls whether error-handling
+    regex callbacks are included in the adaptor's callback list.
+
+    When activate_error_checking=0 (deactivate): Error regexes should be absent
+    When activate_error_checking=1 (activate): Error regexes should be present
+    """
+    # GIVEN:
+    init_data["activate_error_checking"] = str(activate_error_checking)
+    adaptor = Cinema4DAdaptor(init_data)
+    # Manually set the private variable to fix timing issue (normally set in on_start())
+    adaptor._activate_error_checking = activate_error_checking
+
+    # WHEN:
+    callbacks = adaptor._get_regex_callbacks()
+
+    # THEN: Check if `error_regexes` corresponding callback is present based on configuration
+    # `error_regexes` has the callback function called `_handle_error`.
+    has_handle_error_callback = any(
+        regex_callback.callback == adaptor._handle_error for regex_callback in callbacks
+    )
+
+    if activate_error_checking == 1:
+        assert (
+            has_handle_error_callback
+        ), "Error checking should be activated when activate_error_checking=1"
+    else:
+        assert (
+            not has_handle_error_callback
+        ), "Error checking should be deactivated when activate_error_checking=0"

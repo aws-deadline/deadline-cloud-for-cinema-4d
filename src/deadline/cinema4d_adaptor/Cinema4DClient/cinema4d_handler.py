@@ -77,10 +77,6 @@ class Cinema4DHandler:
             # whether we have done owner[param_id] = mapped_path
             attempted_basic_path_mapping_approach = False
             try:
-                print(
-                    f"Attempting to update path for asset with owner '{owner}', paramId '{param_id}', "
-                    f"new filename '{mapped_path}', nodeSpace '{node_space}', and nodePath '{node_path}'."
-                )
                 success = self._pathmap_recognized_types(
                     owner, param_id, node_space, node_path, mapped_path
                 )
@@ -199,7 +195,6 @@ class Cinema4DHandler:
         return True
 
     def start_render(self, data: dict) -> None:
-        self.doc = c4d.documents.GetActiveDocument()
         self.render_data = self.doc.GetActiveRenderData()
         self.render_data[c4d.RDATA_FRAMESEQUENCE] = c4d.RDATA_FRAMESEQUENCE_MANUAL
         frame = int(self.render_kwargs.get("frame", data["frame"]))
@@ -217,8 +212,6 @@ class Cinema4DHandler:
             self.render_data[c4d.RDATA_MULTIPASS_FILENAME] = self.map_path(
                 self.render_data[c4d.RDATA_MULTIPASS_FILENAME]
             )
-
-        self._remap_assets()
 
         bm = bitmaps.MultipassBitmap(
             int(self.render_data[c4d.RDATA_XRES]),
@@ -325,3 +318,5 @@ class Cinema4DHandler:
 
             c4d.documents.InsertBaseDocument(doc)
             c4d.documents.SetActiveDocument(doc)
+            self.doc = doc
+            self._remap_assets()

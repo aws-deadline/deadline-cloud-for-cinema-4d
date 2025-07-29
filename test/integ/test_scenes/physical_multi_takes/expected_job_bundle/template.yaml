@@ -35,6 +35,17 @@ parameterDefinitions:
     label: Multi-pass output path
     groupLabel: Cinema4D Settings
   description: Multi-pass image output
+- name: ActivateErrorChecking
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Activate automatic error checking
+    groupLabel: Cinema4D Settings
+  description: Fail when errors occur.
+  default: '1'
+  allowedValues:
+  - '1'
+  - '0'
 - name: MainFrames
   type: STRING
   userInterface:
@@ -177,6 +188,7 @@ steps:
           take: 'Main'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -243,6 +255,7 @@ steps:
           take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdei1234'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -306,6 +319,7 @@ steps:
           take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeh1234'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -369,6 +383,7 @@ steps:
           take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -432,6 +447,7 @@ steps:
           take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -495,6 +511,7 @@ steps:
           take: '0123456789abcdef0123456789abcdef0123456789abcdef789abcdeg'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -558,6 +575,7 @@ steps:
           take: '0123456789abcdef0123456789abcdef0123456789abcdef789abcdef'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -621,6 +639,7 @@ steps:
           take: 'abcdef124'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -684,6 +703,7 @@ steps:
           take: 'abcdef123'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -747,6 +767,7 @@ steps:
           take: '{}|:test!@#$%^&*()_'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -810,6 +831,7 @@ steps:
           take: 'he llo'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -873,6 +895,7 @@ steps:
           take: 'hello'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -936,6 +959,7 @@ steps:
           take: '0'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -999,6 +1023,7 @@ steps:
           take: 'B'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -1062,6 +1087,7 @@ steps:
           take: 'A'
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
       actions:
         onEnter:
           command: cinema4d-openjd

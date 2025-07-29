@@ -5,6 +5,8 @@ parameterValues:
   value: PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_$take
 - name: MultiPassPath
   value: ''
+- name: ActivateErrorChecking
+  value: '1'
 - name: MainFrames
   value: '1'
 - name: _0123456789abcdef0123456789abcdef0123456789abcdef012345678Frames
