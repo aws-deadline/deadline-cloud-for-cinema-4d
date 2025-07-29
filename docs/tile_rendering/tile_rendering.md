@@ -2,7 +2,7 @@
 
 *These instructions include a 3x3 tile render as an example.*
 
-Tile rendering divides a single image into smaller sections (tiles) that are rendered separately, then stitched back together into the final image. This approach can significantly reduce render times for large or complex scenes by distributing the workload.
+Tile rendering divides a single image into smaller sections (tiles) that are rendered separately. You will need to stitch these tiles back together yourself using professional image editing software or scripting tools. This approach can significantly reduce render times for large or complex scenes by distributing the workload.
 
 ## Renderer Compatibility
 
