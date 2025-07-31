@@ -14,6 +14,7 @@ from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 
 from deadline.client.exceptions import DeadlineOperationError
 from deadline.client.job_bundle._yaml import deadline_yaml_dump
+from deadline.client.job_bundle.parameters import JobParameter
 from deadline.client.job_bundle.submission import AssetReferences
 from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint: disable=import-error
     JobBundlePurpose,
@@ -82,7 +83,7 @@ def show_submitter():
 
 def _get_parameter_values(
     settings: RenderSubmitterUISettings,
-    queue_parameters: list[dict[str, Any]],
+    queue_parameters: list[JobParameter],
     per_take_frames_parameters: bool,
     submit_takes: list[TakeData],
 ) -> list[dict[str, Any]]:
@@ -125,7 +126,7 @@ def _get_parameter_values(
 
     # If we're overriding the adaptor with wheels, remove deadline_cloud_for_cinema4d from the CondaPackages
     if settings.include_adaptor_wheels:
-        conda_param = {}
+        conda_param: Optional[JobParameter] = None
         # Find the CondaPackages parameter definition
         for param in queue_parameters:
             if param["name"] == "CondaPackages":
@@ -422,7 +423,7 @@ def create_job_bundle(
     takes: dict[str, list[TakeData]],
     job_bundle_dir: str,
     asset_references: AssetReferences,
-    queue_parameters: list[dict[str, Any]],
+    queue_parameters: list[JobParameter],
     attachments: AssetReferences,
     temp_dir: Optional[str] = None,
     host_requirements: Optional[dict] = None,
@@ -675,11 +676,11 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         widget: SubmitJobToDeadlineDialog,
         job_bundle_dir: str,
         settings: RenderSubmitterUISettings,
-        queue_parameters: list[dict[str, Any]],
+        queue_parameters: list[JobParameter],
         asset_references: AssetReferences,
         host_requirements: Optional[dict[str, Any]] = None,
         purpose: JobBundlePurpose = JobBundlePurpose.SUBMISSION,
-    ) -> None:
+    ) -> dict[str, Any]:
         """
         Callback function for creating a job bundle when submitting the job.
         """
@@ -693,6 +694,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
             temp_dir,
             host_requirements,
         )
+        return {}
 
     submitter_dialog = SubmitJobToDeadlineDialog(
         job_setup_widget_type=SceneSettingsWidget,
