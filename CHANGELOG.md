@@ -1,10 +1,13 @@
 ## 0.8.0 (2025-07-31)
 
+### BREAKING CHANGES
+* Allow deactivating automatic error checking in Cinema4D jobs (#244) ([`1421f72`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/1421f72222472eb43d9d21ba9034d686e7789913))
+* Allow deactivating error checking in the Cinema4D adaptor (#245) ([`8137c8f`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8137c8faa290992b8ec1010368020fa6ab79b4dd))
+
+The init-data schema has changed to support the option to deactivate automatic error checking in the adaptor. If you use Deadline Cloud customer managed fleets, you will need to update your adaptor on the worker before using the latest submitter. The Deadline Cloud service team handles adaptor upgrades on service managed fleets.
 
 ### Features
 * Remember last used shared job settings for job submissions (#235) ([`577377a`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/577377a42a32c025268d041715d117565f067d37))
-* Allow deactivating error checking in the Cinema4D adaptor (#245) ([`8137c8f`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8137c8faa290992b8ec1010368020fa6ab79b4dd))
-* Allow deactivating automatic error checking in Cinema4D jobs (#244) ([`1421f72`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/1421f72222472eb43d9d21ba9034d686e7789913))
 
 ### Bug Fixes
 * Change allowedValues order to match the openjd checkbox specifications (#264) ([`ecbe927`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/ecbe927737081a0cc06d3966e7100059f1596a7e))
