@@ -1,3 +1,21 @@
+## 0.8.0 (2025-07-31)
+
+### BREAKING CHANGES
+* Allow deactivating automatic error checking in Cinema4D jobs (#244) ([`1421f72`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/1421f72222472eb43d9d21ba9034d686e7789913))
+* Allow deactivating error checking in the Cinema4D adaptor (#245) ([`8137c8f`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8137c8faa290992b8ec1010368020fa6ab79b4dd))
+
+The init-data schema has changed to support the option to deactivate automatic error checking in the adaptor. If you use Deadline Cloud customer managed fleets, you will need to update your adaptor on the worker before using the latest submitter. The Deadline Cloud service team handles adaptor upgrades on service managed fleets.
+
+### Features
+* Remember last used shared job settings for job submissions (#235) ([`577377a`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/577377a42a32c025268d041715d117565f067d37))
+
+### Bug Fixes
+* Change allowedValues order to match the openjd checkbox specifications (#264) ([`ecbe927`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/ecbe927737081a0cc06d3966e7100059f1596a7e))
+* remap assets per session instead of per frame (#261) ([`004746d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/004746db0f67d8862c0e097dd27513022afbe620))
+* Reduce logging for path mapping. (#258) ([`bef03af`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/bef03af9a83d0add11f39f09a3abb8cb463acdb0))
+* Save project with assets feature raises exception if all the paths to assets are not found. (#253) ([`85a00eb`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/85a00eba8e2a1164297756010a913d7a52563034))
+* Path mapping issues on Linux with save project with assets (#252) ([`67eff55`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/67eff55ea4546c810da64f4bc6d3f8e57e70a7cc))
+
 ## 0.7.10 (2025-07-07)
 
 

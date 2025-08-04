@@ -44,8 +44,8 @@ parameterDefinitions:
   description: Fail when errors occur.
   default: '1'
   allowedValues:
-  - '0'
   - '1'
+  - '0'
 - name: MainFrames
   type: STRING
   userInterface:
