@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - mainline
-      - github_pages_cinema_4d
     paths:
       - 'docs/user_guide/**'
       - 'mkdocs.yml'
