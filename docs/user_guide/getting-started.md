@@ -1,0 +1,66 @@
+# Quick Start
+
+Set up Cinema 4D and AWS Deadline Cloud in just a few steps.
+
+## What You'll Need
+
+- **Cinema 4D 2024 or 2025** installed on your workstation
+- **AWS Account** with Deadline Cloud access
+- **Windows or macOS** workstation for job submission
+- **Deadline Cloud monitor** ([download here](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/monitor-onboarding.html))
+- **Access to an AWS Deadline Cloud farm** with either:
+    - A Windows service-managed fleet, or
+    - A customer-managed fleet with Cinema 4D, the Cinema 4D adaptor, and licensing set up
+
+## Step 1: Install the Submitter (5 minutes)
+
+The submitter adds AWS Deadline Cloud functionality to Cinema 4D's Extensions menu, allowing you to submit your scene directly to Deadline Cloud to manage the rendering.
+
+**[Download the Official Installer](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/submitter.html)** ← Start here (recommended)
+
+1. Run the installer and follow the on-screen instructions
+2. Launch Cinema 4D after installation
+3. Verify the submitter appears in `Extensions` > `AWS Deadline Cloud Submitter`
+
+## Updating the Submitter
+
+To update the submitter to the latest version, download and run the latest submitter installer.
+
+## Step 2: Submit Your First Render (2 minutes)
+
+1. Open Cinema 4D and load a test scene. **Or use our sample scenes:** Go to [`test_scenes`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/tree/mainline/test/integ/test_scenes), select a scene folder, navigate to its `scene` subfolder, and run `scene.py` in Cinema 4D via `Extensions` > `User Scripts` > `Run Script` (this will generate a .c4d file for you)
+![Run Script](images/sample-scene-python-script.png)
+2. Make sure your scene is saved
+3. Set up your camera angles, materials, and lighting as desired
+4. Go to `Extensions` > `AWS Deadline Cloud Submitter`
+![Extensions Menu](images/extensions-menu.png)
+![Submitter Dialog](images/submitter-dialog.png)
+5. Review your render settings
+6. Click Submit!
+![Submit button](images/submit-button.png)
+
+## Step 3: Monitor Your Renders
+
+If you haven't already, install the Deadline Cloud Monitor from the requirements above.
+
+After submitting a job, open Deadline Cloud Monitor (DCM) to view the job's progress. The submitter will create a job with a single step and with one task per frame.
+![DCM](images/DCM.png)
+
+**To view rendering logs:** Right-click on a task and choose "View logs"  
+This is especially useful when your job fails to troubleshoot issues.  
+![DCM Logs](images/DCM-logs.png)
+
+## Step 4: Download Your Results
+
+Once your render job completes successfully, you can download the rendered frames:
+
+1. In Deadline Cloud Monitor, locate your completed job
+2. Right-click on the job name
+3. Select "Download output" from the context menu
+4. Choose where to save your rendered files
+5. The download will begin automatically
+
+![Download Process](images/DCM-download-output.png)
+
+Your rendered frames will be organized in the same structure as specified in your output settings.
+<br><br><br>
