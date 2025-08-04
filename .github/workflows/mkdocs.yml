@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - mainline
+<<<<<<< HEAD
+=======
+      - github_pages_cinema_4d
+>>>>>>> 08ada2e (docs: publish user guide to GitHub pages)
     paths:
       - 'docs/user_guide/**'
       - 'mkdocs.yml'
