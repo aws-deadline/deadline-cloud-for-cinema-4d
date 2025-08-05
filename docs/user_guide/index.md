@@ -14,10 +14,10 @@ Transform your Cinema 4D rendering workflow with AWS Deadline Cloud - a fully ma
 
 ## Why Use Deadline Cloud for Cinema 4D?
 
-- **Scale Your Renders** - Render complex scenes faster by distributing frames across multiple instances, reducing render times from hours to minutes.
-- **Free Up Your Workstation** - Submit renders to Deadline Cloud and continue working on your next project while your scenes render in the background.
-- **Pay Only for What You Use** - No upfront costs or long-term commitments. Pay only for the compute time you actually use.
-- **Redshift Ready** - Full support for Maxon Cinema 4D and Maxon Redshift.
+- **⚡Scale Your Renders ⚡** - Render complex scenes faster by distributing frames across multiple instances, reducing render times from hours to minutes.
+- **🖥️ Free Up Your Workstation 🖥️** - Submit renders to Deadline Cloud and continue working on your next project while your scenes render in the background.
+- **💰 Pay Only for What You Use 💰** - No upfront costs or long-term commitments. Pay only for the compute time you actually use.
+- **🎨 Redshift Ready 🎨** - Full support for Maxon Cinema 4D and Maxon Redshift.
 
 ## Supported Versions
 
@@ -33,9 +33,9 @@ Follow our step-by-step user guide to start rendering with Deadline Cloud in min
 
 *Click below to learn more about each step.*
 
-1. **[Install the Submitter](getting-started.md#step-1-install-the-submitter-5-minutes)** - Add the Deadline Cloud extension to your Cinema 4D workstation
-2. **[Submit Your Scene](getting-started.md#step-2-submit-your-first-render-2-minutes)** - Click the submit button to send your render to Deadline Cloud
-3. **[Monitor Progress](getting-started.md#step-3-monitor-your-renders)** - Track your renders in real-time with the Deadline Cloud monitor
-4. **[Download Results](getting-started.md#step-4-download-your-results)** - Completed frames become available for download when jobs succeed
+1. 📥 **[Install the Submitter](getting-started.md#step-1-install-the-submitter-5-minutes)** - Add the Deadline Cloud extension to your Cinema 4D workstation
+2. ☁️ **[Submit Your Scene](getting-started.md#step-2-submit-your-first-render-2-minutes)** - Click the submit button to send your render to Deadline Cloud
+3. 📊 **[Monitor Progress](getting-started.md#step-3-monitor-your-renders)** - Track your renders in real-time with the Deadline Cloud monitor
+4. 📤 **[Download Results](getting-started.md#step-4-download-your-results)** - Completed frames become available for download when jobs succeed
 
 ---
