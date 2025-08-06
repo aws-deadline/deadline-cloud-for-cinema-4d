@@ -55,9 +55,10 @@ If you need more than 5 tiles per axis, you can modify the limit:
 
 1. Go to Render → Render Settings
 2. In the "Output" tab:
-    1. Set "Frame Range" to Manual
-    2. Set "From" to 0
-    3. Set "To" to (number of tiles - 1)
+    1. Divide both the Width and Height by the number of tiles per axis (e.g., for 3x3 tiles, divide original dimensions by 3)
+    2. Set "Frame Range" to Manual
+    3. Set "From" to 0
+    4. Set "To" to (number of tiles - 1)
 ![Render settings frame configuration](images/render_settings_frames.png)
 
 ### Submit Job
