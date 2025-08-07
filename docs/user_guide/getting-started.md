@@ -47,7 +47,7 @@ After submitting a job, open Deadline Cloud Monitor (DCM) to view the job's prog
 ![DCM](images/DCM.png)
 
 **To view rendering logs:** Right-click on a task and choose "View logs"  
-This is especially useful when your job fails to troubleshoot issues.  
+Viewing logs is especially useful for troubleshooting failed jobs.  
 ![DCM Logs](images/DCM-logs.png)
 
 ## Step 4: Download Your Results
