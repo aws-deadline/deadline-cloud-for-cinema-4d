@@ -28,8 +28,7 @@ To update the submitter to the latest version, download and run the latest submi
 
 ## Step 2: Submit Your First Render (2 minutes)
 
-1. Open Cinema 4D and load a test scene. **Or use our sample scenes:** Go to [`test_scenes`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/tree/mainline/test/integ/test_scenes), select a scene folder, navigate to its `scene` subfolder, and run `scene.py` in Cinema 4D via `Extensions` > `User Scripts` > `Run Script` (this will generate a .c4d file for you)
-![Run Script](images/sample-scene-python-script.png)
+1. Open Cinema 4D and load a scene 
 2. Make sure your scene is saved
 3. Set up your camera angles, materials, and lighting as desired
 4. Go to `Extensions` > `AWS Deadline Cloud Submitter`
