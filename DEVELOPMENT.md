@@ -50,7 +50,8 @@ from any directory of this repository:
 * `hatch shell` - Enter a shell environment that will have Python set up to import your development version of this package.
 * `hatch env prune` - Delete all of your isolated workspace [environments](https://hatch.pypa.io/1.12/environment/)
    for this package.
-* `hatch run installer:build-installer --local-dev --platform <PLATFORM> [--install-builder-path <LOCATION> --output-dir <DIR>]` - To build a local submitter installer. 
+* `hatch run installer:build-installer --local-dev --platform <PLATFORM> [--install-builder-path <LOCATION> --output-dir <DIR>]` - To build a local submitter installer.
+    * platform can be `windows` or `macos`
 * `hatch run test-installer` - To run tests against your locally built installer. 
 
 Note: Hatch uses [environments](https://hatch.pypa.io/1.12/environment/) to isolate the Python development workspace

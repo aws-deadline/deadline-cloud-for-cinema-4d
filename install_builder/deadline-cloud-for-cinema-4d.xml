@@ -82,7 +82,17 @@
                 <setInstallerVariable name="cinema_4d_submitter_installdir" value="${installdir}"/>
             </actionList>
             <elseActionList>
-                <setInstallerVariable name="cinema_4d_submitter_installdir" value="${installdir}/Submitters/Cinema4D"/>
+                <if>
+                    <conditionRuleList>
+                        <platformTest type="windows"/>
+                    </conditionRuleList>
+                    <actionList>
+                        <setInstallerVariable name="cinema_4d_submitter_installdir" value="${installdir}\Submitters\Cinema4D"/>
+                    </actionList>
+                    <elseActionList>
+                        <setInstallerVariable name="cinema_4d_submitter_installdir" value="${installdir}/Submitters/Cinema4D"/>
+                    </elseActionList>
+                </if>
             </elseActionList>
         </if>
     </readyToInstallActionList>
@@ -100,13 +110,13 @@
             <actionList>
                 <!-- Windows-specific actions -->
                 <createDirectory>
-                    <path>${cinema_4d_submitter_installdir}/cinema_4d_plugins</path>
+                    <path>${cinema_4d_submitter_installdir}\cinema_4d_plugins</path>
                     <ruleList>
-                        <fileTest condition="not_exists" path="${cinema_4d_submitter_installdir}/cinema_4d_plugins"/>
+                        <fileTest condition="not_exists" path="${cinema_4d_submitter_installdir}\cinema_4d_plugins"/>
                     </ruleList>
                 </createDirectory>
                 <copyFile>
-                    <destination>${cinema_4d_submitter_installdir}/cinema_4d_plugins/DeadlineCloud.pyp</destination>
+                    <destination>${cinema_4d_submitter_installdir}\cinema_4d_plugins\DeadlineCloud.pyp</destination>
                     <origin>${installdir}/tmp/c4d_deps/DeadlineCloud.pyp</origin>
                 </copyFile>
                 <fnAddPathEnvironmentVariable>
@@ -119,7 +129,7 @@
                 <fnAddPathEnvironmentVariable>
                     <progressText>Setting g_additionalModulePath</progressText>
                     <name>g_additionalModulePath</name>
-                    <value>${cinema_4d_submitter_installdir}/cinema_4d_plugins</value>
+                    <value>${cinema_4d_submitter_installdir}\cinema_4d_plugins</value>
                     <scope>${installscope}</scope>
                     <insertAt>end</insertAt>
                 </fnAddPathEnvironmentVariable>
