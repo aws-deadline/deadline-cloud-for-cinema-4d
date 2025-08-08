@@ -40,7 +40,7 @@ Settings specific to your Cinema 4D render:
 - **Override Multipass Path** - Override the multipass output path for additional render passes
 - **Takes** - Select which Cinema 4D takes to render
 - **Override Frame Range** - Override the frame range from your scene settings
-- **Automatic Error Checking Control** - Optional checkbox to activate/deactivate error checking during rendering
+- **Automatic Error Checking** - Optional checkbox to activate/deactivate error checking during rendering
 - **Task Run Timeout** - Maximum time allowed for each task to complete
 - **Cinema 4D Launch Timeout** - Maximum time allowed for Cinema 4D to start up
 - **Cinema 4D Shutdown Timeout** - Maximum time allowed for Cinema 4D to shut down cleanly
@@ -56,10 +56,4 @@ Settings specific to your Cinema 4D render:
 
 The submitter handles all the technical details so you can focus on your creative work.
 
----
-
-[← Back to Quick Start](getting-started.md)
-
-
-
-<br><br><br>
+<br>

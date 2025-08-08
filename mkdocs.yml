@@ -24,6 +24,7 @@ docs_dir: docs/user_guide
 nav:
   - Home: index.md
   - Quick Start: getting-started.md
+  - Submitter Features: submitter-features.md
 
 markdown_extensions:
   - toc:
