@@ -12,6 +12,8 @@ import sys
 import traceback
 from typing import Set, Tuple
 
+_TEMP_FONTS_DIR = "tempFonts"
+
 if sys.platform == "win32":
     try:
         import winreg
@@ -67,13 +69,13 @@ def find_fonts(session_dir: str) -> Set[str]:
         full_sub_dir = None
         for path, dirs, files in os.walk(asset_dir):
             for d in dirs:
-                if "tempFonts" in d:
+                if _TEMP_FONTS_DIR in d:
                     full_sub_dir = os.path.join(path, d)
                     logger.debug(f"tempFonts directory: {full_sub_dir}")
                     break
 
         if not full_sub_dir:
-            logger.debug(f"Couldn't recursively find tempFonts in subfolder: {subfolder}")
+            logger.debug(f"Couldn't recursively find {_TEMP_FONTS_DIR} in subfolder: {subfolder}")
             continue
 
         for file_name in os.listdir(full_sub_dir):
@@ -84,7 +86,7 @@ def find_fonts(session_dir: str) -> Set[str]:
                 fonts.add(full_assetpath)
             else:
                 logger.warning(
-                    f"A file that is not a supported font was found in the tempFonts folder: {full_assetpath}"
+                    f"A file that is not a supported font was found in the {_TEMP_FONTS_DIR} folder: {full_assetpath}"
                 )
     return fonts
 
@@ -100,26 +102,22 @@ def get_font_name(dst_path: str) -> str:
     if sys.platform != "win32":
         raise RuntimeError("Font installation is only supported on Windows")
 
-    try:
-        filename = os.path.basename(dst_path)
-        fontname = os.path.splitext(filename)[0]
+    filename = os.path.basename(dst_path)
+    fontname = os.path.splitext(filename)[0]
 
-        # Try to get the font's real name
-        cb = ctypes.wintypes.DWORD()
-        if gdi32.GetFontResourceInfoW(filename, ctypes.byref(cb), None, GFRI_DESCRIPTION):
-            buf = (ctypes.c_wchar * cb.value)()
-            if gdi32.GetFontResourceInfoW(filename, ctypes.byref(cb), buf, GFRI_DESCRIPTION):
-                fontname = buf.value
-        is_truetype = ctypes.wintypes.BOOL()
-        cb.value = ctypes.sizeof(is_truetype)
-        gdi32.GetFontResourceInfoW(
-            filename, ctypes.byref(cb), ctypes.byref(is_truetype), GFRI_ISTRUETYPE
-        )
-        if is_truetype:
-            fontname += " (TrueType)"
-
-    except Exception as e:
-        raise e
+    # Try to get the font's real name
+    cb = ctypes.wintypes.DWORD()
+    if gdi32.GetFontResourceInfoW(filename, ctypes.byref(cb), None, GFRI_DESCRIPTION):
+        buf = (ctypes.c_wchar * cb.value)()
+        if gdi32.GetFontResourceInfoW(filename, ctypes.byref(cb), buf, GFRI_DESCRIPTION):
+            fontname = buf.value
+    is_truetype = ctypes.wintypes.BOOL()
+    cb.value = ctypes.sizeof(is_truetype)
+    gdi32.GetFontResourceInfoW(
+        filename, ctypes.byref(cb), ctypes.byref(is_truetype), GFRI_ISTRUETYPE
+    )
+    if is_truetype:
+        fontname += " (TrueType)"
 
     return fontname
 
@@ -230,8 +228,7 @@ def _install_fonts(session_dir: str) -> None:
     fonts = find_fonts(session_dir)
 
     if not fonts:
-        logger.info("No custom fonts found, continuing task...")
-        return
+        raise RuntimeError("No custom fonts found")
     for font in fonts:
         logger.info("Installing font: " + font)
         installed, msg = install_font(font)

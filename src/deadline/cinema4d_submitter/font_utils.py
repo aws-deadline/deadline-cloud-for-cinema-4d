@@ -7,6 +7,8 @@ import shutil
 from pathlib import Path
 from typing import Optional, List, Any
 
+TEMP_FONTS_DIR = "tempFonts"
+
 
 class FontNotFoundError(Exception):
     """Exception raised when a font cannot be found in the system."""
@@ -51,7 +53,7 @@ def get_font_location(font_name: str) -> Optional[str]:
                     if font_name.lower() in file.lower():
                         file_path = os.path.join(root, file)
                         # Check if it's a font file by extension and exists
-                        if is_font_file(file_path) and os.path.isfile(file_path):
+                        if is_font_file(file_path):
                             return file_path
         except (PermissionError, OSError) as e:
             print(f"[ERROR] Cannot access font directory {font_dir}: {e}")
@@ -128,6 +130,9 @@ def is_font_file(file_path: str) -> bool:
     if not file_path:
         return False
 
+    if not os.path.isfile(file_path):
+        return False
+
     # Adobe fonts do not have an extension.
     font_extensions = [".otf", ".ttf", ".fon", ""]
     return any(file_path.lower().endswith(ext) for ext in font_extensions)
@@ -158,7 +163,7 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
         raise FontNotFoundError(f"Font '{font_name}' not found in system font directories")
 
     # Create the tempFonts directory within the scene location if it doesn't exist
-    fonts_dir = scene_location / "tempFonts"
+    fonts_dir = scene_location / TEMP_FONTS_DIR
 
     try:
         fonts_dir.mkdir(exist_ok=True, parents=True)
@@ -201,12 +206,12 @@ def scene_has_fonts(scene_location: Path) -> bool:
     if not scene_location or not scene_location.exists():
         return False
 
-    fonts_dir = scene_location / "tempFonts"
+    fonts_dir = scene_location / TEMP_FONTS_DIR
 
     # Check if tempFonts directory exists and has font files
     if fonts_dir.exists() and fonts_dir.is_dir():
         for font_file in fonts_dir.iterdir():
-            if font_file.is_file() and is_font_file(str(font_file)):
+            if is_font_file(str(font_file)):
                 return True
 
     return False
@@ -226,7 +231,7 @@ def get_font_manager_environment() -> dict[str, Any]:
 
     return {
         "name": "FontManager",
-        "description": "Manages font installation and cleanup for Cinema4D rendering.",
+        "description": "Manages font installation and cleanup for Cinema4D rendering as submitter detected some fonts in the scene.",
         "script": {
             "embeddedFiles": [
                 {

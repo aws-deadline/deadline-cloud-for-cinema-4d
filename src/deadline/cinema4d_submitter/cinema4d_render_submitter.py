@@ -668,12 +668,10 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
         temp_fonts_dir.mkdir(exist_ok=True, parents=True)
 
         # Copy all font files from the original tempFonts directory
-        copied_fonts = []
         for font_file in original_fonts_dir.iterdir():
             if font_file.is_file():
                 destination = temp_fonts_dir / font_file.name
                 shutil.copy2(font_file, destination)
-                copied_fonts.append(font_file.name)
 
     # If we get here, save was successful
     # Get all files within the temp directory

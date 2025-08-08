@@ -7,7 +7,7 @@ from pathlib import Path
 import c4d
 
 from .scene import Scene
-from .font_utils import is_asset_a_font, copy_font_to_scene_folder
+from .font_utils import is_asset_a_font, copy_font_to_scene_folder, TEMP_FONTS_DIR
 
 _FRAME_RE = re.compile("#+")
 
@@ -49,7 +49,7 @@ class AssetIntrospector:
                 assets.add(Path(filename))
 
         # Add all font files from the tempFonts directory to assets
-        fonts_dir = path_to_scene_file_dir / "tempFonts"
+        fonts_dir = path_to_scene_file_dir / TEMP_FONTS_DIR
         if fonts_dir.exists():
             for font_file in fonts_dir.iterdir():
                 if font_file.is_file():
