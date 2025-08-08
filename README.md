@@ -9,6 +9,8 @@ to Deadline Cloud to free up your workstation's compute for other tasks, and the
 adaptor application based on the [Open Job Description (OpenJD) Adaptor Runtime][openjd-adaptor-runtime] that improves Deadline Cloud's
 ability to run Cinema 4D efficiently on your render farm.
 
+For instructions on installing and using this integration, visit the [user guide](https://aws-deadline.github.io/deadline-cloud-for-cinema-4d).
+
 [deadline-cloud]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/what-is-deadline-cloud.html
 [deadline-cloud-client]: https://github.com/aws-deadline/deadline-cloud
 [openjd-template]: https://github.com/OpenJobDescription/openjd-specifications/wiki/2023-09-Template-Schemas
