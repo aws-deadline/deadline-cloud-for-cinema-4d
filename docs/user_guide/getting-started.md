@@ -22,6 +22,8 @@ The submitter adds AWS Deadline Cloud functionality to Cinema 4D's Extensions me
 2. Launch Cinema 4D after installation
 3. Verify the submitter appears in `Extensions` > `AWS Deadline Cloud Submitter`
 
+[Learn about submitter features →](submitter-features.md)
+
 ## Updating the Submitter
 
 To update the submitter to the latest version, download and run the latest submitter installer.
@@ -62,4 +64,7 @@ Once your render job completes successfully, you can download the rendered frame
 ![Download Process](images/DCM-download-output.png)
 
 Your rendered frames will be organized in the same structure as specified in your output settings.
+
+[Learn about submitter features →](submitter-features.md)
+
 <br><br><br>

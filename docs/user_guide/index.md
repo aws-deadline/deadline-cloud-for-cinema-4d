@@ -38,4 +38,6 @@ Follow our step-by-step user guide to start rendering with Deadline Cloud in min
 3. 📊 **[Monitor Progress](getting-started.md#step-3-monitor-your-renders)** - Track your renders in real-time with the Deadline Cloud monitor
 4. 📤 **[Download Results](getting-started.md#step-4-download-your-results)** - Completed frames become available for download when jobs succeed
 
+[Learn about submitter features →](submitter-features.md)
+
 ---
