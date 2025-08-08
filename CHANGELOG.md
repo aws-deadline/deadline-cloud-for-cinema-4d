@@ -1,3 +1,9 @@
+## 0.8.1 (2025-08-07)
+
+### Bug Fixes
+* use blackslashes for Windows paths in submitter installer (#275) ([`3d39370`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/3d393707a7526258325f286b02b6c04a508d5a52))
+* upgrade deadline version to fix bug where submitter stays open after submission (#276) ([`398cd7e`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/398cd7e5b3c9f1209bd6b6ddbacbf3fc84288043))
+
 ## 0.8.0 (2025-07-31)
 
 ### BREAKING CHANGES
