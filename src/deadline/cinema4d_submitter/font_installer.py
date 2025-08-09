@@ -15,6 +15,8 @@ from typing import Set, Tuple
 _TEMP_FONTS_DIR = "tempFonts"
 
 if sys.platform == "win32":
+    from ctypes import wintypes
+
     try:
         import winreg
     except ImportError:
@@ -27,6 +29,7 @@ else:
     winreg = None  # type: ignore
     user32 = None  # type: ignore
     gdi32 = None  # type: ignore
+    wintypes = None  # type: ignore
 
 FONTS_REG_PATH = r"Software\Microsoft\Windows NT\CurrentVersion\Fonts"
 
@@ -106,12 +109,12 @@ def get_font_name(dst_path: str) -> str:
     fontname = os.path.splitext(filename)[0]
 
     # Try to get the font's real name
-    cb = ctypes.wintypes.DWORD()
+    cb = wintypes.DWORD()
     if gdi32.GetFontResourceInfoW(filename, ctypes.byref(cb), None, GFRI_DESCRIPTION):
         buf = (ctypes.c_wchar * cb.value)()
         if gdi32.GetFontResourceInfoW(filename, ctypes.byref(cb), buf, GFRI_DESCRIPTION):
             fontname = buf.value
-    is_truetype = ctypes.wintypes.BOOL()
+    is_truetype = wintypes.BOOL()
     cb.value = ctypes.sizeof(is_truetype)
     gdi32.GetFontResourceInfoW(
         filename, ctypes.byref(cb), ctypes.byref(is_truetype), GFRI_ISTRUETYPE
