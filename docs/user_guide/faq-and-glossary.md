@@ -3,13 +3,13 @@
 ## Getting Started
 
 **Q: What is AWS Deadline Cloud?**  
-A: AWS Deadline Cloud is a fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects for films, TV shows, commercials, games, and industrial design. With Deadline Cloud, you can set up, deploy, and scale rendering projects in minutes, so you can improve the efficiency of your rendering pipelines and take on more projects.
+A: AWS Deadline Cloud is a fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects for films, TV shows, commercials, games, and industrial design. With Deadline Cloud, you can set up, deploy, and scale rendering projects in minutes, so you can improve the efficiency of your rendering pipelines and take on more projects. Not only are rendering pipelines more efficient, they're super easy to set up and scale up to deliver faster.
 
 **Q: What is the submitter?**  
 A: The Cinema 4D submitter extension creates a button in Cinema 4D (Extensions > AWS Deadline Cloud Submitter) that allows you to access the submitter and submit jobs to Deadline Cloud. It automatically determines required files based on the loaded scene, allows you to specify render options, builds an Open Job Description template that defines the workflow, and submits the job to your chosen farm and queue. 
 
 **Q: What is the adaptor?**  
-A: The adaptor application is a command-line Python-based application that enhances the functionality of Cinema 4D for running within a render farm like Deadline Cloud. 
+A: The adaptor is a command-line Python-based application that enhances the functionality of Cinema 4D for running within a render farm like Deadline Cloud. Its primary purpose is to add a "sticky rendering" functionality where a single process instance of Cinema 4D is able to load the scene file and then dynamically be instructed to perform desired renders without needing to close and re-launch Cinema 4D between them. It also has additional benefits such as support for path mapping, and reporting the progress of your render to Deadline Cloud.
 
 **Q: What is a job bundle?**  
 A: A job bundle is a directory structure that contains an Open Job Description (OpenJD) template, your Cinema 4D scene file, all assets (textures, models, etc.), and job-specific files required as input for your job. The submitter automatically creates this bundle and you can export it to review contents before submission or submit it using the Deadline Cloud CLI.
@@ -42,12 +42,12 @@ A: Yes! Redshift GPU rendering is supported.
 A: Cloud rendering can be much faster than local rendering because you can use multiple powerful instances simultaneously.
 
 **Q: Where do my rendered images go?**  
-A: Completed frames are available by downloading the outputs in the Deadline Cloud monitor.
+A: Completed frames are stored securely in Amazon S3 storage and are available for download through the Deadline Cloud monitor.
 
 ## Troubleshooting
 
 **Q: My submitter button doesn't appear in Cinema 4D**  
-A: Make sure you've installed the extension correctly and restarted Cinema 4D. Check the Console for any error messages.
+A: Make sure you've installed the extension correctly and restarted Cinema 4D. Check the Console for any error messages. Consider re-installing the submitter if the issue persists. 
 
 **Q: My render failed in the cloud**  
 A: Common causes include missing assets, incorrect file paths, or insufficient memory. Check the job logs in the Deadline Cloud monitor.
@@ -56,19 +56,21 @@ A: Common causes include missing assets, incorrect file paths, or insufficient m
 A: Yes, you can cancel jobs through the Deadline Cloud monitor at any time.
 
 **Q: Can I set job priorities?**  
-A: Yes, you can set job priority levels in the submitter to control render queue order.
+A: Yes, you can set job priority levels in the submitter to control render queue order, and you can adjust them later in the Deadline Cloud monitor!
 
 **Q: What is automatic error checking?**  
 A: The submitter includes built-in error detection to catch common issues like missing assets before submission. This can be deactivated in the submitter.
 
 ## Glossary
 
-**Adaptor** - Software that runs on cloud computers to execute your Cinema 4D renders  
+**Adaptor** - Software that runs on cloud computers to execute your Cinema 4D renders or projects.
 **Submitter** - The Cinema 4D extension that sends jobs to Deadline Cloud  
 **Farm** - Your rendering facility in the cloud  
 **Queue** - Different rendering departments with specific settings  
 **Fleet** - Group of computers that do the rendering  
-**Job** - Your render request sent to the cloud  
+**Job** - Your render request sent to the cloud that appears in Deadline Cloud Monitor  
+**Step** - A phase within a job that groups related tasks together  
+**Task** - Individual work units within a step, can be one or multiple frames to render  
 **Asset** - Files your scene needs (textures, models, etc.)   
 **Take** - Different render variations of the same scene
 
