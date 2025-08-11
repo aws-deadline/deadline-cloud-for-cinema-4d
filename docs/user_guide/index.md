@@ -39,6 +39,8 @@ Follow our step-by-step user guide to start rendering with Deadline Cloud in min
 4. 📤 **[Download Results](getting-started.md#step-4-download-your-results)** - Completed frames become available for download when jobs succeed
 
 ---
-[Learn about submitter features →](submitter-features.md)
+
+[Learn about submitter features →](submitter-features.md)  
+[FAQ and Glossary →](faq-and-glossary.md)
 
 <br>

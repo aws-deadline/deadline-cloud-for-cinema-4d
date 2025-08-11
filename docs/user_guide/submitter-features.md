@@ -56,4 +56,8 @@ Settings specific to your Cinema 4D render:
 
 The submitter handles all the technical details so you can focus on your creative work.
 
+---
+
+[FAQ and Glossary →](faq-and-glossary.md)
+
 <br>

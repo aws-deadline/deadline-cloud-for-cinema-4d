@@ -65,4 +65,9 @@ Once your render job completes successfully, you can download the rendered frame
 
 Your rendered frames will be organized in the same structure as specified in your output settings.
 
+---
+
+[Learn about submitter features →](submitter-features.md)  
+[FAQ and Glossary →](faq-and-glossary.md)
+
 <br>

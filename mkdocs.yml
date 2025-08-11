@@ -25,6 +25,7 @@ nav:
   - Home: index.md
   - Quick Start: getting-started.md
   - Submitter Features: submitter-features.md
+  - FAQ and Glossary: faq-and-glossary.md
 
 markdown_extensions:
   - toc:
