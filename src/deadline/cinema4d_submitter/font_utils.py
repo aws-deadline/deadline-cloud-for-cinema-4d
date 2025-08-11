@@ -398,15 +398,20 @@ def scene_has_fonts(scene_location: Path) -> bool:
     return False
 
 
-def get_font_manager_environment() -> dict[str, Any]:
+def get_font_manager_environment(scene_file_path: str) -> dict[str, Any]:
     """
     Returns the FontManager job environment definition.
+
+    Args:
+        scene_file_path (str): Path to the scene file to use for finding fonts
 
     Returns:
         dict[str, Any]: The FontManager job environment configuration
     """
+
     # Read the font installer script from file
     font_installer_path = Path(__file__).parent / "font_installer.py"
+
     with open(font_installer_path, "r", encoding="utf-8") as f:
         font_installer_script = f.read()
 
@@ -429,6 +434,7 @@ def get_font_manager_environment() -> dict[str, Any]:
                         "{{Env.File.fontInstaller}}",
                         "install",
                         "{{Session.WorkingDirectory}}",
+                        scene_file_path,
                     ],
                     "cancelation": {"mode": "NOTIFY_THEN_TERMINATE"},
                 },
@@ -438,6 +444,7 @@ def get_font_manager_environment() -> dict[str, Any]:
                         "{{Env.File.fontInstaller}}",
                         "remove",
                         "{{Session.WorkingDirectory}}",
+                        scene_file_path,
                     ],
                     "cancelation": {"mode": "NOTIFY_THEN_TERMINATE"},
                 },

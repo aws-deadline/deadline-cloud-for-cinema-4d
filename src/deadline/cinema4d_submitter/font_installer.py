@@ -10,6 +10,7 @@ import os
 import shutil
 import sys
 import traceback
+from pathlib import Path
 from typing import Set, Tuple
 
 _TEMP_FONTS_DIR = "tempFonts"
@@ -54,15 +55,22 @@ FONT_EXTENSIONS = [".otf", ".ttf", ".fon", ""]
 logger = logging.getLogger(__name__)
 
 
-def find_fonts(session_dir: str) -> Set[str]:
+def find_fonts(session_dir: str, scene_file_path: str) -> Set[str]:
     """
     Looks for all font files that were sent along with the job
 
     :param session_dir: the root folder in which to look for files
+    :param scene_file_path: path to the scene file to use for finding fonts
 
     :returns: a set with all found fonts
     """
+    logger.debug(f"Starting font search in session_dir: {session_dir}")
+    logger.debug(f"Scene file path provided: {scene_file_path}")
+
     fonts = set()
+
+    # First, try the asset root approach
+    logger.debug("Using asset root font search approach")
     for subfolder in os.listdir(session_dir):
         # Only look in assetroot folders
         if not subfolder.startswith("assetroot-"):
@@ -74,7 +82,7 @@ def find_fonts(session_dir: str) -> Set[str]:
             for d in dirs:
                 if _TEMP_FONTS_DIR in d:
                     full_sub_dir = os.path.join(path, d)
-                    logger.debug(f"tempFonts directory: {full_sub_dir}")
+                    logger.debug(f"{_TEMP_FONTS_DIR} directory: {full_sub_dir}")
                     break
 
         if not full_sub_dir:
@@ -91,6 +99,43 @@ def find_fonts(session_dir: str) -> Set[str]:
                 logger.warning(
                     f"A file that is not a supported font was found in the {_TEMP_FONTS_DIR} folder: {full_assetpath}"
                 )
+
+    # If fonts were found in asset root, return them
+    if fonts:
+        logger.debug(f"Found {len(fonts)} fonts in asset root directories")
+        return fonts
+
+    # Fall back to scene file path approach if no fonts found in asset root
+    logger.debug(
+        "No fonts found in asset root, trying scene-based relative path font search approach"
+    )
+    try:
+        scene_parent_dir = Path(scene_file_path).parent
+        temp_fonts_dir = scene_parent_dir / _TEMP_FONTS_DIR
+        logger.debug(f"Looking for fonts in scene-based directory: {temp_fonts_dir}")
+
+        if temp_fonts_dir.exists() and temp_fonts_dir.is_dir():
+            logger.debug(f"Scene-based {_TEMP_FONTS_DIR} directory found: {temp_fonts_dir}")
+            font_count = 0
+            for font_file in temp_fonts_dir.iterdir():
+                if font_file.is_file():
+                    _, ext = os.path.splitext(str(font_file))
+                    if ext.lower() in FONT_EXTENSIONS:
+                        logger.debug(f"Adding font from scene {_TEMP_FONTS_DIR}: {font_file}")
+                        fonts.add(str(font_file))
+                        font_count += 1
+                    else:
+                        logger.warning(
+                            f"Non-font file found in {_TEMP_FONTS_DIR} folder: {font_file}"
+                        )
+            logger.debug(f"Found {font_count} fonts in scene-based {_TEMP_FONTS_DIR} directory")
+        else:
+            logger.debug(
+                f"Scene-based {_TEMP_FONTS_DIR} directory not found or not a directory: {temp_fonts_dir}"
+            )
+    except Exception as e:
+        logger.warning(f"Error accessing scene file path for font location: {e}")
+
     return fonts
 
 
@@ -226,14 +271,15 @@ def uninstall_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> Tuple[bool
     return True, ""
 
 
-def _install_fonts(session_dir: str) -> None:
+def _install_fonts(session_dir: str, scene_file_path: str) -> None:
     """
     Calls all needed functions for installing fonts
 
     :param session_dir: directory of the session
+    :param scene_file_path: path to the scene file to use for finding fonts
     """
     logger.info("Looking for fonts to install...")
-    fonts = find_fonts(session_dir)
+    fonts = find_fonts(session_dir, scene_file_path)
 
     if not fonts:
         raise RuntimeError("No custom fonts found")
@@ -244,14 +290,15 @@ def _install_fonts(session_dir: str) -> None:
             raise RuntimeError(f"Error installing font: {msg}")
 
 
-def _remove_fonts(session_dir: str) -> None:
+def _remove_fonts(session_dir: str, scene_file_path: str) -> None:
     """
     Calls all needed functions for removing fonts
 
     :param session_dir: directory of the session
+    :param scene_file_path: path to the scene file to use for finding fonts
     """
     logger.info("Looking for fonts to uninstall...")
-    fonts = find_fonts(session_dir)
+    fonts = find_fonts(session_dir, scene_file_path)
 
     if not fonts:
         logger.info("No custom fonts found, finishing task...")
@@ -279,10 +326,12 @@ def setup_logger() -> None:
 if __name__ == "__main__":
     setup_logger()
     session_dir = sys.argv[2]
+    scene_file_path = sys.argv[3]
 
     logger.debug(f"Running font script job: {sys.argv[1]}")
+    logger.debug(f"Using scene file path: {scene_file_path}")
 
     if sys.argv[1] == "install":
-        _install_fonts(session_dir)
+        _install_fonts(session_dir, scene_file_path)
     if sys.argv[1] == "remove":
-        _remove_fonts(session_dir)
+        _remove_fonts(session_dir, scene_file_path)

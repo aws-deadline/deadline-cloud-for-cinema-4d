@@ -28,7 +28,7 @@ from .assets import AssetIntrospector
 from .data_classes import (
     RenderSubmitterUISettings,
 )
-from .font_utils import scene_has_fonts, get_font_manager_environment
+from .font_utils import scene_has_fonts, get_font_manager_environment, TEMP_FONTS_DIR
 from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
@@ -284,7 +284,7 @@ def _get_job_template(
 
     # Conditionally add FontManager job environment if fonts are detected
     if adaptor and scene_has_fonts(Path(Scene.name()).parent):
-        font_manager_environment = get_font_manager_environment()
+        font_manager_environment = get_font_manager_environment(Scene.name())
         if "jobEnvironments" not in job_template:
             job_template["jobEnvironments"] = []
         job_template["jobEnvironments"].append(font_manager_environment)
@@ -642,7 +642,7 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
     # This is crucial because Scene.name() will change after SaveProject
     original_scene_file_path = Path(Scene.name())
     original_scene_dir = original_scene_file_path.parent
-    original_fonts_dir = original_scene_dir / "tempFonts"
+    original_fonts_dir = original_scene_dir / TEMP_FONTS_DIR
 
     # Save the project to the temporary directory
     temp_file_path = os.path.join(temp_dir, doc.GetDocumentName())
@@ -659,7 +659,7 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
             "Exporting the scene failed. Please fix all the paths for your assets in your scene in Cinema 4D's Window menu bar > Project Asset Inspector."
         )
 
-    temp_fonts_dir = Path(Scene.name()).parent / "tempFonts"
+    temp_fonts_dir = Path(Scene.name()).parent / TEMP_FONTS_DIR
 
     # Copy fonts from the original scene's tempFonts directory to the temp directory
 
