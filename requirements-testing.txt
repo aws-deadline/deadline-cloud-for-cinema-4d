@@ -11,3 +11,4 @@ types-pyyaml == 6.*
 numpy == 2.*
 pillow == 11.*
 openjd-cli == 0.7.*
+fonttools >= 4.0.0
