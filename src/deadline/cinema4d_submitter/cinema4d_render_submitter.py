@@ -427,7 +427,7 @@ def create_job_bundle(
     attachments: AssetReferences,
     temp_dir: Optional[str] = None,
     host_requirements: Optional[dict] = None,
-):
+) -> dict[str, Any]:
     """
     Creates a job bundle and saves sticky settings for rendering.
 
@@ -513,6 +513,13 @@ def create_job_bundle(
     settings.input_directories = sorted(attachments.input_directories)
 
     settings.save_sticky_settings(Scene.name())
+
+    return {
+        "known_asset_paths": [
+            os.path.abspath(directory) for directory in settings.input_directories
+        ],
+        "job_parameters": parameter_values,
+    }
 
 
 def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
@@ -684,7 +691,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        create_job_bundle(
+        return create_job_bundle(
             settings,
             takes,
             job_bundle_dir,
@@ -694,7 +701,6 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
             temp_dir,
             host_requirements,
         )
-        return {}
 
     submitter_dialog = SubmitJobToDeadlineDialog(
         job_setup_widget_type=SceneSettingsWidget,
