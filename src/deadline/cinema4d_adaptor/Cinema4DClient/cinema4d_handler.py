@@ -26,9 +26,30 @@ _RENDERRESULT = {
 }
 
 
-def progress_callback(progress, progress_type):
-    if progress_type == c4d.RENDERPROGRESSTYPE_DURINGRENDERING:
-        print("ALF_PROGRESS %g" % (progress * 100))
+def progress_callback(progress_percent, progress_type_int):
+    """Function passed in RenderDocument. It will be called automatically by Cinema 4D with the current render progress.
+
+    Args:
+        progress (float): The percent of the progress for the current step
+        progress_type (c4d.RENDERPROGRESSTYPE): The Main part of the current rendering step
+    """
+    progress_type_map = {
+        c4d.RENDERPROGRESSTYPE_BEFORERENDERING: "Before Rendering",
+        c4d.RENDERPROGRESSTYPE_DURINGRENDERING: "During Rendering",
+        c4d.RENDERPROGRESSTYPE_AFTERRENDERING: "After Rendering",
+        c4d.RENDERPROGRESSTYPE_GLOBALILLUMINATION: "Global Illumination",
+        c4d.RENDERPROGRESSTYPE_QUICK_PREVIEW: "Quick Preview",
+        c4d.RENDERPROGRESSTYPE_AMBIENTOCCLUSION: "Ambient Occlusion",
+    }
+    if progress_type_int in progress_type_map:
+        progress_type_text = progress_type_map[progress_type_int]
+    else:
+        progress_type_text = f"Unknown progress type ({progress_type_int})"
+
+    print(f"Progress Update: ({progress_type_text}): {progress_percent * 100.0}%")
+
+    if progress_type_int == c4d.RENDERPROGRESSTYPE_DURINGRENDERING:
+        print("ALF_PROGRESS %g" % (progress_percent * 100))
 
 
 class Cinema4DHandler:
