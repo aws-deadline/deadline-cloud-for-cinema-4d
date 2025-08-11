@@ -6,29 +6,29 @@
 A: AWS Deadline Cloud is a fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects for films, TV shows, commercials, games, and industrial design. With Deadline Cloud, you can set up, deploy, and scale rendering projects in minutes, so you can improve the efficiency of your rendering pipelines and take on more projects.
 
 **Q: What is the submitter?**  
-A: The submitter is a Cinema 4D extension that adds a button to your Extensions menu. It automatically detects your scene assets, packages everything into a job bundle, and submits your render to AWS Deadline Cloud. It handles all the technical complexity so you can focus on your creative work.
+A: The Cinema 4D submitter extension creates a button in Cinema 4D (Extensions > AWS Deadline Cloud Submitter) that allows you to access the submitter and submit jobs to Deadline Cloud. It automatically determines required files based on the loaded scene, allows you to specify render options, builds an Open Job Description template that defines the workflow, and submits the job to your chosen farm and queue. 
 
 **Q: What is the adaptor?**  
-A: The adaptor runs on cloud workers and acts as a bridge between Deadline Cloud and Cinema 4D. It launches Cinema 4D, loads your scene, and executes renders. It provides "sticky rendering" - keeping Cinema 4D open between frames instead of restarting, which speeds up rendering significantly.
+A: The adaptor application is a command-line Python-based application that enhances the functionality of Cinema 4D for running within a render farm like Deadline Cloud. 
 
 **Q: What is a job bundle?**  
-A: A job bundle is a package containing your Cinema 4D scene file, all assets (textures, models, etc.), render settings, and workflow instructions. The submitter automatically creates this bundle and you can export it to review contents before submission.
+A: A job bundle is a directory structure that contains an Open Job Description (OpenJD) template, your Cinema 4D scene file, all assets (textures, models, etc.), and job-specific files required as input for your job. The submitter automatically creates this bundle and you can export it to review contents before submission or submit it using the Deadline Cloud CLI.
 
 **Q: What is a worker?**  
-A: A worker is a cloud computer that renders your frames. Workers automatically scale up when you have jobs and scale down when idle to minimize costs. They can use CPU-only rendering or include GPUs for faster rendering.
+A: A worker is a cloud computer that renders your frames. AWS Deadline Cloud lets you scale thousands of workers up and down minute-to-minute, allowing you to render complex assets, accelerate production timelines, take on new projects, and meet challenging turnaround times. Workers automatically scale down when you're done to minimize costs.
 
 **Q: Do I need to know about AWS to use this?**  
 A: No! The submitter handles all the technical AWS details. You just need an AWS account and the Cinema 4D extension.
 
 **Q: How much does it cost?**  
-A: You only pay for the compute time you use on AWS. Costs vary based on instance types and render time. [Learn more about pricing](https://aws.amazon.com/deadline-cloud/pricing/).
+A: You only pay for the compute time you use with pay-as-you-go pricing and Usage-Based Licensing (UBL). Costs vary based on instance types and render time. Built-in cost management capabilities include budget setting and usage tracking on a project-by-project basis, which gives you the ability to manage rendering costs and keep budgets on track. [Learn more about pricing](https://aws.amazon.com/deadline-cloud/pricing/).
 
 ## Technical Questions
 
 **Q: What's the difference between Service Managed and Customer Managed fleets?**  
-A: **Service Managed** = AWS handles everything for you. Cinema 4D and licensing are automatically available, and everything is ready to go. Just submit your job and start rendering. This is recommended for most users.
+A: **Service Managed** = A service-managed fleet (SMF) is a fleet of workers that have default settings provided by Deadline Cloud. These default settings are designed to be efficient and cost-effective.
 
-**Customer Managed** = You set up and manage your own render computers. You install Cinema 4D yourself, handle licensing, and maintain the systems. Choose this only if you have specific technical requirements or existing infrastructure.
+**Customer Managed** = A customer-managed fleet (CMF) is a fleet of workers that you manage and that Deadline Cloud uses to process your jobs. Use a CMF when you have existing on-premises workers to integrate with Deadline Cloud, workers in a co-located data center, or want direct control of Amazon EC2 workers. With a CMF, you have full control over and responsibility for the fleet, including provisioning, operations, management, and decommissioning workers.
 
 **Q: What files get uploaded to Deadline Cloud?**  
 A: The submitter automatically detects your scene file, textures, models, and other assets needed for rendering.
