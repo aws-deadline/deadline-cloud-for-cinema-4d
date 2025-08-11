@@ -151,6 +151,11 @@ def install_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> Tuple[bool, 
             registry_scope = winreg.HKEY_CURRENT_USER
         dst_path = os.path.join(dst_dir, os.path.basename(src_path))
 
+        # Check if font already exists at destination
+        if os.path.exists(dst_path):
+            logger.info(f"Font already exists at {dst_path}, skipping installation")
+            return True, ""
+
         # Copy the font to the Windows Fonts folder
         shutil.copy(src_path, dst_path)
 
