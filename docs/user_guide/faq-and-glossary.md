@@ -15,7 +15,7 @@ A: The adaptor is a command-line Python-based application that enhances the func
 A: A job bundle is a directory structure that contains an Open Job Description (OpenJD) template, your Cinema 4D scene file path, paths to all assets (textures, models, etc.), and job-specific files required as input for your job. The submitter automatically creates this bundle and you can export it to review contents before submission or submit it using the Deadline Cloud CLI.
 
 **Q: What is a worker?**  
-A: A worker is a cloud computer that renders your frames. AWS Deadline Cloud lets you scale thousands of workers up and down minute-to-minute, allowing you to render complex assets, accelerate production timelines, take on new projects, and meet challenging turnaround times. Based on your fleet's minimum and maximum worker size settings, workers automatically scale down when you're done to minimize costs.
+A: A worker is a cloud compute resource that renders your frames. AWS Deadline Cloud lets you scale thousands of workers up and down minute-to-minute, allowing you to render complex assets, accelerate production timelines, take on new projects, and meet challenging turnaround times. Based on your fleet's minimum and maximum worker size settings, workers automatically scale down when you're done to minimize costs.
 
 **Q: Do I need to know about AWS to use this?**  
 A: For Service Managed Fleets, you just need an AWS account to access the AWS Deadline Cloud dashboard and setup wizard, which makes it easier to create a cloud-based render farm. For Customer Managed Fleets, you'll need more AWS knowledge to manage your own fleet. 
@@ -25,10 +25,10 @@ A: You only pay for the compute time you use with pay-as-you-go pricing and Usag
 
 ## Technical Questions
 
-**Q: What's the difference between Service Managed and Customer Managed fleets?**  
-A: **Service Managed** = A service-managed fleet (SMF) is a fleet of workers that have default settings provided by Deadline Cloud. These default settings are designed to be efficient and cost-effective.
+**Q: What's the difference between Service-managed and Customer-managed fleets?**  
+A: **Service-managed** = A service-managed fleet (SMF) is a fleet of workers that have default settings provided by Deadline Cloud. These default settings are designed to be efficient and cost-effective.
 
-**Customer Managed** = A customer-managed fleet (CMF) is a fleet of workers that you manage and that Deadline Cloud uses to process your jobs. Use a CMF when you have existing on-premises workers to integrate with Deadline Cloud, workers in a co-located data center, or want direct control of Amazon EC2 workers. With a CMF, you have full control over and responsibility for the fleet, including provisioning, operations, management, and decommissioning workers.
+**Customer-managed** = A customer-managed fleet (CMF) is a fleet of workers that you manage and that Deadline Cloud uses to process your jobs. We recommend using a CMF when you have existing on-premises workers to integrate with Deadline Cloud, workers in a co-located data center, or want direct control of Amazon EC2 workers. With a CMF, you have full control over and responsibility for the fleet, including provisioning, operations, management, and decommissioning workers.
 
 **Q: What files get uploaded to Deadline Cloud?**  
 A: For SMF, the submitter automatically detects your scene file and assets needed for rendering. These files are uploaded to Job attachments. For CMF, it depends on your setup. 
@@ -49,10 +49,10 @@ A: Completed frames are stored securely in Amazon S3 storage and are available f
 
 ## Troubleshooting
 
-**Q: My submitter button doesn't appear in Cinema 4D**  
+**Q: My submitter button doesn't appear in Cinema 4D.**  
 A: Make sure you've installed the extension correctly and restarted Cinema 4D. Check the Console for any error messages. Consider re-installing the submitter if the issue persists. 
 
-**Q: My render failed in the cloud**  
+**Q: My render failed in the cloud.**  
 A: Common causes include missing assets, incorrect file paths, or insufficient memory. Check the job logs in the Deadline Cloud monitor.
 
 **Q: Can I cancel a job after submitting?**  

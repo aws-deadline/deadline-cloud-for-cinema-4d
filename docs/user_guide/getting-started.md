@@ -26,17 +26,17 @@ The submitter adds AWS Deadline Cloud functionality to Cinema 4D's Extensions me
 
 ## Updating the Submitter
 
-To update the submitter to the latest version, download and run the latest submitter installer.
+To update the submitter to the latest version, download and run the latest [submitter installer](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/submitter.html).
 
 ## Step 2: Submit Your First Render (2 minutes)
 
-1. Open Cinema 4D and load a scene 
-2. Make sure your scene is saved
-3. Set up your camera angles, materials, and lighting as desired
-4. Go to `Extensions` > `AWS Deadline Cloud Submitter`
+1. Open Cinema 4D and load a scene.
+2. Make sure your scene is saved.
+3. Set up your camera angles, materials, and lighting as desired.
+4. Go to `Extensions` > `AWS Deadline Cloud Submitter`.
 ![Extensions Menu](images/extensions-menu.png)
 ![Submitter Dialog](images/submitter-dialog.png)
-5. Review your render settings
+5. Review your render settings.
 6. Click Submit!
 ![Submit button](images/submit-button.png)
 
@@ -47,19 +47,19 @@ If you haven't already, install the Deadline Cloud Monitor from the requirements
 After submitting a job, open Deadline Cloud Monitor (DCM) to view the job's progress. The submitter will create a job with a single step and with one task per frame.
 ![DCM](images/DCM.png)
 
-**To view rendering logs:** Right-click on a task and choose "View logs"  
+To view rendering logs, right-click on a task and choose "View logs". 
 Viewing logs is especially useful for troubleshooting failed jobs.  
 ![DCM Logs](images/DCM-logs.png)
 
 ## Step 4: Download Your Results
 
-Once your render job completes successfully, you can download the rendered frames:
+Once your render job completes successfully, you can download the rendered frames.
 
-1. In Deadline Cloud Monitor, locate your completed job
-2. Right-click on the job name
-3. Select "Download output" from the context menu
-4. Choose where to save your rendered files
-5. The download will begin automatically
+1. In Deadline Cloud Monitor, locate your completed job.
+2. Right-click on the job name.
+3. Select "Download output" from the context menu.
+4. Choose where to save your rendered files.
+5. The download will begin automatically.
 
 ![Download Process](images/DCM-download-output.png)
 

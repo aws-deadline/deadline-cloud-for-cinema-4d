@@ -12,7 +12,7 @@ Provides additional configuration options beyond basic settings, allowing you to
 
 ## Interface Walkthrough
 
-The submitter interface has several tabs to configure your job:
+The submitter interface has several tabs to configure your job.
 
 ### Shared Job Settings
 
@@ -54,7 +54,7 @@ Settings specific to your Cinema 4D render:
 
 **Host Requirements** (optional) - Allows you to specify which types of hosts will be eligible for picking up tasks for this job.
 
-The submitter handles all the technical details so you can focus on your creative work.
+The submitter handles the technical details so you can focus on your creative work.
 
 ---
 
