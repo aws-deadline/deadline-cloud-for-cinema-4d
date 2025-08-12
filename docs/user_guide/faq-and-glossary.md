@@ -3,7 +3,7 @@
 ## Getting Started
 
 **Q: What is AWS Deadline Cloud?**  
-A: AWS Deadline Cloud is a fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects for films, TV shows, commercials, games, and industrial design. With Deadline Cloud, you can set up, deploy, and scale rendering projects in minutes, so you can improve the efficiency of your rendering pipelines and take on more projects. Not only are rendering pipelines more efficient, they're super easy to set up and scale up to deliver faster.
+A: AWS Deadline Cloud is a fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects for films, TV shows, commercials, games, and industrial design. With Deadline Cloud, you can set up, deploy, and scale rendering projects in minutes, so you can improve the efficiency of your rendering pipelines and take on more projects.
 
 **Q: What is the submitter?**  
 A: The Cinema 4D submitter extension creates a button in Cinema 4D (Extensions > AWS Deadline Cloud Submitter) that allows you to access the submitter and submit jobs to Deadline Cloud. It automatically determines required files based on the loaded scene, allows you to specify render options, builds an Open Job Description template that defines the workflow, and submits the job to your chosen farm and queue. 
@@ -12,13 +12,13 @@ A: The Cinema 4D submitter extension creates a button in Cinema 4D (Extensions >
 A: The adaptor is a command-line Python-based application that enhances the functionality of Cinema 4D for running within a render farm like Deadline Cloud. Its primary purpose is to add a "sticky rendering" functionality where a single process instance of Cinema 4D is able to load the scene file and then dynamically be instructed to perform desired renders without needing to close and re-launch Cinema 4D between them. It also has additional benefits such as support for path mapping, and reporting the progress of your render to Deadline Cloud.
 
 **Q: What is a job bundle?**  
-A: A job bundle is a directory structure that contains an Open Job Description (OpenJD) template, your Cinema 4D scene file, all assets (textures, models, etc.), and job-specific files required as input for your job. The submitter automatically creates this bundle and you can export it to review contents before submission or submit it using the Deadline Cloud CLI.
+A: A job bundle is a directory structure that contains an Open Job Description (OpenJD) template, your Cinema 4D scene file path, paths to all assets (textures, models, etc.), and job-specific files required as input for your job. The submitter automatically creates this bundle and you can export it to review contents before submission or submit it using the Deadline Cloud CLI.
 
 **Q: What is a worker?**  
-A: A worker is a cloud computer that renders your frames. AWS Deadline Cloud lets you scale thousands of workers up and down minute-to-minute, allowing you to render complex assets, accelerate production timelines, take on new projects, and meet challenging turnaround times. Workers automatically scale down when you're done to minimize costs.
+A: A worker is a cloud computer that renders your frames. AWS Deadline Cloud lets you scale thousands of workers up and down minute-to-minute, allowing you to render complex assets, accelerate production timelines, take on new projects, and meet challenging turnaround times. Based on your fleet's minimum and maximum worker size settings, workers automatically scale down when you're done to minimize costs.
 
 **Q: Do I need to know about AWS to use this?**  
-A: No! The submitter handles all the technical AWS details. You just need an AWS account and the Cinema 4D extension.
+A: For Service Managed Fleets, you just need an AWS account to access the AWS Deadline Cloud dashboard and setup wizard, which makes it easier to create a cloud-based render farm. For Customer Managed Fleets, you'll need more AWS knowledge to manage your own fleet. 
 
 **Q: How much does it cost?**  
 A: You only pay for the compute time you use with pay-as-you-go pricing and Usage-Based Licensing (UBL). Costs vary based on instance types and render time. Built-in cost management capabilities include budget setting and usage tracking on a project-by-project basis, which gives you the ability to manage rendering costs and keep budgets on track. [Learn more about pricing](https://aws.amazon.com/deadline-cloud/pricing/).
@@ -31,7 +31,10 @@ A: **Service Managed** = A service-managed fleet (SMF) is a fleet of workers tha
 **Customer Managed** = A customer-managed fleet (CMF) is a fleet of workers that you manage and that Deadline Cloud uses to process your jobs. Use a CMF when you have existing on-premises workers to integrate with Deadline Cloud, workers in a co-located data center, or want direct control of Amazon EC2 workers. With a CMF, you have full control over and responsibility for the fleet, including provisioning, operations, management, and decommissioning workers.
 
 **Q: What files get uploaded to Deadline Cloud?**  
-A: The submitter automatically detects your scene file, textures, models, and other assets needed for rendering.
+A: For SMF, the submitter automatically detects your scene file and assets needed for rendering. These files are uploaded to Job attachments. For CMF, it depends on your setup. 
+
+**Q: What are Job attachments?**
+A: Job attachments enable you to transfer files back and forth between your workstation and AWS Deadline Cloud. With job attachments, you don't need to manually set up an Amazon S3 bucket for your files. Instead, when you create a queue with the Deadline Cloud console, you choose the bucket for your job attachments.
 
 ## Rendering Questions
 
