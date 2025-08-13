@@ -47,8 +47,10 @@ If you haven't already, install the Deadline Cloud Monitor from the requirements
 After submitting a job, open Deadline Cloud Monitor (DCM) to view the job's progress. The submitter will create a job with a single step and with one task per frame.
 ![DCM](images/DCM.png)
 
-To view rendering logs, right-click on a task and choose "View logs". 
-Viewing logs is especially useful for troubleshooting failed jobs.  
+To view rendering logs, right-click on a task and choose "View logs".
+
+Viewing logs is especially useful for troubleshooting failed jobs.
+
 ![DCM Logs](images/DCM-logs.png)
 
 ## Step 4: Download Your Results
@@ -67,7 +69,6 @@ Your rendered frames will be organized in the same structure as specified in you
 
 ---
 
-[Learn about submitter features →](submitter-features.md)  
-[FAQ and Glossary →](faq-and-glossary.md)
+[Learn about submitter features →](submitter-features.md)
 
-<br>
+[FAQ and Glossary →](faq-and-glossary.md)

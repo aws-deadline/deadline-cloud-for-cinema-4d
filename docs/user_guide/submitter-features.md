@@ -59,5 +59,3 @@ The submitter handles the technical details so you can focus on your creative wo
 ---
 
 [FAQ and Glossary →](faq-and-glossary.md)
-
-<br>

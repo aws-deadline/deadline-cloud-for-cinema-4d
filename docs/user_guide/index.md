@@ -40,7 +40,6 @@ Follow our step-by-step user guide to start rendering with Deadline Cloud in min
 
 ---
 
-[Learn about submitter features →](submitter-features.md)  
-[FAQ and Glossary →](faq-and-glossary.md)
+[Learn about submitter features →](submitter-features.md)
 
-<br>
+[FAQ and Glossary →](faq-and-glossary.md)
