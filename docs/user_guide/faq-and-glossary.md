@@ -3,7 +3,7 @@
 ## Getting Started
 
 **Q: What is AWS Deadline Cloud?**  
-A: AWS Deadline Cloud is a fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects for films, TV shows, commercials, games, and industrial design. With Deadline Cloud, you can set up, deploy, and scale rendering projects in minutes, so you can improve the efficiency of your rendering pipelines and take on more projects.
+A: AWS Deadline Cloud is a fully managed service that simplifies render management for teams creating computer-generated 2D/3D graphics and visual effects for films, TV shows, commercials, games, industrial design, and more. With Deadline Cloud, you can set up, deploy, and scale rendering projects in minutes, so you can improve the efficiency of your rendering pipelines and take on more projects.
 
 **Q: What is the submitter?**  
 A: The Cinema 4D submitter extension creates a button in Cinema 4D (Extensions > AWS Deadline Cloud Submitter) that allows you to access the submitter and submit jobs to Deadline Cloud. It automatically determines required files based on the loaded scene, allows you to specify render options, builds an Open Job Description template that defines the workflow, and submits the job to your chosen farm and queue. 
@@ -64,14 +64,15 @@ A: The submitter includes built-in error detection to catch common issues like m
 ## Glossary
 
 **Adaptor** - Software that runs on cloud computers to execute your Cinema 4D renders or projects.
-**Submitter** - The Cinema 4D extension that sends jobs to Deadline Cloud  
-**Farm** - Your rendering facility in the cloud  
-**Queue** - Different rendering departments with specific settings  
-**Fleet** - Group of computers that do the rendering  
-**Job** - Your render request sent to the cloud that appears in Deadline Cloud Monitor  
-**Step** - A phase within a job that groups related tasks together  
-**Task** - Individual work units within a step, can be one or multiple frames to render  
-**Asset** - Files your scene needs (textures, models, etc.)   
-**Take** - Different render variations of the same scene
+**Submitter** - The Cinema 4D extension that sends jobs to Deadline Cloud.
+**Farm** - Your rendering facility in the cloud.
+**Queue** - A rendering department with specific settings.
+**Fleet** - A group of computers that do the rendering.
+**Job** - A set of instructions that AWS Deadline Cloud uses to schedule and run work on available workers. When you create a job, you choose the farm and queue to send the job to.
+**Steps** - Define the script to run on workers. Steps can have requirements such as minimum worker memory or other steps that need to complete first. Each step has one or more tasks.  
+**Tasks** - A unit of work sent to a worker to perform. A task is a combination of a step's script and parameters, such as a frame number, that are used in the script. The job is complete when all tasks are complete for all steps. 
+**Asset** - Files that your scene needs (textures, models, etc.).  
+**Take** - A render variation of the same scene.
+**Priority** - The approximate order that Deadline Cloud processes a job in a queue. You can set the job priority between 0 and 100, jobs with a higher number priority are generally processed first. Jobs with the same priority are processed in the order received.
 
 <br>
