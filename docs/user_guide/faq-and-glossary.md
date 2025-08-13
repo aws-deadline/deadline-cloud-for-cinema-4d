@@ -14,8 +14,8 @@ A: The adaptor is a command-line Python-based application that enhances the func
 **Q: What is a job bundle?**  
 A: A job bundle is a directory structure that contains an Open Job Description (OpenJD) template, your Cinema 4D scene file path, paths to all assets (textures, models, etc.), and job-specific files required as input for your job. The submitter automatically creates this bundle and you can export it to review contents before submission or submit it using the Deadline Cloud CLI.
 
-**Q: What is a worker?**  
-A: A worker is a cloud compute resource that renders your frames. AWS Deadline Cloud lets you scale thousands of workers up and down minute-to-minute, allowing you to render complex assets, accelerate production timelines, take on new projects, and meet challenging turnaround times. Based on your fleet's minimum and maximum worker size settings, workers automatically scale down when you're done to minimize costs.
+**Q: What are workers?**  
+A: Workers belong to fleets and run Deadline Cloud assigned tasks to complete steps and jobs. Workers store the logs from task operations in Amazon CloudWatch Logs. Workers can also use the job attachments feature to sync inputs and outputs to an Amazon Simple Storage Service (Amazon S3) bucket.
 
 **Q: Do I need to know about AWS to use this?**  
 A: For Service Managed Fleets, you just need an AWS account to access the AWS Deadline Cloud dashboard and setup wizard, which makes it easier to create a cloud-based render farm. For Customer Managed Fleets, you'll need more AWS knowledge to manage your own fleet. 
@@ -31,7 +31,7 @@ A: **Service-managed** = A service-managed fleet (SMF) is a fleet of workers tha
 **Customer-managed** = A customer-managed fleet (CMF) is a fleet of workers that you manage and that Deadline Cloud uses to process your jobs. We recommend using a CMF when you have existing on-premises workers to integrate with Deadline Cloud, workers in a co-located data center, or want direct control of Amazon EC2 workers. With a CMF, you have full control over and responsibility for the fleet, including provisioning, operations, management, and decommissioning workers.
 
 **Q: What files get uploaded to Deadline Cloud?**  
-A: For SMF, the submitter automatically detects your scene file and assets needed for rendering. These files are uploaded to Job attachments. For CMF, it depends on your setup. 
+A: If you are using job attachments, your scene and all its assets are uploaded. Otherwise, it depends on your setup.
 
 **Q: What are Job attachments?**
 A: Job attachments enable you to transfer files back and forth between your workstation and AWS Deadline Cloud. With job attachments, you don't need to manually set up an Amazon S3 bucket for your files. Instead, when you create a queue with the Deadline Cloud console, you choose the bucket for your job attachments.
@@ -63,14 +63,15 @@ A: The submitter includes built-in error detection to catch common issues like m
 
 ## Glossary
 
-**Adaptor** - Software that runs on cloud computers to execute your Cinema 4D renders or projects.
+**Adaptor** - Software that runs on compute resources to execute your Cinema 4D renders or projects.
 **Submitter** - The Cinema 4D extension that sends jobs to Deadline Cloud.
-**Farm** - Your rendering facility in the cloud.
-**Queue** - A rendering department with specific settings.
-**Fleet** - A group of computers that do the rendering.
-**Job** - A set of instructions that AWS Deadline Cloud uses to schedule and run work on available workers. When you create a job, you choose the farm and queue to send the job to.
+**Farm** - A farm is a where your project resources are located. It consists of queues and fleets.
+**Queue** - A queue is where submitted jobs are located and scheduled to be rendered. A queue must be associated with a fleet to create a successful render. A queue can be associated with multiple fleets.
+**Fleet** - A fleet is a group of worker nodes that do the rendering. Worker nodes process jobs. A fleet can be associated to multiple queues, and a queue can be associated to multiple fleets.
+**Job** - A job is a rendering request. Users submit jobs. Jobs contain specific job properties that are outlined as steps and tasks.
 **Steps** - Define the script to run on workers. Steps can have requirements such as minimum worker memory or other steps that need to complete first. Each step has one or more tasks.  
 **Tasks** - A unit of work sent to a worker to perform. A task is a combination of a step's script and parameters, such as a frame number, that are used in the script. The job is complete when all tasks are complete for all steps. 
+**Job attachments** - A job attachment is a Deadline Cloud feature that you can use to manage inputs and outputs for jobs. Job files are uploaded as job attachments during the rendering process. These files can be textures, 3D models, lighting rigs, and other similar items.
 **Asset** - Files that your scene needs (textures, models, etc.).  
 **Take** - A render variation of the same scene.
 **Priority** - The approximate order that Deadline Cloud processes a job in a queue. You can set the job priority between 0 and 100, jobs with a higher number priority are generally processed first. Jobs with the same priority are processed in the order received.
