@@ -1,3 +1,14 @@
+## 0.8.2 (2025-08-12)
+
+
+### Features
+* improved render progress reporting (#287) ([`d6ab2c0`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/d6ab2c034b0c7a22d00c4cb2b41c728760808c75))
+* Implement font handling for Cinema 4D submitter for Windows. (#283) ([`f4e4b17`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f4e4b17054a4c3f69c38c1b67f31a46070bb6eae))
+
+### Bug Fixes
+* Use scene file location to map path for fonts folder. (#286) ([`bb77b8f`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/bb77b8f20c8627ab020552cde91ce6b2b272b302))
+* Add the known asset root paths to suppress job submission warnings. (#284) ([`350ba4f`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/350ba4ff9014ae3448857f5f1a58773b607f7e8e))
+
 ## 0.8.1 (2025-08-07)
 
 ### Bug Fixes
