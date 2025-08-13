@@ -44,13 +44,10 @@ A: Yes! Redshift GPU rendering is supported.
 **Q: How long do renders take?**  
 A: Cloud rendering can be much faster than local rendering because you can use multiple powerful instances simultaneously.
 
-**Q: Where do my rendered images go?**  
-A: Completed frames are stored securely in Amazon S3 storage and are available for download through the Deadline Cloud monitor.
-
 ## Troubleshooting
 
 **Q: My submitter button doesn't appear in Cinema 4D.**  
-A: Make sure you've installed the extension correctly and restarted Cinema 4D. Check the Console for any error messages. Consider re-installing the submitter if the issue persists. 
+A: Make sure you've installed the extension correctly and restarted Cinema 4D. Check the Console (Extensions > Console) for any error messages. Consider re-installing the submitter if the issue persists. 
 
 **Q: My render failed in the cloud.**  
 A: Common causes include missing assets, incorrect file paths, or insufficient memory. Check the job logs in the Deadline Cloud monitor.
