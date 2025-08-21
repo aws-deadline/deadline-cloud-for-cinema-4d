@@ -5,14 +5,21 @@ import logging
 import os
 import platform
 import shutil
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Any, Dict
 
 # Import fontTools for robust font metadata extraction
 # for detecting Adobe fonts.
-from fontTools import ttLib
+# Only available on Windows. Mac font functionality is not supported
+if sys.platform == "win32":
+    from fontTools import ttLib
+else:
+    # Stub for non-Windows platforms where font functionality is deactivated
+    ttLib = None  # type: ignore
 
-TEMP_FONTS_DIR = "tempFonts"
+FONTS_DIR = "fonts"
 
 # Font table indices from TrueType specification
 TTF_FAMILY_NAME = 1
@@ -24,7 +31,26 @@ TTF_POSTSCRIPT_NAME = 6
 logger = logging.getLogger(__name__)
 
 
-def get_font_metadata(font_path: str) -> Optional[Dict[str, Any]]:
+@dataclass
+class FontMetadata:
+    """
+    Dataclass representing font metadata extracted from a font file.
+    """
+
+    file_path: str
+    family_name: Optional[str] = None
+    style: Optional[str] = None
+    full_name: Optional[str] = None
+    postscript_name: Optional[str] = None
+    raw_names: Optional[Dict[int, str]] = None
+
+    def __post_init__(self):
+        """Initialize raw_names as empty dict if None."""
+        if self.raw_names is None:
+            self.raw_names = {}
+
+
+def get_font_metadata(font_path: str) -> Optional[FontMetadata]:
     """
     Extract font metadata from a font file using fontTools.
 
@@ -32,54 +58,50 @@ def get_font_metadata(font_path: str) -> Optional[Dict[str, Any]]:
         font_path (str): Path to the font file
 
     Returns:
-        Optional[Dict[str, Any]]: Font metadata dictionary or None if extraction fails
+        Optional[FontMetadata]: Font metadata dataclass or None if extraction fails
     """
 
     if not font_path or not os.path.isfile(font_path):
+        return None
+
+    if ttLib is None:
         return None
 
     try:
         font = ttLib.TTFont(font_path)
         names_table = font["name"].names
 
-        # Extract key font information
-        metadata: dict[str, Any] = {
-            "file_path": font_path,
-            "family_name": None,
-            "style": None,
-            "full_name": None,
-            "postscript_name": None,
-            "raw_names": {},
-        }
+        # Create FontMetadata instance
+        metadata = FontMetadata(file_path=font_path)
 
         # Build raw names table for debugging
         try:
-            metadata["raw_names"] = {i: str(names_table[i]) for i in range(len(names_table))}
+            metadata.raw_names = {i: str(names_table[i]) for i in range(len(names_table))}
         except Exception as e:
             logger.debug(f"Could not build raw names table for {font_path}: {e}")
 
         # Extract standard font names
         try:
             if len(names_table) > TTF_FAMILY_NAME:
-                metadata["family_name"] = str(names_table[TTF_FAMILY_NAME])
+                metadata.family_name = str(names_table[TTF_FAMILY_NAME])
         except (IndexError, Exception) as e:
             logger.debug(f"Could not extract family name from {font_path}: {e}")
 
         try:
             if len(names_table) > TTF_STYLE:
-                metadata["style"] = str(names_table[TTF_STYLE])
+                metadata.style = str(names_table[TTF_STYLE])
         except (IndexError, Exception) as e:
             logger.debug(f"Could not extract style from {font_path}: {e}")
 
         try:
             if len(names_table) > TTF_FULL_NAME:
-                metadata["full_name"] = str(names_table[TTF_FULL_NAME])
+                metadata.full_name = str(names_table[TTF_FULL_NAME])
         except (IndexError, Exception) as e:
             logger.debug(f"Could not extract full name from {font_path}: {e}")
 
         try:
             if len(names_table) > TTF_POSTSCRIPT_NAME:
-                metadata["postscript_name"] = str(names_table[TTF_POSTSCRIPT_NAME])
+                metadata.postscript_name = str(names_table[TTF_POSTSCRIPT_NAME])
         except (IndexError, Exception) as e:
             logger.debug(f"Could not extract PostScript name from {font_path}: {e}")
 
@@ -162,19 +184,20 @@ def _is_font_match(font_name: str, filename: str, file_path: str) -> bool:
     metadata = get_font_metadata(file_path)
     if metadata:
         # Check PostScript name match (exact match - highest priority)
-        postscript_name = metadata.get("postscript_name", "")
-        if postscript_name and font_name == postscript_name:
+        if metadata.postscript_name and font_name == metadata.postscript_name:
             return True
 
         # Check family name match
-        family_name = metadata.get("family_name", "").lower()
-        if family_name and (font_name_lower == family_name or font_name_lower in family_name):
-            return True
+        if metadata.family_name:
+            family_name_lower = metadata.family_name.lower()
+            if font_name_lower == family_name_lower or font_name_lower in family_name_lower:
+                return True
 
         # Check full name match
-        full_name = metadata.get("full_name", "").lower()
-        if full_name and (font_name_lower == full_name or font_name_lower in full_name):
-            return True
+        if metadata.full_name:
+            full_name_lower = metadata.full_name.lower()
+            if font_name_lower == full_name_lower or font_name_lower in full_name_lower:
+                return True
 
     # Fall back to filename-based matching
     # Exact filename match (without extension)
@@ -231,28 +254,6 @@ def get_system_font_directories() -> List[str]:
                 if os.path.isdir(location):
                     font_dirs.append(location)
 
-    elif system == "Darwin":  # macOS
-        # macOS font directories
-        mac_locations = [
-            "/Library/Fonts",
-            "/System/Library/Fonts",
-            os.path.expanduser("~/Library/Fonts"),
-        ]
-
-        for location in mac_locations:
-            if os.path.isdir(location):
-                font_dirs.append(location)
-
-        # Adobe fonts on macOS
-        adobe_locations = [
-            os.path.expanduser("~/Library/Application Support/Adobe/CoreSync/plugins/livetype/r"),
-            os.path.expanduser("~/Library/Application Support/Adobe/User Owned Fonts"),
-        ]
-
-        for location in adobe_locations:
-            if os.path.isdir(location):
-                font_dirs.append(location)
-
     else:
         logger.warning(f"Unknown operating system: {system}")
 
@@ -276,11 +277,7 @@ def is_font_file(file_path: str) -> bool:
     if not os.path.isfile(file_path):
         return False
 
-    # Check file extension first (quick check)
-    font_extensions = [".otf", ".ttf", ".fon", ""]  # Adobe fonts may have no extension
-    has_font_extension = any(file_path.lower().endswith(ext) for ext in font_extensions)
-
-    if not has_font_extension:
+    if ttLib is None:
         return False
 
     # Try to validate the font file using fontTools
@@ -328,8 +325,8 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
         logger.error(f"Font file validation failed: {font_location}")
         return
 
-    # Create the tempFonts directory within the scene location if it doesn't exist
-    fonts_dir = scene_location / TEMP_FONTS_DIR
+    # Create the fonts directory within the scene location if it doesn't exist
+    fonts_dir = scene_location / FONTS_DIR
 
     try:
         fonts_dir.mkdir(exist_ok=True, parents=True)
@@ -376,7 +373,7 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
 
 def scene_has_fonts(scene_location: Path) -> bool:
     """
-    Check if a scene has fonts by looking for the tempFonts directory and its contents.
+    Check if a scene has fonts by looking for the fonts directory and its contents.
 
     Args:
         scene_location (Path): Path to the scene location
@@ -387,9 +384,9 @@ def scene_has_fonts(scene_location: Path) -> bool:
     if not scene_location or not scene_location.exists():
         return False
 
-    fonts_dir = scene_location / TEMP_FONTS_DIR
+    fonts_dir = scene_location / FONTS_DIR
 
-    # Check if tempFonts directory exists and has font files
+    # Check if fonts directory exists and has font files
     if fonts_dir.exists() and fonts_dir.is_dir():
         for font_file in fonts_dir.iterdir():
             if is_font_file(str(font_file)):

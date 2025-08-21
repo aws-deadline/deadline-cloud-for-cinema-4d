@@ -98,7 +98,8 @@ if not has_gui_deps():
             "Did not install GUI components, the AWS Deadline Cloud extension will fail with qtpy bindings errors."
         )
 
-if not has_fonttools():
+# Only install fonttools on Windows. Mac font functionality is not supported
+if sys.platform == "win32" and not has_fonttools():
     if c4d.gui.QuestionDialog(
         "The AWS Deadline Cloud extension needs fonttools to work properly. Press Yes to install."
     ):

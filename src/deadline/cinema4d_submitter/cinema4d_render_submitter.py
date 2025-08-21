@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import os
 import re
+import sys
 import tempfile
 from copy import deepcopy
 from dataclasses import dataclass
@@ -28,7 +29,7 @@ from .assets import AssetIntrospector
 from .data_classes import (
     RenderSubmitterUISettings,
 )
-from .font_utils import scene_has_fonts, get_font_manager_environment, TEMP_FONTS_DIR
+from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
 from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
@@ -282,8 +283,8 @@ def _get_job_template(
             job_template["jobEnvironments"] = []
         job_template["jobEnvironments"].append(override_environment["environment"])
 
-    # Conditionally add FontManager job environment if fonts are detected
-    if adaptor and scene_has_fonts(Path(Scene.name()).parent):
+    # Conditionally add FontManager job environment if fonts are detected (Windows only)
+    if adaptor and sys.platform == "win32" and scene_has_fonts(Path(Scene.name()).parent):
         font_manager_environment = get_font_manager_environment(Scene.name())
         if "jobEnvironments" not in job_template:
             job_template["jobEnvironments"] = []
@@ -642,7 +643,7 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
     # This is crucial because Scene.name() will change after SaveProject
     original_scene_file_path = Path(Scene.name())
     original_scene_dir = original_scene_file_path.parent
-    original_fonts_dir = original_scene_dir / TEMP_FONTS_DIR
+    original_fonts_dir = original_scene_dir / FONTS_DIR
 
     # Save the project to the temporary directory
     temp_file_path = os.path.join(temp_dir, doc.GetDocumentName())
@@ -659,18 +660,17 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
             "Exporting the scene failed. Please fix all the paths for your assets in your scene in Cinema 4D's Window menu bar > Project Asset Inspector."
         )
 
-    temp_fonts_dir = Path(Scene.name()).parent / TEMP_FONTS_DIR
+    fonts_dir = Path(Scene.name()).parent / FONTS_DIR
 
-    # Copy fonts from the original scene's tempFonts directory to the temp directory
+    # Copy fonts from the original scene's fonts directory to the temp directory (Windows only)
+    if sys.platform == "win32" and original_fonts_dir.exists() and original_fonts_dir.is_dir():
+        # Create the fonts directory in the temp location
+        fonts_dir.mkdir(exist_ok=True, parents=True)
 
-    if original_fonts_dir.exists() and original_fonts_dir.is_dir():
-        # Create the tempFonts directory in the temp location
-        temp_fonts_dir.mkdir(exist_ok=True, parents=True)
-
-        # Copy all font files from the original tempFonts directory
+        # Copy all font files from the original fonts directory
         for font_file in original_fonts_dir.iterdir():
             if font_file.is_file():
-                destination = temp_fonts_dir / font_file.name
+                destination = fonts_dir / font_file.name
                 shutil.copy2(font_file, destination)
 
     # If we get here, save was successful

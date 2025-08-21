@@ -56,6 +56,12 @@ A: Yes! Redshift GPU rendering is supported.
 
 A: Cloud rendering can be much faster than local rendering because you can use multiple powerful instances simultaneously.
 
+**Q: Why don't fonts work while submitting with macOS?**
+
+A: Font functionality is currently only supported on Windows due to technical limitations. This is a known behavior in mixed macOS/Windows environments, as confirmed by Maxon's official documentation. 
+
+For more information, see [Maxon's official FAQ on resolving missing fonts in Team Render](https://support.maxon.net/hc/en-us/articles/1500006439721-How-to-resolve-missing-fonts-in-Team-Render-for-Cinema-4D-install-fonts-or-make-Text-editable).
+
 ## Troubleshooting
 
 **Q: My submitter button doesn't appear in Cinema 4D.**
