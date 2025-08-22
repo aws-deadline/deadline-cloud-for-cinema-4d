@@ -54,6 +54,108 @@ FONT_EXTENSIONS = [".otf", ".ttf", ".fon", ""]
 logger = logging.getLogger(__name__)
 
 
+def _collect_fonts_from_directory(fonts_dir: str) -> Set[str]:
+    """
+    Collect all valid font files from a given directory.
+
+    :param fonts_dir: path to the fonts directory
+    :returns: set of font file paths found in the directory
+    """
+    fonts = set()
+
+    try:
+        for file_name in os.listdir(fonts_dir):
+            full_path = os.path.join(fonts_dir, file_name)
+
+            # Skip non-files (directories, symlinks, etc.)
+            if not os.path.isfile(full_path):
+                continue
+
+            _, ext = os.path.splitext(full_path)
+            if ext.lower() in FONT_EXTENSIONS:
+                logger.debug(f"Adding font: {full_path}")
+                fonts.add(full_path)
+            else:
+                logger.warning(f"Non-font file found in {FONTS_DIR} folder: {full_path}")
+
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Could not access fonts directory {fonts_dir}: {e}")
+
+    return fonts
+
+
+def _find_fonts_recursive(session_dir: str) -> Set[str]:
+    """
+    Recursively search for fonts directory in session_dir.
+
+    :param session_dir: the root folder in which to look for files
+    :returns: set of font file paths found via recursive search
+    """
+    logger.info("Using recursive font search approach")
+    fonts = set()
+
+    try:
+        for root, dirs, files in os.walk(session_dir):
+            for dir_name in dirs:
+                # Skip directories that are not fonts directories
+                if dir_name != FONTS_DIR:
+                    continue
+
+                fonts_dir = os.path.join(root, dir_name)
+                logger.info(f"Found {FONTS_DIR} directory: {fonts_dir}")
+
+                # Skip system fonts directories (those under .env directories)
+                if os.sep + ".env" + os.sep in fonts_dir:
+                    logger.info(f"Skipping system fonts directory under .env: {fonts_dir}")
+                    continue
+
+                # Collect fonts from this directory and add to the overall set
+                logger.info(f"Processing fonts directory: {fonts_dir}")
+                directory_fonts = _collect_fonts_from_directory(fonts_dir)
+                logger.info(f"Found {len(directory_fonts)} fonts in directory: {fonts_dir}")
+                fonts.update(directory_fonts)
+
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Could not perform recursive search in session directory: {e}")
+
+    logger.info(f"Recursive search completed. Total fonts found: {len(fonts)}")
+    return fonts
+
+
+def _find_fonts_scene_based(scene_file_path: str) -> Set[str]:
+    """
+    Search for fonts directory relative to the scene file path.
+
+    :param scene_file_path: path to the scene file to use for finding fonts
+    :returns: set of font file paths found via scene-based search
+    """
+    logger.debug("Using scene-based approach")
+
+    try:
+        scene_parent_dir = Path(scene_file_path).parent
+        fonts_dir_path = scene_parent_dir / FONTS_DIR
+        logger.debug(f"Looking for fonts in scene-based directory: {fonts_dir_path}")
+
+        # Early return if fonts directory doesn't exist
+        if not fonts_dir_path.exists():
+            logger.debug(f"Scene-based {FONTS_DIR} directory not found: {fonts_dir_path}")
+            return set()
+
+        # Early return if path exists but isn't a directory
+        if not fonts_dir_path.is_dir():
+            logger.debug(f"Scene-based {FONTS_DIR} path is not a directory: {fonts_dir_path}")
+            return set()
+
+        logger.debug(f"Scene-based {FONTS_DIR} directory found: {fonts_dir_path}")
+        fonts = _collect_fonts_from_directory(str(fonts_dir_path))
+        logger.debug(f"Found {len(fonts)} fonts in scene-based {FONTS_DIR} directory")
+        return fonts
+
+    except Exception as e:
+        logger.warning(f"Error accessing scene file path for font location: {e}")
+        return set()
+
+
 def find_fonts(session_dir: str, scene_file_path: str) -> Set[str]:
     """
     Looks for all font files that were sent along with the job
@@ -66,68 +168,14 @@ def find_fonts(session_dir: str, scene_file_path: str) -> Set[str]:
     logger.debug(f"Starting font search in session_dir: {session_dir}")
     logger.debug(f"Scene file path provided: {scene_file_path}")
 
-    fonts = set()
-
     # Approach 1: Recursive search for fonts directories in session_dir
-    logger.debug("Using recursive font search approach")
-    try:
-        for root, dirs, files in os.walk(session_dir):
-            for dir_name in dirs:
-                if dir_name == FONTS_DIR:
-                    fonts_dir = os.path.join(root, dir_name)
-                    logger.debug(f"Found {FONTS_DIR} directory: {fonts_dir}")
-
-                    try:
-                        for file_name in os.listdir(fonts_dir):
-                            full_path = os.path.join(fonts_dir, file_name)
-                            if os.path.isfile(full_path):
-                                _, ext = os.path.splitext(full_path)
-                                if ext.lower() in FONT_EXTENSIONS:
-                                    logger.debug(f"Adding font: {full_path}")
-                                    fonts.add(full_path)
-                                else:
-                                    logger.warning(
-                                        f"Non-font file found in {FONTS_DIR} folder: {full_path}"
-                                    )
-                    except (OSError, PermissionError) as e:
-                        logger.warning(f"Could not access fonts directory {fonts_dir}: {e}")
-                        continue
-    except (OSError, PermissionError) as e:
-        logger.warning(f"Could not perform recursive search in session directory: {e}")
-
-    # If fonts were found via recursive search, return them
+    fonts = _find_fonts_recursive(session_dir)
     if fonts:
-        logger.debug(f"Found {len(fonts)} fonts via recursive search")
         return fonts
 
     # Approach 2: Scene file path approach as fallback
     logger.debug("No fonts found via recursive search, trying scene-based approach")
-    try:
-        scene_parent_dir = Path(scene_file_path).parent
-        fonts_dir_path = scene_parent_dir / FONTS_DIR
-        logger.debug(f"Looking for fonts in scene-based directory: {fonts_dir_path}")
-
-        if fonts_dir_path.exists() and fonts_dir_path.is_dir():
-            logger.debug(f"Scene-based {FONTS_DIR} directory found: {fonts_dir_path}")
-            font_count = 0
-            for font_file in fonts_dir_path.iterdir():
-                if font_file.is_file():
-                    _, ext = os.path.splitext(str(font_file))
-                    if ext.lower() in FONT_EXTENSIONS:
-                        logger.debug(f"Adding font from scene {FONTS_DIR}: {font_file}")
-                        fonts.add(str(font_file))
-                        font_count += 1
-                    else:
-                        logger.warning(f"Non-font file found in {FONTS_DIR} folder: {font_file}")
-            logger.debug(f"Found {font_count} fonts in scene-based {FONTS_DIR} directory")
-        else:
-            logger.debug(
-                f"Scene-based {FONTS_DIR} directory not found or not a directory: {fonts_dir_path}"
-            )
-    except Exception as e:
-        logger.warning(f"Error accessing scene file path for font location: {e}")
-
-    return fonts
+    return _find_fonts_scene_based(scene_file_path)
 
 
 def get_font_name(dst_path: str) -> str:
