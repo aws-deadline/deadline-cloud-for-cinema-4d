@@ -14,23 +14,6 @@ from typing import Set
 
 FONTS_DIR = "fonts"
 
-if sys.platform == "win32":
-    from ctypes import wintypes
-
-    try:
-        import winreg
-    except ImportError:
-        import _winreg as winreg  # type: ignore
-
-    user32 = ctypes.WinDLL("user32", use_last_error=True)
-    gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
-else:
-    # Stub for non-Windows platforms
-    winreg = None  # type: ignore
-    user32 = None  # type: ignore
-    gdi32 = None  # type: ignore
-    wintypes = None  # type: ignore
-
 FONTS_REG_PATH = r"Software\Microsoft\Windows NT\CurrentVersion\Fonts"
 
 HWND_BROADCAST = 0xFFFF
@@ -52,6 +35,16 @@ FONT_LOCATION_USER = os.path.join(
 FONT_EXTENSIONS = [".otf", ".ttf", ".fon", ""]
 
 logger = logging.getLogger(__name__)
+
+
+def is_windows() -> bool:
+    """
+    Check if the current platform is Windows.
+
+    Returns:
+        bool: True if running on Windows, False otherwise
+    """
+    return sys.platform == "win32"
 
 
 def _collect_fonts_from_directory(fonts_dir: str) -> Set[str]:
@@ -186,8 +179,13 @@ def get_font_name(dst_path: str) -> str:
 
     :returns: string with the font's name
     """
-    if sys.platform != "win32":
+    if not is_windows():
         raise RuntimeError("Font installation is only supported on Windows")
+
+    # Import Windows-specific modules only when needed
+    from ctypes import wintypes
+
+    gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)  # type: ignore[attr-defined]
 
     filename = os.path.basename(dst_path)
     fontname = os.path.splitext(filename)[0]
@@ -218,15 +216,23 @@ def install_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> None:
 
     :raises RuntimeError: if font installation fails
     """
-    if sys.platform != "win32":
+    if not is_windows():
         logger.error("Font installation is only supported on Windows")
         return
+
+    # Import Windows-specific modules only when needed
+    try:
+        import winreg
+    except ImportError:
+        import _winreg as winreg  # type: ignore
+
+    gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)  # type: ignore[attr-defined]
 
     try:
         # Determine font destination
         if scope == INSTALL_SCOPE_SYSTEM:
             dst_dir = FONT_LOCATION_SYSTEM
-            registry_scope = winreg.HKEY_LOCAL_MACHINE
+            registry_scope = winreg.HKEY_LOCAL_MACHINE  # type: ignore[attr-defined]
         else:
             # Check if the Fonts folder exists, create it if it doesn't
             if not os.path.exists(FONT_LOCATION_USER):
@@ -234,7 +240,7 @@ def install_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> None:
                 os.makedirs(FONT_LOCATION_USER)
 
             dst_dir = FONT_LOCATION_USER
-            registry_scope = winreg.HKEY_CURRENT_USER
+            registry_scope = winreg.HKEY_CURRENT_USER  # type: ignore[attr-defined]
         dst_path = os.path.join(dst_dir, os.path.basename(src_path))
 
         # Check if font already exists at destination
@@ -255,10 +261,10 @@ def install_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> None:
         fontname = get_font_name(dst_path)
 
         # Creates registry if it doesn't exist, opens when it does exist
-        with winreg.CreateKeyEx(
-            registry_scope, FONTS_REG_PATH, 0, access=winreg.KEY_SET_VALUE
+        with winreg.CreateKeyEx(  # type: ignore[attr-defined]
+            registry_scope, FONTS_REG_PATH, 0, access=winreg.KEY_SET_VALUE  # type: ignore[attr-defined]
         ) as key:
-            winreg.SetValueEx(key, fontname, 0, winreg.REG_SZ, filename)
+            winreg.SetValueEx(key, fontname, 0, winreg.REG_SZ, filename)  # type: ignore[attr-defined]
     except Exception as e:
         raise RuntimeError(f"Failed to install font '{src_path}': {str(e)}") from e
 
@@ -272,24 +278,32 @@ def uninstall_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> None:
 
     :raises RuntimeError: if font uninstallation fails
     """
-    if sys.platform != "win32":
+    if not is_windows():
         logger.error("Font uninstallation is only supported on Windows")
         return
+
+    # Import Windows-specific modules only when needed
+    try:
+        import winreg
+    except ImportError:
+        import _winreg as winreg  # type: ignore
+
+    gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)  # type: ignore[attr-defined]
 
     try:
         # Determine where the font was installed
         if scope == INSTALL_SCOPE_SYSTEM:
             dst_path = os.path.join(FONT_LOCATION_SYSTEM, os.path.basename(src_path))
-            registry_scope = winreg.HKEY_LOCAL_MACHINE
+            registry_scope = winreg.HKEY_LOCAL_MACHINE  # type: ignore[attr-defined]
         else:
             dst_path = os.path.join(FONT_LOCATION_USER, os.path.basename(src_path))
-            registry_scope = winreg.HKEY_CURRENT_USER
+            registry_scope = winreg.HKEY_CURRENT_USER  # type: ignore[attr-defined]
 
         # Remove the fontname/filename from the registry
         fontname = get_font_name(dst_path)
 
-        with winreg.OpenKey(registry_scope, FONTS_REG_PATH, 0, access=winreg.KEY_SET_VALUE) as key:
-            winreg.DeleteValue(key, fontname)
+        with winreg.OpenKey(registry_scope, FONTS_REG_PATH, 0, access=winreg.KEY_SET_VALUE) as key:  # type: ignore[attr-defined]
+            winreg.DeleteValue(key, fontname)  # type: ignore[attr-defined]
 
         # Unload the font in the current session
         if not gdi32.RemoveFontResourceW(dst_path):
@@ -307,8 +321,11 @@ def _notify_font_change() -> None:
     Send a notification to all running programs that fonts have changed.
     This should be called once after all font operations are complete.
     """
-    if sys.platform != "win32":
+    if not is_windows():
         return
+
+    # Import Windows-specific modules only when needed
+    user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]
 
     logger.debug("Notifying running programs of font changes")
     user32.SendMessageTimeoutW(HWND_BROADCAST, WM_FONTCHANGE, 0, 0, SMTO_ABORTIFHUNG, 1000, None)
@@ -321,7 +338,7 @@ def _install_fonts(session_dir: str, scene_file_path: str) -> None:
     :param session_dir: directory of the session
     :param scene_file_path: path to the scene file to use for finding fonts
     """
-    if sys.platform != "win32":
+    if not is_windows():
         logger.info("Font installation is only supported on Windows, skipping...")
         return
 
@@ -348,7 +365,7 @@ def _remove_fonts(session_dir: str, scene_file_path: str) -> None:
     :param session_dir: directory of the session
     :param scene_file_path: path to the scene file to use for finding fonts
     """
-    if sys.platform != "win32":
+    if not is_windows():
         logger.info("Font uninstallation is only supported on Windows, skipping...")
         return
 

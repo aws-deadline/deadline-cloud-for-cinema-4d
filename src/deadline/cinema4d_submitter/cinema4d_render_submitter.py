@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import os
 import re
-import sys
 import tempfile
 from copy import deepcopy
 from dataclasses import dataclass
@@ -30,6 +29,7 @@ from .data_classes import (
     RenderSubmitterUISettings,
 )
 from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
+from .platform_utils import is_windows
 from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
@@ -284,7 +284,7 @@ def _get_job_template(
         job_template["jobEnvironments"].append(override_environment["environment"])
 
     # Conditionally add FontManager job environment if fonts are detected (Windows only)
-    if adaptor and sys.platform == "win32" and scene_has_fonts(Path(Scene.name()).parent):
+    if adaptor and is_windows() and scene_has_fonts(Path(Scene.name()).parent):
         font_manager_environment = get_font_manager_environment(Scene.name())
         if "jobEnvironments" not in job_template:
             job_template["jobEnvironments"] = []
@@ -663,7 +663,7 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
     fonts_dir = Path(Scene.name()).parent / FONTS_DIR
 
     # Copy fonts from the original scene's fonts directory to the temp directory (Windows only)
-    if sys.platform == "win32" and original_fonts_dir.exists() and original_fonts_dir.is_dir():
+    if is_windows() and original_fonts_dir.exists() and original_fonts_dir.is_dir():
         # Create the fonts directory in the temp location
         fonts_dir.mkdir(exist_ok=True, parents=True)
 

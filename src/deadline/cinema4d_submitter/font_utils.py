@@ -3,21 +3,12 @@
 import c4d
 import logging
 import os
-import platform
 import shutil
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Any, Dict
 
-# Import fontTools for robust font metadata extraction
-# for detecting Adobe fonts.
-# Only available on Windows. Mac font functionality is not supported
-if sys.platform == "win32":
-    from fontTools import ttLib
-else:
-    # Stub for non-Windows platforms where font functionality is deactivated
-    ttLib = None  # type: ignore
+from .platform_utils import is_windows
 
 FONTS_DIR = "fonts"
 
@@ -64,7 +55,13 @@ def get_font_metadata(font_path: str) -> Optional[FontMetadata]:
     if not font_path or not os.path.isfile(font_path):
         return None
 
-    if ttLib is None:
+    if not is_windows():
+        return None
+
+    # Import fontTools only when needed and on Windows
+    try:
+        from fontTools import ttLib
+    except ImportError:
         return None
 
     try:
@@ -224,10 +221,9 @@ def get_system_font_directories() -> List[str]:
     Returns:
         List[str]: List of font directory paths
     """
-    system = platform.system()
     font_dirs = []
 
-    if system == "Windows":
+    if is_windows():
         # Windows font directories
         windir = os.environ.get("WINDIR", r"C:\Windows")
         localappdata = os.environ.get("LOCALAPPDATA")
@@ -255,7 +251,7 @@ def get_system_font_directories() -> List[str]:
                     font_dirs.append(location)
 
     else:
-        logger.warning(f"Unknown operating system: {system}")
+        logger.warning("Font functionality is only supported on Windows")
 
     logger.debug(f"Found {len(font_dirs)} font directories: {font_dirs}")
     return font_dirs
@@ -277,7 +273,13 @@ def is_font_file(file_path: str) -> bool:
     if not os.path.isfile(file_path):
         return False
 
-    if ttLib is None:
+    if not is_windows():
+        return False
+
+    # Import fontTools only when needed and on Windows
+    try:
+        from fontTools import ttLib
+    except ImportError:
         return False
 
     # Try to validate the font file using fontTools

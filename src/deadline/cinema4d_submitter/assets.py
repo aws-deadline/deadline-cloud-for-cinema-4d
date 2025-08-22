@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 import c4d
 
+from .platform_utils import is_windows
 from .scene import Scene
 from .font_utils import is_asset_a_font, copy_font_to_scene_folder, FONTS_DIR
 
@@ -42,7 +42,7 @@ class AssetIntrospector:
 
         for asset in asset_list:
             # Only process fonts on Windows. Mac font functionality is not supported
-            if sys.platform == "win32" and is_asset_a_font(asset):
+            if is_windows() and is_asset_a_font(asset):
                 copy_font_to_scene_folder(asset["assetname"], path_to_scene_file_dir)
 
             filename = asset.get("filename", None)
@@ -51,7 +51,7 @@ class AssetIntrospector:
                 assets.add(Path(filename))
 
         # Add all font files from the fonts directory to assets (Windows only)
-        if sys.platform == "win32":
+        if is_windows():
             fonts_dir = path_to_scene_file_dir / FONTS_DIR
             if fonts_dir.exists():
                 for font_file in fonts_dir.iterdir():
