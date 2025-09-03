@@ -68,6 +68,7 @@ destinations = [
 include = [
     "src/*",
     "hatch_custom_hook.py",
+    "THIRD_PARTY_LICENSES",
 ]
 
 [tool.hatch.build.targets.wheel]
