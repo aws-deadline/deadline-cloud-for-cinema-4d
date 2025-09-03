@@ -216,17 +216,17 @@ class TestFontInstaller:
         scene_file.write_text("dummy scene")
 
         # Mock is_windows to return False
-        with mock.patch(
-            "deadline.cinema4d_submitter.font_installer.is_windows", return_value=False
+        with (
+            mock.patch("deadline.cinema4d_submitter.font_installer.is_windows", return_value=False),
+            mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger,
         ):
-            with mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger:
-                # Should not raise any exceptions
-                _install_fonts(str(session_dir), str(scene_file))
+            # Should not raise any exceptions
+            _install_fonts(str(session_dir), str(scene_file))
 
-                # Should log that it's skipping
-                mock_logger.info.assert_called_with(
-                    "Font installation is only supported on Windows, skipping..."
-                )
+            # Should log that it's skipping
+            mock_logger.info.assert_called_with(
+                "Font installation is only supported on Windows, skipping..."
+            )
 
     def test_remove_fonts_non_windows_skips(self, tmp_path):
         """Test skipping on non-Windows."""
@@ -237,17 +237,17 @@ class TestFontInstaller:
         scene_file.write_text("dummy scene")
 
         # Mock is_windows to return False
-        with mock.patch(
-            "deadline.cinema4d_submitter.font_installer.is_windows", return_value=False
+        with (
+            mock.patch("deadline.cinema4d_submitter.font_installer.is_windows", return_value=False),
+            mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger,
         ):
-            with mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger:
-                # Should not raise any exceptions
-                _remove_fonts(str(session_dir), str(scene_file))
+            # Should not raise any exceptions
+            _remove_fonts(str(session_dir), str(scene_file))
 
-                # Should log that it's skipping
-                mock_logger.info.assert_called_with(
-                    "Font uninstallation is only supported on Windows, skipping..."
-                )
+            # Should log that it's skipping
+            mock_logger.info.assert_called_with(
+                "Font uninstallation is only supported on Windows, skipping..."
+            )
 
     def test_install_font_non_windows_logs_error(self, tmp_path):
         """Test behavior on non-Windows platforms."""
@@ -256,17 +256,15 @@ class TestFontInstaller:
         font_file.write_text("dummy font content")
 
         # Mock is_windows to return False
-        with mock.patch(
-            "deadline.cinema4d_submitter.font_installer.is_windows", return_value=False
+        with (
+            mock.patch("deadline.cinema4d_submitter.font_installer.is_windows", return_value=False),
+            mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger,
         ):
-            with mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger:
-                # Should not raise any exceptions but should log error
-                install_font(str(font_file))
+            # Should not raise any exceptions but should log error
+            install_font(str(font_file))
 
-                # Should log that it's not supported
-                mock_logger.error.assert_called_with(
-                    "Font installation is only supported on Windows"
-                )
+            # Should log that it's not supported
+            mock_logger.error.assert_called_with("Font installation is only supported on Windows")
 
     def test_uninstall_font_non_windows_logs_error(self, tmp_path):
         """Test behavior on non-Windows platforms."""
@@ -275,14 +273,12 @@ class TestFontInstaller:
         font_file.write_text("dummy font content")
 
         # Mock is_windows to return False
-        with mock.patch(
-            "deadline.cinema4d_submitter.font_installer.is_windows", return_value=False
+        with (
+            mock.patch("deadline.cinema4d_submitter.font_installer.is_windows", return_value=False),
+            mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger,
         ):
-            with mock.patch("deadline.cinema4d_submitter.font_installer.logger") as mock_logger:
-                # Should not raise any exceptions but should log error
-                uninstall_font(str(font_file))
+            # Should not raise any exceptions but should log error
+            uninstall_font(str(font_file))
 
-                # Should log that it's not supported
-                mock_logger.error.assert_called_with(
-                    "Font uninstallation is only supported on Windows"
-                )
+            # Should log that it's not supported
+            mock_logger.error.assert_called_with("Font uninstallation is only supported on Windows")

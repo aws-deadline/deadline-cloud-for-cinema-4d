@@ -18,59 +18,63 @@ class TestFontUtils:
     # System Font Directory Tests
     def test_get_system_font_directories_windows(self):
         """Test Windows font directory detection."""
-        with mock.patch("deadline.cinema4d_submitter.font_utils.is_windows", return_value=True):
-            with mock.patch.dict(
+        with (
+            mock.patch("deadline.cinema4d_submitter.font_utils.is_windows", return_value=True),
+            mock.patch.dict(
                 os.environ,
                 {
                     "WINDIR": r"C:\Windows",
                     "LOCALAPPDATA": r"C:\Users\Test\AppData\Local",
                     "APPDATA": r"C:\Users\Test\AppData\Roaming",
                 },
-            ):
-                with mock.patch("os.path.isdir", return_value=True):
-                    result = get_system_font_directories()
+            ),
+            mock.patch("os.path.isdir", return_value=True),
+        ):
+            result = get_system_font_directories()
 
-                    # Verify expected directories are included
-                    assert len(result) >= 4  # At least system, user, and 2 Adobe directories
+            # Verify expected directories are included
+            assert len(result) >= 4  # At least system, user, and 2 Adobe directories
 
-                    # Check for system fonts directory (use os.path.join for cross-platform compatibility)
-                    expected_system_fonts = os.path.join(r"C:\Windows", "Fonts")
-                    assert expected_system_fonts in result
+            # Check for system fonts directory (use os.path.join for cross-platform compatibility)
+            expected_system_fonts = os.path.join(r"C:\Windows", "Fonts")
+            assert expected_system_fonts in result
 
-                    # Check for user fonts directory
-                    expected_user_fonts = os.path.join(
-                        r"C:\Users\Test\AppData\Local", "Microsoft", "Windows", "Fonts"
-                    )
-                    assert expected_user_fonts in result
+            # Check for user fonts directory
+            expected_user_fonts = os.path.join(
+                r"C:\Users\Test\AppData\Local", "Microsoft", "Windows", "Fonts"
+            )
+            assert expected_user_fonts in result
 
-                    # Check for Adobe font directories
-                    expected_adobe_dirs = [
-                        os.path.join(
-                            r"C:\Users\Test\AppData\Roaming",
-                            "Adobe",
-                            "CoreSync",
-                            "plugins",
-                            "livetype",
-                            "r",
-                        ),
-                        os.path.join(r"C:\Users\Test\AppData\Roaming", "Adobe", "User Owned Fonts"),
-                    ]
-                    for adobe_dir in expected_adobe_dirs:
-                        assert adobe_dir in result
+            # Check for Adobe font directories
+            expected_adobe_dirs = [
+                os.path.join(
+                    r"C:\Users\Test\AppData\Roaming",
+                    "Adobe",
+                    "CoreSync",
+                    "plugins",
+                    "livetype",
+                    "r",
+                ),
+                os.path.join(r"C:\Users\Test\AppData\Roaming", "Adobe", "User Owned Fonts"),
+            ]
+            for adobe_dir in expected_adobe_dirs:
+                assert adobe_dir in result
 
     def test_get_system_font_directories_non_windows(self):
         """Test non-Windows behavior."""
-        with mock.patch("deadline.cinema4d_submitter.font_utils.is_windows", return_value=False):
-            with mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger:
-                result = get_system_font_directories()
+        with (
+            mock.patch("deadline.cinema4d_submitter.font_utils.is_windows", return_value=False),
+            mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger,
+        ):
+            result = get_system_font_directories()
 
-                # Should return empty list on non-Windows
-                assert result == []
+            # Should return empty list on non-Windows
+            assert result == []
 
-                # Should log warning
-                mock_logger.warning.assert_called_with(
-                    "Font functionality is only supported on Windows"
-                )
+            # Should log warning
+            mock_logger.warning.assert_called_with(
+                "Font functionality is only supported on Windows"
+            )
 
     # Font Copying Tests
     def test_copy_font_to_scene_folder_creates_fonts_dir(self, tmp_path):
@@ -79,40 +83,42 @@ class TestFontUtils:
         scene_location.mkdir()
 
         # Mock font location and validation
-        with mock.patch(
-            "deadline.cinema4d_submitter.font_utils.get_font_location",
-            return_value="/system/fonts/test.ttf",
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.font_utils.get_font_location",
+                return_value="/system/fonts/test.ttf",
+            ),
+            mock.patch("deadline.cinema4d_submitter.font_utils.is_font_file", return_value=True),
+            mock.patch("os.path.basename", return_value="test.ttf"),
+            mock.patch("shutil.copy2") as mock_copy,
         ):
-            with mock.patch(
-                "deadline.cinema4d_submitter.font_utils.is_font_file", return_value=True
-            ):
-                with mock.patch("os.path.basename", return_value="test.ttf"):
-                    with mock.patch("shutil.copy2") as mock_copy:
-                        copy_font_to_scene_folder("TestFont", scene_location)
+            copy_font_to_scene_folder("TestFont", scene_location)
 
-                        # Should create fonts directory
-                        fonts_dir = scene_location / FONTS_DIR
-                        assert fonts_dir.exists()
-                        assert fonts_dir.is_dir()
+            # Should create fonts directory
+            fonts_dir = scene_location / FONTS_DIR
+            assert fonts_dir.exists()
+            assert fonts_dir.is_dir()
 
-                        # Should copy the font
-                        mock_copy.assert_called_once()
+            # Should copy the font
+            mock_copy.assert_called_once()
 
     def test_copy_font_to_scene_folder_font_not_found(self, tmp_path):
         """Test when font not found in system."""
         scene_location = tmp_path / "scene"
         scene_location.mkdir()
 
-        with mock.patch(
-            "deadline.cinema4d_submitter.font_utils.get_font_location", return_value=None
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.font_utils.get_font_location", return_value=None
+            ),
+            mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger,
         ):
-            with mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger:
-                # Should not raise exception, just log error
-                copy_font_to_scene_folder("NonExistentFont", scene_location)
+            # Should not raise exception, just log error
+            copy_font_to_scene_folder("NonExistentFont", scene_location)
 
-                mock_logger.error.assert_called_with(
-                    "Font 'NonExistentFont' not found in system font directories"
-                )
+            mock_logger.error.assert_called_with(
+                "Font 'NonExistentFont' not found in system font directories"
+            )
 
     def test_get_font_manager_environment_actions(self):
         """Test onEnter/onExit actions."""
