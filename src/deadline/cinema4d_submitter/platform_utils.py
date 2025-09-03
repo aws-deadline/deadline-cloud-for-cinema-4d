@@ -8,20 +8,10 @@ import sys
 
 
 def is_windows() -> bool:
-    """
-    Check if the current platform is Windows.
-
-    Returns:
-        bool: True if running on Windows, False otherwise
-    """
+    """Check if running on Windows."""
     return sys.platform == "win32"
 
 
 def is_macos() -> bool:
-    """
-    Check if the current platform is macOS.
-
-    Returns:
-        bool: True if running on macOS, False otherwise
-    """
+    """Check if running on macOS."""
     return sys.platform == "darwin"
