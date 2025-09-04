@@ -6,8 +6,9 @@ from pathlib import Path
 
 import c4d
 
+from .platform_utils import is_windows
 from .scene import Scene
-from .font_utils import is_asset_a_font, copy_font_to_scene_folder, TEMP_FONTS_DIR
+from .font_utils import is_asset_a_font, copy_font_to_scene_folder, FONTS_DIR
 
 _FRAME_RE = re.compile("#+")
 
@@ -40,7 +41,8 @@ class AssetIntrospector:
         )
 
         for asset in asset_list:
-            if is_asset_a_font(asset):
+            # Only process fonts on Windows. Mac font functionality is not supported
+            if is_windows() and is_asset_a_font(asset):
                 copy_font_to_scene_folder(asset["assetname"], path_to_scene_file_dir)
 
             filename = asset.get("filename", None)
@@ -48,11 +50,12 @@ class AssetIntrospector:
             if exists is True and filename is not None:
                 assets.add(Path(filename))
 
-        # Add all font files from the tempFonts directory to assets
-        fonts_dir = path_to_scene_file_dir / TEMP_FONTS_DIR
-        if fonts_dir.exists():
-            for font_file in fonts_dir.iterdir():
-                if font_file.is_file():
-                    assets.add(font_file)
+        # Add all font files from the fonts directory to assets (Windows only)
+        if is_windows():
+            fonts_dir = path_to_scene_file_dir / FONTS_DIR
+            if fonts_dir.exists():
+                for font_file in fonts_dir.iterdir():
+                    if font_file.is_file():
+                        assets.add(font_file)
 
         return assets
