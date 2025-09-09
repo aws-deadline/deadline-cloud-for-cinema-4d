@@ -6,6 +6,8 @@ from pathlib import Path
 
 import c4d
 
+from .platform_utils import is_windows, is_macos
+
 _logger = _logging.getLogger(__name__)
 
 
@@ -41,7 +43,7 @@ def _install_packages(packages, description):
     c4d_executable = "Cinema 4D.exe"
     python_location = "resource\\modules\\python\\libs\\win64\\python.exe"
     # If its MacOS, install it in MacOS python location.
-    if sys.platform == "darwin":
+    if is_macos():
         c4d_executable = "Cinema 4D.app/Contents/MacOS/Cinema 4D"
         python_location = "resource/modules/python/libs/python311.macos.framework/python"
 
@@ -98,7 +100,8 @@ if not has_gui_deps():
             "Did not install GUI components, the AWS Deadline Cloud extension will fail with qtpy bindings errors."
         )
 
-if not has_fonttools():
+# Only install fonttools on Windows. Mac font functionality is not supported
+if is_windows() and not has_fonttools():
     if c4d.gui.QuestionDialog(
         "The AWS Deadline Cloud extension needs fonttools to work properly. Press Yes to install."
     ):
