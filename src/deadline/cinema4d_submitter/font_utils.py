@@ -6,7 +6,7 @@ import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any
 
 from .platform_utils import is_windows
 
@@ -33,12 +33,6 @@ class FontMetadata:
     style: Optional[str] = None
     full_name: Optional[str] = None
     postscript_name: Optional[str] = None
-    raw_names: Optional[Dict[int, str]] = None
-
-    def __post_init__(self):
-        """Initialize raw_names as empty dict if None."""
-        if self.raw_names is None:
-            self.raw_names = {}
 
 
 def get_font_metadata(font_path: str) -> Optional[FontMetadata]:
@@ -70,12 +64,6 @@ def get_font_metadata(font_path: str) -> Optional[FontMetadata]:
 
         # Create FontMetadata instance
         metadata = FontMetadata(file_path=font_path)
-
-        # Build raw names table for debugging
-        try:
-            metadata.raw_names = {i: str(names_table[i]) for i in range(len(names_table))}
-        except Exception as e:
-            logger.debug(f"Could not build raw names table for {font_path}: {e}")
 
         # Extract standard font names
         try:
@@ -187,13 +175,13 @@ def _is_font_match(font_name: str, filename: str, file_path: str) -> bool:
         # Check family name match
         if metadata.family_name:
             family_name_lower = metadata.family_name.lower()
-            if font_name_lower == family_name_lower or font_name_lower in family_name_lower:
+            if font_name_lower in family_name_lower:
                 return True
 
         # Check full name match
         if metadata.full_name:
             full_name_lower = metadata.full_name.lower()
-            if font_name_lower == full_name_lower or font_name_lower in full_name_lower:
+            if font_name_lower in full_name_lower:
                 return True
 
     # Fall back to filename-based matching
