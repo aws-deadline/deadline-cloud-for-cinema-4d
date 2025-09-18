@@ -5,6 +5,7 @@ Utility functions for the handling of fonts
 """
 
 import ctypes
+import glob
 import logging
 import os
 import shutil
@@ -66,7 +67,7 @@ def _collect_fonts_from_directory(fonts_dir: str) -> Set[str]:
 
             _, ext = os.path.splitext(full_path)
             if ext.lower() in FONT_EXTENSIONS:
-                logger.debug(f"Adding font: {full_path}")
+                logger.info(f"Adding font: {full_path}")
                 fonts.add(full_path)
             else:
                 logger.warning(f"Non-font file found in {FONTS_DIR} folder: {full_path}")
@@ -88,25 +89,26 @@ def _find_fonts_recursive(session_dir: str) -> Set[str]:
     fonts = set()
 
     try:
-        for root, dirs, files in os.walk(session_dir):
-            for dir_name in dirs:
-                # Skip directories that are not fonts directories
-                if dir_name != FONTS_DIR:
-                    continue
+        # Use glob to find all fonts directories recursively
+        fonts_dir_pattern = os.path.join(session_dir, "**", FONTS_DIR)
+        fonts_directories = glob.glob(fonts_dir_pattern, recursive=True)
 
-                fonts_dir = os.path.join(root, dir_name)
-                logger.info(f"Found {FONTS_DIR} directory: {fonts_dir}")
+        for fonts_dir in fonts_directories:
+            if not os.path.isdir(fonts_dir):
+                continue
 
-                # Skip system fonts directories (those under .env directories)
-                if os.sep + ".env" + os.sep in fonts_dir:
-                    logger.info(f"Skipping system fonts directory under .env: {fonts_dir}")
-                    continue
+            logger.info(f"Found {FONTS_DIR} directory: {fonts_dir}")
 
-                # Collect fonts from this directory and add to the overall set
-                logger.info(f"Processing fonts directory: {fonts_dir}")
-                directory_fonts = _collect_fonts_from_directory(fonts_dir)
-                logger.info(f"Found {len(directory_fonts)} fonts in directory: {fonts_dir}")
-                fonts.update(directory_fonts)
+            # Skip system fonts directories (those under .env directories)
+            if os.sep + ".env" + os.sep in fonts_dir:
+                logger.info(f"Skipping system fonts directory under .env: {fonts_dir}")
+                continue
+
+            # Collect fonts from this directory and add to the overall set
+            logger.info(f"Processing fonts directory: {fonts_dir}")
+            directory_fonts = _collect_fonts_from_directory(fonts_dir)
+            logger.info(f"Found {len(directory_fonts)} fonts in directory: {fonts_dir}")
+            fonts.update(directory_fonts)
 
     except (OSError, PermissionError) as e:
         logger.warning(f"Could not perform recursive search in session directory: {e}")
@@ -122,26 +124,26 @@ def _find_fonts_scene_based(scene_file_path: str) -> Set[str]:
     :param scene_file_path: path to the scene file to use for finding fonts
     :returns: set of font file paths found via scene-based search
     """
-    logger.debug("Using scene-based approach")
+    logger.info("Using scene-based approach")
 
     try:
         scene_parent_dir = Path(scene_file_path).parent
         fonts_dir_path = scene_parent_dir / FONTS_DIR
-        logger.debug(f"Looking for fonts in scene-based directory: {fonts_dir_path}")
+        logger.info(f"Looking for fonts in scene-based directory: {fonts_dir_path}")
 
         # Early return if fonts directory doesn't exist
         if not fonts_dir_path.exists():
-            logger.debug(f"Scene-based {FONTS_DIR} directory not found: {fonts_dir_path}")
+            logger.info(f"Scene-based {FONTS_DIR} directory not found: {fonts_dir_path}")
             return set()
 
         # Early return if path exists but isn't a directory
         if not fonts_dir_path.is_dir():
-            logger.debug(f"Scene-based {FONTS_DIR} path is not a directory: {fonts_dir_path}")
+            logger.info(f"Scene-based {FONTS_DIR} path is not a directory: {fonts_dir_path}")
             return set()
 
-        logger.debug(f"Scene-based {FONTS_DIR} directory found: {fonts_dir_path}")
+        logger.info(f"Scene-based {FONTS_DIR} directory found: {fonts_dir_path}")
         fonts = _collect_fonts_from_directory(str(fonts_dir_path))
-        logger.debug(f"Found {len(fonts)} fonts in scene-based {FONTS_DIR} directory")
+        logger.info(f"Found {len(fonts)} fonts in scene-based {FONTS_DIR} directory")
         return fonts
 
     except Exception as e:
@@ -158,17 +160,21 @@ def find_fonts(session_dir: str, scene_file_path: str) -> Set[str]:
 
     :returns: a set with all found fonts
     """
-    logger.debug(f"Starting font search in session_dir: {session_dir}")
-    logger.debug(f"Scene file path provided: {scene_file_path}")
+    logger.info(f"Starting font search in session_dir: {session_dir}")
+    logger.info(f"Scene file path provided: {scene_file_path}")
 
-    # Approach 1: Recursive search for fonts directories in session_dir
-    fonts = _find_fonts_recursive(session_dir)
-    if fonts:
-        return fonts
+    # Combine both approaches for comprehensive font discovery
+    recursive_fonts = _find_fonts_recursive(session_dir)
+    scene_fonts = _find_fonts_scene_based(scene_file_path)
 
-    # Approach 2: Scene file path approach as fallback
-    logger.debug("No fonts found via recursive search, trying scene-based approach")
-    return _find_fonts_scene_based(scene_file_path)
+    # Combine results from both approaches
+    all_fonts = recursive_fonts.union(scene_fonts)
+
+    logger.info(f"Recursive search found: {len(recursive_fonts)} fonts")
+    logger.info(f"Scene-based search found: {len(scene_fonts)} fonts")
+    logger.info(f"Total unique fonts found: {len(all_fonts)}")
+
+    return all_fonts
 
 
 def get_font_name(dst_path: str) -> str:
@@ -327,7 +333,7 @@ def _notify_font_change() -> None:
     # Import Windows-specific modules only when needed
     user32 = ctypes.WinDLL("user32", use_last_error=True)  # type: ignore[attr-defined]
 
-    logger.debug("Notifying running programs of font changes")
+    logger.info("Notifying running programs of font changes")
     user32.SendMessageTimeoutW(HWND_BROADCAST, WM_FONTCHANGE, 0, 0, SMTO_ABORTIFHUNG, 1000, None)
 
 
@@ -415,8 +421,8 @@ if __name__ == "__main__":
     session_dir = sys.argv[2]
     scene_file_path = sys.argv[3]
 
-    logger.debug(f"Running font script job: {sys.argv[1]}")
-    logger.debug(f"Using scene file path: {scene_file_path}")
+    logger.info(f"Running font script job: {sys.argv[1]}")
+    logger.info(f"Using scene file path: {scene_file_path}")
 
     if sys.argv[1] == "install":
         _install_fonts(session_dir, scene_file_path)
