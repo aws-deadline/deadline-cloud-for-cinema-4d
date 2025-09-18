@@ -32,6 +32,8 @@ classifiers = [
 dependencies = [
     "deadline >= 0.51.1,< 0.53",
     "openjd-adaptor-runtime >= 0.7,< 0.10",
+    # fonttools is Windows-only due to Cinema 4D technical limitations
+    "fonttools >=4.59.2, <4.60; sys_platform == 'win32'",
 ]
 
 [project.urls]

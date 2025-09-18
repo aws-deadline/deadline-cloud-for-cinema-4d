@@ -95,11 +95,15 @@ def _validate_files(installation_path: Path) -> None:
 
     if platform.system() == "Windows":
         assert "cinema_4d_plugins" in top_level_dir
+        # fontTools is Windows-only due to Cinema 4D technical limitations
+        assert "fontTools" in top_level_dir
 
         # Check the Cinema_4d plugin file is inside the plugin folder
         plugin_file = [f.name for f in (installation_path / "cinema_4d_plugins").iterdir()]
         assert len(plugin_file) == 1
         assert "DeadlineCloud.pyp" in plugin_file
+    else:
+        assert "fontTools" not in top_level_dir
 
 
 @pytest.fixture(scope="session")
