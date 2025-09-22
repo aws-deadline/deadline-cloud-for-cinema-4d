@@ -6,7 +6,7 @@ from pathlib import Path
 
 import c4d
 
-from .platform_utils import is_windows, is_macos
+from .platform_utils import is_macos
 
 _logger = _logging.getLogger(__name__)
 
@@ -21,14 +21,6 @@ def has_gui_deps():
             raise
         return False
 
-    return True
-
-
-def has_fonttools():
-    try:
-        import fontTools  # noqa
-    except ImportError:
-        return False
     return True
 
 
@@ -85,11 +77,6 @@ def install_gui():
     _install_packages(packages, "GUI libraries")
 
 
-def install_fonttools():
-    packages = ["fonttools"]
-    _install_packages(packages, "fonttools")
-
-
 if not has_gui_deps():
     if c4d.gui.QuestionDialog(
         "The AWS Deadline Cloud extension needs a few GUI components to work. Press Yes to install."
@@ -98,17 +85,6 @@ if not has_gui_deps():
     else:
         c4d.gui.MessageDialog(
             "Did not install GUI components, the AWS Deadline Cloud extension will fail with qtpy bindings errors."
-        )
-
-# Only install fonttools on Windows. Mac font functionality is not supported
-if is_windows() and not has_fonttools():
-    if c4d.gui.QuestionDialog(
-        "The AWS Deadline Cloud extension needs fonttools to work properly. Press Yes to install."
-    ):
-        install_fonttools()
-    else:
-        c4d.gui.MessageDialog(
-            "Did not install fonttools, some font-related functionality may not work properly."
         )
 
 from .cinema4d_render_submitter import show_submitter  # noqa: E402
