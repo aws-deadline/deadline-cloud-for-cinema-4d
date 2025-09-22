@@ -244,6 +244,32 @@ To remedy these errors, you can switch to a later version of Cinema 4D which res
 "C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe"-m pip install MISSING_MODULE
 ```
 
+## 3rd party plugins
+
+Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Most
+plugins are installed on Service Managed Fleets using a [conda build recipe](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/README.md)
+from the [deadline-cloud-samples repository](https://github.com/aws-deadline/deadline-cloud-samples).
+
+### Arnold
+
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe
+supports both Windows and Linux fleets.
+
+### V-Ray
+
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-vray-2025/README.md) to build the V-Ray for Cinema 4D conda package.
+
+### INSYDIUM
+
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-insydium-2025/README.md) to build the INSYDIUM conda package.
+
+### Cargo
+
+[Cargo](https://kit-bash.myshopify.com/pages/cargo) works without requiring
+extra fleet or submitter confuration. Use File > Save Project with Assets... to
+save your scene before submitting.
+
+
 ## License
 
 This project is licensed under the Apache-2.0 License.
