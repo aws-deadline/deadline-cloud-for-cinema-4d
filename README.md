@@ -247,26 +247,27 @@ To remedy these errors, you can switch to a later version of Cinema 4D which res
 ## 3rd party plugins
 
 Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Most
-plugins are installed on Service Managed Fleets using a [conda build recipe](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/README.md)
+plugins are installed on Service Managed Fleets using a [conda recipe](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/README.md)
 from the [deadline-cloud-samples repository](https://github.com/aws-deadline/deadline-cloud-samples).
 
-### Arnold
+### Autodesk Arnold
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe
 supports both Windows and Linux fleets.
 
-### V-Ray
+### Chaos Group V-Ray
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-vray-2025/README.md) to build the V-Ray for Cinema 4D conda package.
 
-### INSYDIUM
+### INSYDIUM X-Particles
 
-Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-insydium-2025/README.md) to build the INSYDIUM conda package.
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-insydium-2025/README.md)
+to build the INSYDIUM conda package which includes X-Particles.
 
-### Cargo
+### Kit-Bash Cargo
 
 [Cargo](https://kit-bash.myshopify.com/pages/cargo) works without requiring
-extra fleet or submitter confuration. Use File > Save Project with Assets... to
+extra fleet or submitter confuration. Use **File > Save Project with Assets** to
 save your scene before submitting.
 
 
