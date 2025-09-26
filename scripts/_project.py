@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import subprocess
 import sys
-
 from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Optional
-
 
 ADAPTOR_ONLY_DEPENDENCIES = {"openjd-adaptor-runtime"}
 
@@ -61,7 +59,8 @@ def get_dependencies(pyproject_dict: dict[str, Any], exclude_adaptor_only=True) 
     return [
         Dependency(dep_str)
         for dep_str in pyproject_dict["project"]["dependencies"]
-        if exclude_adaptor_only or dep_str not in ADAPTOR_ONLY_DEPENDENCIES
+        if (exclude_adaptor_only or dep_str not in ADAPTOR_ONLY_DEPENDENCIES)
+        and not (dep_str.startswith("fonttools") and sys.platform == "darwin")
     ]
 
 
