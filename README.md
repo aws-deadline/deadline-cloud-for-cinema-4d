@@ -252,17 +252,47 @@ from the [deadline-cloud-samples repository](https://github.com/aws-deadline/dea
 
 ### Autodesk Arnold
 
-Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe
-supports both Windows and Linux fleets.
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/main/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe supports both Windows and Linux fleets.
+
+#### Installation instructions for workstation
+
+1. Install the Cinema 4D to Arnold plugin by following [instructions here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Installation_ci_Installing_Arnold_for_Cinema_4D_on_Windows_html).
+2. [Optional] Verify that "Arnold" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Tutorials_ci_Learning_Scenes_html)
+3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-c4dtoa` in the Conda Packages parameter.
+
+#### Licensing instructions
+
+Follow licensing [instructions here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Getting_Started_ci_Licensing_Arnold_html)
 
 ### Chaos Group V-Ray
 
-Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-vray-2025/README.md) to build the V-Ray for Cinema 4D conda package.
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-vray-2025/README.md) to build the V-Ray for Cinema 4D conda package.
+
+#### Installation instructions for workstation
+
+1. Install the V-Ray for Cinema 4D plugin by [following instructions here](https://docs.chaos.com/display/VC4D/Installation).
+  i. Choose "Workstation" install
+2. [Optional] Verify that "V-Ray" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://www.chaos.com/cloud/scenes?srsltid=AfmBOorJmV6Bugw1DTiIyfiA1gxANUxdp1tUaHOTdyZLJnBGJxLON8Xi#cinema-4d).
+3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-vray` in the Conda Packages parameter.
+
+#### Licensing instructions
+
+Follow licensing [instructions here](https://documentation.chaos.com/space/VC4D/116855120/Installation#Licensing)
 
 ### INSYDIUM X-Particles
 
-Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/c4dtoa-conda-sample-1/conda_recipes/cinema4d-insydium-2025/README.md)
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-insydium-2025/README.md)
 to build the INSYDIUM conda package which includes X-Particles.
+
+#### Installation instructions for workstation
+
+1. Install by following [instructions here](https://insydium.ltd/help/?q=1608)
+2. [Optional] Verify that "INSYDIUM" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://insydium.ltd/support-home/content-repository/).
+3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-insydium` in the Conda Packages parameter.
+
+#### Licensing instructions
+
+Follow licensing [instructions here](https://insydium.ltd/help/?q=1608)
 
 ### Kit-Bash Cargo
 
