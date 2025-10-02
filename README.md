@@ -246,15 +246,17 @@ To remedy these errors, you can switch to a later version of Cinema 4D which res
 
 ## 3rd party plugins
 
-Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Most
-plugins are installed on Service Managed Fleets using a [conda recipe](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/README.md)
+Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Many
+plugins can be installed on Service Managed Fleets using a [conda recipe](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/README.md)
 from the [deadline-cloud-samples repository](https://github.com/aws-deadline/deadline-cloud-samples).
+
+
 
 ### Autodesk Arnold
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/main/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe supports both Windows and Linux fleets.
 
-#### Installation instructions for workstation
+#### Installation instructions for workstations
 
 1. Install the Cinema 4D to Arnold plugin by following [instructions here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Installation_ci_Installing_Arnold_for_Cinema_4D_on_Windows_html).
 2. [Optional] Verify that "Arnold" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Tutorials_ci_Learning_Scenes_html)
@@ -262,13 +264,17 @@ Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-sampl
 
 #### Licensing instructions
 
-Follow licensing [instructions here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Getting_Started_ci_Licensing_Arnold_html)
+Arnold licensing is available by default on service managed fleets. To setup licensing on a customer managed fleet, follow the licensing instructions [here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Getting_Started_ci_Licensing_Arnold_html)
+
+#### Version compatibility
+
+We ran C4dtoA v4.8.3.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc
 
 ### Chaos Group V-Ray
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-vray-2025/README.md) to build the V-Ray for Cinema 4D conda package.
 
-#### Installation instructions for workstation
+#### Installation instructions for workstations
 
 1. Install the V-Ray for Cinema 4D plugin by [following instructions here](https://docs.chaos.com/display/VC4D/Installation).
   i. Choose "Workstation" install
@@ -277,14 +283,14 @@ Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-sampl
 
 #### Licensing instructions
 
-Follow licensing [instructions here](https://documentation.chaos.com/space/VC4D/116855120/Installation#Licensing)
+V-Ray licensing is available by default on service managed fleets. To setup licensing on a customer managed fleet, follow the licensing instructions[here](https://documentation.chaos.com/space/VC4D/116855120/Installation#Licensing)
 
 ### INSYDIUM X-Particles
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-insydium-2025/README.md)
 to build the INSYDIUM conda package which includes X-Particles.
 
-#### Installation instructions for workstation
+#### Installation instructions for workstations
 
 1. Install by following [instructions here](https://insydium.ltd/help/?q=1608)
 2. [Optional] Verify that "INSYDIUM" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://insydium.ltd/support-home/content-repository/).
@@ -292,7 +298,7 @@ to build the INSYDIUM conda package which includes X-Particles.
 
 #### Licensing instructions
 
-Follow licensing [instructions here](https://insydium.ltd/help/?q=1608)
+Licensing is built into your Insydium plugin by default. For more information, see [here](https://insydium.ltd/help/?q=1608)
 
 ### Kit-Bash Cargo
 
