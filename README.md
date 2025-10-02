@@ -268,7 +268,7 @@ Arnold licensing is available by default on service managed fleets. To setup lic
 
 #### Version compatibility
 
-We ran C4dtoA v4.8.3.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the the [C4dtoA release notes](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_481_html).
+We ran C4dtoA v4.8.3.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [C4dtoA release notes](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_481_html).
 
 ### Chaos Group V-Ray
 
@@ -285,6 +285,10 @@ Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-sampl
 
 V-Ray licensing is available by default on service managed fleets. To setup licensing on a customer managed fleet, follow the licensing instructions[here](https://documentation.chaos.com/space/VC4D/116855120/Installation#Licensing)
 
+#### Version compatibility
+
+We ran V-Ray for Cineam 4D v7.10.01 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [V-Ray System Requirements](https://documentation.chaos.com/space/VC4D/116855102/System+Requirements).
+
 ### INSYDIUM X-Particles
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-insydium-2025/README.md)
@@ -299,6 +303,10 @@ to build the INSYDIUM conda package which includes X-Particles.
 #### Licensing instructions
 
 Licensing is built into your Insydium plugin by default. For more information, see [here](https://insydium.ltd/help/?q=1608)
+
+#### Version compatibility
+
+We ran Insydium Fused v2024.4.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [Insyduim Compatability Documentation](https://insydium.ltd/help/?q=2025).
 
 ### Kit-Bash Cargo
 
