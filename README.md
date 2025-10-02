@@ -268,7 +268,7 @@ Arnold licensing is available by default on service managed fleets. To setup lic
 
 #### Version compatibility
 
-We ran C4dtoA v4.8.3.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc
+We ran C4dtoA v4.8.3.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the the [C4dtoA release notes](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_481_html).
 
 ### Chaos Group V-Ray
 
