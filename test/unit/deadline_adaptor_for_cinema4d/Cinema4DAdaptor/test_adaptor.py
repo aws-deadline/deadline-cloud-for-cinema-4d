@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from jsonschema.exceptions import ValidationError
@@ -49,7 +50,7 @@ def init_data() -> dict:
     }
 
 
-class TestCinema4DAdaptor_on_cleanup:
+class TestCinema4DAdaptor_errors_on_cleanup:
     @pytest.mark.parametrize(
         "stdout,error_expected",
         [
@@ -235,3 +236,149 @@ def test_activate_error_checking(init_data: dict, activate_error_checking: int) 
         assert (
             not has_handle_error_callback
         ), "Error checking should be deactivated when activate_error_checking=0"
+
+
+@pytest.fixture()
+def run_data() -> dict:
+    """
+    Pytest Fixture to return a run_data dictionary that passes validation
+
+    Returns:
+        dict: A run_data dictionary
+    """
+    return {"frame": 42}
+
+
+class TestCinema4DAdaptor_on_start:
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.LoggingSubprocess")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.AdaptorServer")
+    def test_no_error(
+        self,
+        mock_server: Mock,
+        mock_logging_subprocess: Mock,
+        mock_actions_queue: Mock,
+        init_data: dict,
+    ) -> None:
+        """Tests that on_start completes without error"""
+        adaptor = Cinema4DAdaptor(init_data)
+        mock_server.return_value.server_path = "/tmp/9999"
+        adaptor.on_start()
+
+    @patch("time.sleep")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.LoggingSubprocess")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.AdaptorServer")
+    def test__wait_for_socket(
+        self,
+        mock_server: Mock,
+        mock_logging_subprocess: Mock,
+        mock_actions_queue: Mock,
+        mock_sleep: Mock,
+        init_data: dict,
+    ) -> None:
+        """Tests that the _wait_for_socket method sleeps until a socket is available"""
+        # GIVEN
+        adaptor = Cinema4DAdaptor(init_data)
+        socket_mock = PropertyMock(
+            side_effect=[None, None, None, "/tmp/9999", "/tmp/9999", "/tmp/9999"]
+        )
+        type(mock_server.return_value).server_path = socket_mock
+
+        # WHEN
+        adaptor.on_start()
+
+        # THEN
+        assert mock_sleep.call_count == 3
+
+
+class TestCinema4DAdaptor_on_run:
+    @patch("time.sleep")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.LoggingSubprocess")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.AdaptorServer")
+    def test_on_run(
+        self,
+        mock_server: Mock,
+        mock_logging_subprocess: Mock,
+        mock_actions_queue: Mock,
+        mock_sleep: Mock,
+        init_data: dict,
+        run_data: dict,
+    ) -> None:
+        """Tests that on_run completes without error, and waits"""
+        # GIVEN
+        adaptor = Cinema4DAdaptor(init_data)
+        mock_server.return_value.server_path = "/tmp/9999"
+        # First side_effect value consumed by setter
+        is_rendering_mock = PropertyMock(side_effect=[None, True, False])
+        Cinema4DAdaptor._is_rendering = is_rendering_mock
+        adaptor.on_start()
+
+        # WHEN
+        adaptor.on_run(run_data)
+
+        # THEN
+        mock_sleep.assert_called_once_with(0.1)
+
+
+class TestCinema4DAdaptor_on_cleanup:
+    @patch("time.sleep")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor._logger")
+    def test_on_cleanup_cinema4d_not_graceful_shutdown(
+        self, mock_logger: Mock, mock_sleep: Mock, init_data: dict
+    ) -> None:
+        """Tests that on_cleanup reports when cinema4d does not gracefully shutdown"""
+        # GIVEN
+        adaptor = Cinema4DAdaptor(init_data)
+
+        with (
+            patch(
+                "deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.Cinema4DAdaptor._cinema4d_is_running",
+                new_callable=lambda: True,
+            ),
+            patch.object(adaptor, "_CINEMA4D_END_TIMEOUT_SECONDS", 0.01),
+            patch.object(adaptor, "_cinema4d_client") as mock_client,
+        ):
+            # WHEN
+            adaptor.on_cleanup()
+
+        # THEN
+        mock_logger.error.assert_called_once_with(
+            "Cinema4D did not complete cleanup actions and failed to gracefully shutdown. Terminating."
+        )
+        mock_client.terminate.assert_called_once()
+
+
+class TestCinema4DAdaptor_on_cancel:
+    """Tests for Cinema4DAdaptor.on_cancel"""
+
+    def test_terminates_cinema4d_client(self, init_data: dict, caplog: pytest.LogCaptureFixture):
+        """Tests that the cinema4d client is terminated on cancel"""
+        # GIVEN
+        caplog.set_level(0)
+        adaptor = Cinema4DAdaptor(init_data)
+        adaptor._cinema4d_client = mock_client = Mock()
+
+        # WHEN
+        adaptor.on_cancel()
+
+        # THEN
+        mock_client.terminate.assert_called_once_with(grace_time_s=0)
+        assert "CANCEL REQUESTED" in caplog.text
+
+    def test_does_nothing_if_cinema4d_not_running(
+        self, init_data: dict, caplog: pytest.LogCaptureFixture
+    ):
+        """Tests that nothing happens if a cancel is requested when cinema4d is not running"""
+        # GIVEN
+        caplog.set_level(0)
+        adaptor = Cinema4DAdaptor(init_data)
+        adaptor._cinema4d_client = None
+
+        # WHEN
+        adaptor.on_cancel()
+
+        # THEN
+        assert "CANCEL REQUESTED" in caplog.text
+        assert "Nothing to cancel because Cinema4D is not running" in caplog.text
