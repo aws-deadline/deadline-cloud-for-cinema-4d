@@ -80,7 +80,7 @@ class TestCinema4DClient:
     def test_empty_map_path(self):
         client = Cinema4DClient(server_path="/tmp/9999")
         with pytest.raises(ValueError):
-            client.map_path('')
+            client.map_path("")
 
     @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.map_path")
     def test_map_path(self, mock_map_path: Mock):
@@ -90,7 +90,9 @@ class TestCinema4DClient:
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client.sys.platform")
     @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.map_path")
-    @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.path_mapping_rules")
+    @patch(
+        "openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.path_mapping_rules"
+    )
     def test_map_path_win(self, mock_rules: Mock, mock_map_path: Mock, mock_platform: Mock):
         mock_rules.return_value = None
         mock_map_path.return_value = "C:/test"
@@ -100,7 +102,9 @@ class TestCinema4DClient:
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client.sys.platform")
     @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.map_path")
-    @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.path_mapping_rules")
+    @patch(
+        "openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.path_mapping_rules"
+    )
     def test_map_path_rules(self, mock_rules: Mock, mock_map_path: Mock, mock_platform: Mock):
         rules = PathMappingRule(
             source_path_format="windows",

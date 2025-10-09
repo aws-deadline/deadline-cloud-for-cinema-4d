@@ -16,7 +16,9 @@ class TestProgress:
         with patch.object(c4d, "RENDERPROGRESSTYPE_DURINGRENDERING", 0):
             progress_callback(42, 0)
             progress = capsys.readouterr()
-            assert progress.out == "Progress update (during rendering): 4200.0%\nALF_PROGRESS 4200\n"
+            assert (
+                progress.out == "Progress update (during rendering): 4200.0%\nALF_PROGRESS 4200\n"
+            )
 
 
 class TestCinema4DHandler:
