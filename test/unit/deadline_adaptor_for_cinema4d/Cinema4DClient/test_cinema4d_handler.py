@@ -21,18 +21,18 @@ class TestProgress:
 
 class TestCinema4DHandler:
     def test_init(self):
-        handler = Cinema4DHandler(lambda x: print(x))
+        handler = Cinema4DHandler(print)
         assert handler.take == "Main"
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
     def test_set_scene_file(self, mock_isfile: Mock):
         mock_isfile.return_value = True
-        handler = Cinema4DHandler(lambda x: print(x))
+        handler = Cinema4DHandler(print)
         handler.set_scene_file({"scene_file": "file.c4d"})
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
     def test_set_scene_file_not_found(self, mock_isfile: Mock):
         mock_isfile.return_value = False
-        handler = Cinema4DHandler(lambda x: print(x))
+        handler = Cinema4DHandler(print)
         with pytest.raises(FileNotFoundError):
             handler.set_scene_file({"scene_file": "file.c4d"})
