@@ -244,6 +244,77 @@ To remedy these errors, you can switch to a later version of Cinema 4D which res
 "C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe"-m pip install MISSING_MODULE
 ```
 
+## 3rd party plugins
+
+Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Many
+plugins can be installed on Service Managed Fleets using a [conda recipe](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/README.md)
+from the [deadline-cloud-samples repository](https://github.com/aws-deadline/deadline-cloud-samples).
+
+
+
+### Autodesk Arnold
+
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/main/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe supports both Windows and Linux fleets.
+
+#### Installation instructions for workstations
+
+1. Install the Cinema 4D to Arnold plugin by following [instructions here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Installation_ci_Installing_Arnold_for_Cinema_4D_on_Windows_html).
+2. [Optional] Verify that "Arnold" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Tutorials_ci_Learning_Scenes_html)
+3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-c4dtoa` in the Conda Packages parameter.
+
+#### Licensing instructions
+
+Arnold licensing is available by default on service managed fleets. To setup licensing on a customer managed fleet, follow the licensing instructions [here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Getting_Started_ci_Licensing_Arnold_html)
+
+#### Version compatibility
+
+We ran C4dtoA v4.8.3.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [C4dtoA release notes](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_481_html).
+
+### Chaos Group V-Ray
+
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-vray-2025/README.md) to build the V-Ray for Cinema 4D conda package.
+
+#### Installation instructions for workstations
+
+1. Install the V-Ray for Cinema 4D plugin by [following instructions here](https://docs.chaos.com/display/VC4D/Installation).
+  i. Choose "Workstation" install
+2. [Optional] Verify that "V-Ray" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://www.chaos.com/cloud/scenes?srsltid=AfmBOorJmV6Bugw1DTiIyfiA1gxANUxdp1tUaHOTdyZLJnBGJxLON8Xi#cinema-4d).
+3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-vray` in the Conda Packages parameter.
+
+#### Licensing instructions
+
+V-Ray licensing is available by default on service managed fleets. To setup licensing on a customer managed fleet, follow the licensing instructions[here](https://documentation.chaos.com/space/VC4D/116855120/Installation#Licensing)
+
+#### Version compatibility
+
+We ran V-Ray for Cineam 4D v7.10.01 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [V-Ray System Requirements](https://documentation.chaos.com/space/VC4D/116855102/System+Requirements).
+
+### INSYDIUM X-Particles
+
+Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-insydium-2025/README.md)
+to build the INSYDIUM conda package which includes X-Particles.
+
+#### Installation instructions for workstations
+
+1. Install by following [instructions here](https://insydium.ltd/help/?q=1608)
+2. [Optional] Verify that "INSYDIUM" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://insydium.ltd/support-home/content-repository/).
+3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-insydium` in the Conda Packages parameter.
+
+#### Licensing instructions
+
+Licensing is built into your Insydium plugin by default. For more information, see [here](https://insydium.ltd/help/?q=1608)
+
+#### Version compatibility
+
+We ran Insydium Fused v2024.4.1 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [Insyduim Compatability Documentation](https://insydium.ltd/help/?q=2025).
+
+### Kit-Bash Cargo
+
+[Cargo](https://kit-bash.myshopify.com/pages/cargo) works without requiring
+extra fleet or submitter confuration. Use **File > Save Project with Assets** to
+save your scene before submitting.
+
+
 ## License
 
 This project is licensed under the Apache-2.0 License.
