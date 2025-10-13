@@ -22,7 +22,7 @@ class TestCinema4DClient:
         """Tests that the cinema4d client can initialize, set a take and close"""
         client = Cinema4DClient(server_path=str(9999))
         with pytest.raises(SystemExit) as e:
-            client.graceful_shutdown(0, 1)
+            client.graceful_shutdown(0, None)
         assert e.value.code == 0
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client.os.path.exists")

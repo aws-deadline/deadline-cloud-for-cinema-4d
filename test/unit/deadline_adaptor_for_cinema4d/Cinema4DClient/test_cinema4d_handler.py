@@ -6,6 +6,10 @@ from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import progress_c
 import c4d
 
 
+def mock_map_path(path: str):
+    pass
+
+
 class TestProgress:
     def test_progress(self, capsys):
         progress_callback(42, 0)
@@ -23,18 +27,18 @@ class TestProgress:
 
 class TestCinema4DHandler:
     def test_init(self):
-        handler = Cinema4DHandler(print)
+        handler = Cinema4DHandler(mock_map_path)
         assert handler.take == "Main"
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
     def test_set_scene_file(self, mock_isfile: Mock):
         mock_isfile.return_value = True
-        handler = Cinema4DHandler(print)
+        handler = Cinema4DHandler(mock_map_path)
         handler.set_scene_file({"scene_file": "file.c4d"})
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
     def test_set_scene_file_not_found(self, mock_isfile: Mock):
         mock_isfile.return_value = False
-        handler = Cinema4DHandler(print)
+        handler = Cinema4DHandler(mock_map_path)
         with pytest.raises(FileNotFoundError):
             handler.set_scene_file({"scene_file": "file.c4d"})
