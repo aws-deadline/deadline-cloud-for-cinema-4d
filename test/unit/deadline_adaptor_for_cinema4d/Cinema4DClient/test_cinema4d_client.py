@@ -13,17 +13,17 @@ class TestCinema4DClient:
     def test_cinema4dclient(self, mock_httpclient: Mock) -> None:
         """Tests that the cinema4d client can initialize, set a take and close"""
         client = Cinema4DClient(server_path=str(9999))
-        with pytest.raises(SystemExit) as e:
+        with patch("sys.exit") as mock_exit:
             client.close()
-        assert e.value.code == 0
+        mock_exit.assert_called_once_with(0)
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client.ClientInterface")
     def test_graceful_shutdown(self, mock_httpclient: Mock) -> None:
         """Tests that the cinema4d client can initialize, set a take and close"""
         client = Cinema4DClient(server_path=str(9999))
-        with pytest.raises(SystemExit) as e:
+        with patch("sys.exit") as mock_exit:
             client.graceful_shutdown(0, None)
-        assert e.value.code == 0
+        mock_exit.assert_called_once_with(0)
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client.os.path.exists")
     @patch.dict(os.environ, {"CINEMA4D_ADAPTOR_SERVER_PATH": "server_path"})

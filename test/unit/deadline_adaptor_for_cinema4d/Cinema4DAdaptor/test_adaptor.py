@@ -240,12 +240,6 @@ def test_activate_error_checking(init_data: dict, activate_error_checking: int) 
 
 @pytest.fixture()
 def run_data() -> dict:
-    """
-    Pytest Fixture to return a run_data dictionary that passes validation
-
-    Returns:
-        dict: A run_data dictionary
-    """
     return {"frame": 42}
 
 
