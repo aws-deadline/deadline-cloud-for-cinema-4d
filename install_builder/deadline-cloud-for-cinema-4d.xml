@@ -143,8 +143,8 @@
                         # Replace installation path in plugin file
                         sed -i '' 's|C4D_Submitter_Installation_Dir_To_Replace|${cinema_4d_submitter_installdir}|g' '${installdir}/tmp/c4d_deps/DeadlineCloud.pyp'
 
-                        # Find and process Cinema 4D 2024 and 2025 directories
-                        for version in 2024 2025; do
+                        # Find and process Cinema 4D 2024 to 2026 directories
+                        for version in 2024 2025 2026; do
                             find \"\$HOME/Library/Preferences/Maxon\" -type d -name \"Maxon Cinema 4D \$version\_*\" -maxdepth 1 | while read -r dir; do
                                 if [ -n \"\$dir\" ]; then
                                     plugin_dir=\"\$dir/plugins\"
