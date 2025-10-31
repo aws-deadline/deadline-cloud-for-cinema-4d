@@ -1,8 +1,8 @@
 site_name: Cinema 4D + AWS Deadline Cloud
 site_description: Render Cinema 4D scenes in the cloud with AWS Deadline Cloud
-site_url: https://{{ github.repository_owner }}.github.io/{{ github.event.repository.name }}/
-repo_url: https://github.com/{{ github.repository }}
-repo_name: {{ github.repository }}
+site_url: https://aws-deadline.github.io/deadline-cloud-for-cinema-4d/
+repo_url: https://github.com/aws-deadline/deadline-cloud-for-cinema-4d
+repo_name: deadline-cloud-for-cinema-4d
 
 theme:
   name: material
