@@ -130,7 +130,7 @@ class TestApplyWindowsReadExecutePermissionsForAllUsers:
             "icacls",
             str(test_dir),
             "/grant",
-            "Users:(OI)(CI)(RX)",
+            "*S-1-5-32-545:(OI)(CI)(RX)",
             "/T",
         ]
         mock_run.assert_called_once_with(

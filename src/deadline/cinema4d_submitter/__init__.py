@@ -61,7 +61,10 @@ def _apply_windows_read_execute_permissions_for_all_users(directory: Path) -> No
 
     # Construct icacls command with appropriate parameters
     # Grant Users group Read and Execute permissions with inheritance
-    icacls_command = ["icacls", str(directory), "/grant", "Users:(OI)(CI)(RX)", "/T"]
+    # The SID for /Users group is "S-1-5-32-545". This ensures that all the
+    # users of the workstation have access to the installed packages.
+    # https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understand-security-identifiers
+    icacls_command = ["icacls", str(directory), "/grant", "*S-1-5-32-545:(OI)(CI)(RX)", "/T"]
 
     try:
         # Execute the command without raising exception on non-zero exit
