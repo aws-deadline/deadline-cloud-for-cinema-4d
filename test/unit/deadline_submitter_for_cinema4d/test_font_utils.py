@@ -9,6 +9,7 @@ from deadline.cinema4d_submitter.font_utils import (
     copy_font_to_scene_folder,
     get_font_manager_environment,
     FONTS_DIR,
+    get_font_location,
 )
 
 
@@ -161,3 +162,132 @@ class TestFontUtils:
             # Check that scene file path is correctly passed to both actions
             assert actions["onEnter"]["args"][3] == scene_file_path
             assert actions["onExit"]["args"][3] == scene_file_path
+
+    # Error Handling Tests
+    def test_copy_font_empty_name(self, tmp_path):
+        """Test copy_font_to_scene_folder with empty font name."""
+        scene_location = tmp_path / "scene"
+        scene_location.mkdir()
+
+        with mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger:
+            # Should not raise exception
+            copy_font_to_scene_folder("", scene_location)
+
+            # Should log error
+            mock_logger.error.assert_called_with("Failed to copy font: font name is empty")
+
+    def test_copy_font_whitespace_only_name(self, tmp_path):
+        """Test copy_font_to_scene_folder with whitespace-only font name."""
+        scene_location = tmp_path / "scene"
+        scene_location.mkdir()
+
+        with mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger:
+            # Should not raise exception
+            copy_font_to_scene_folder("   ", scene_location)
+
+            # Should log error
+            mock_logger.error.assert_called_with("Failed to copy font: font name is empty")
+
+    def test_copy_font_non_valid_scene_location(self, tmp_path):
+        """Test copy_font_to_scene_folder with non-existent scene location."""
+        scene_location = tmp_path / "nonexistent"
+
+        with mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger:
+            # Should not raise exception
+            copy_font_to_scene_folder("TestFont", scene_location)
+
+            # Should log error with path
+            mock_logger.error.assert_called_with(
+                f"Failed to copy font: scene location does not exist at {scene_location}"
+            )
+
+    def test_copy_font_directory_creation_failure(self, tmp_path):
+        """Test copy_font_to_scene_folder when directory creation fails."""
+        scene_location = tmp_path / "scene"
+        scene_location.mkdir()
+
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.font_utils.get_font_location",
+                return_value="/system/fonts/test.ttf",
+            ),
+            mock.patch("deadline.cinema4d_submitter.font_utils.is_font_file", return_value=True),
+            mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger,
+            mock.patch("pathlib.Path.mkdir", side_effect=OSError("Permission denied")),
+        ):
+            # Should not raise exception
+            copy_font_to_scene_folder("TestFont", scene_location)
+
+            # Should log error with directory path and error details
+            fonts_dir = scene_location / FONTS_DIR
+            mock_logger.error.assert_called_with(
+                f"Failed to create fonts directory '{fonts_dir}': Permission denied"
+            )
+
+    def test_copy_font_file_copy_failure(self, tmp_path):
+        """Test copy_font_to_scene_folder when file copy fails."""
+        scene_location = tmp_path / "scene"
+        scene_location.mkdir()
+
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.font_utils.get_font_location",
+                return_value="/system/fonts/test.ttf",
+            ),
+            mock.patch("deadline.cinema4d_submitter.font_utils.is_font_file", return_value=True),
+            mock.patch("os.path.basename", return_value="test.ttf"),
+            mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger,
+            mock.patch("shutil.copy2", side_effect=OSError("Disk full")),
+        ):
+            # Should not raise exception
+            copy_font_to_scene_folder("TestFont", scene_location)
+
+            # Should log error with font name, source, destination, and error details
+            fonts_dir = scene_location / FONTS_DIR
+            destination = fonts_dir / "test.ttf"
+            mock_logger.error.assert_called_with(
+                f"Failed to copy font 'TestFont' from '/system/fonts/test.ttf' to '{destination}': Disk full"
+            )
+
+    def test_get_font_location_empty_name(self):
+        """Test get_font_location with empty font name."""
+        with mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger:
+            result = get_font_location("")
+
+            # Should return None
+            assert result is None
+
+            # Should log error
+            mock_logger.error.assert_called_with("Failed to locate font: font name is empty")
+
+    def test_get_font_location_whitespace_only_name(self):
+        """Test get_font_location with whitespace-only font name."""
+        with mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger:
+            result = get_font_location("   ")
+
+            # Should return None
+            assert result is None
+
+            # Should log error
+            mock_logger.error.assert_called_with("Failed to locate font: font name is empty")
+
+    def test_copy_font_validation_failure_before_copy(self, tmp_path):
+        """Test copy_font_to_scene_folder when font validation fails before copy."""
+        scene_location = tmp_path / "scene"
+        scene_location.mkdir()
+
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.font_utils.get_font_location",
+                return_value="/system/fonts/non_valid.ttf",
+            ),
+            mock.patch("deadline.cinema4d_submitter.font_utils.is_font_file", return_value=False),
+            mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger,
+        ):
+            # Should not raise exception
+            copy_font_to_scene_folder("non_validFont", scene_location)
+
+            # Should log error
+            mock_logger.error.assert_called_with(
+                "Font file validation failed: /system/fonts/non_valid.ttf"
+            )

@@ -122,6 +122,7 @@ def get_font_location(font_name: str) -> Optional[str]:
         Optional[str]: Path to the font file if found, None otherwise
     """
     if not font_name or not font_name.strip():
+        logger.error("Failed to locate font: font name is empty")
         return None
 
     font_name = font_name.strip()
@@ -289,16 +290,14 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     Args:
         font_name (str): Name of the font to copy
         scene_location (Path): Path to the scene location
-
-    Raises:
-        RuntimeError: If there's an error during the copy operation
-        ValueError: If input parameters are not valid
     """
     if not font_name or not font_name.strip():
-        raise ValueError("Font name cannot be empty")
+        logger.error("Failed to copy font: font name is empty")
+        return
 
     if not scene_location or not scene_location.exists():
-        raise ValueError(f"Scene location does not exist: {scene_location}")
+        logger.error(f"Failed to copy font: scene location does not exist at {scene_location}")
+        return
 
     font_name = font_name.strip()
 
@@ -321,7 +320,8 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     try:
         fonts_dir.mkdir(exist_ok=True, parents=True)
     except OSError as e:
-        raise RuntimeError(f"Failed to create fonts directory '{fonts_dir}': {str(e)}")
+        logger.error(f"Failed to create fonts directory '{fonts_dir}': {str(e)}")
+        return
 
     # Copy the font file to the fonts directory
     font_file_name = os.path.basename(font_location)
@@ -348,17 +348,11 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     try:
         shutil.copy2(font_location, destination)
         logger.debug(f"Successfully copied font from {font_location} to {destination}")
-
-        # Verify the copied file
-        if not is_font_file(str(destination)):
-            raise RuntimeError(f"Copied font file failed validation: {destination}")
-
     except (OSError, IOError, shutil.Error) as e:
-        error_msg = (
-            f"Error copying font '{font_name}' from '{font_location}' to '{destination}': {str(e)}"
+        logger.error(
+            f"Failed to copy font '{font_name}' from '{font_location}' to '{destination}': {str(e)}"
         )
-        logger.error(error_msg)
-        raise RuntimeError(error_msg)
+        return
 
 
 def scene_has_fonts(scene_location: Path) -> bool:
