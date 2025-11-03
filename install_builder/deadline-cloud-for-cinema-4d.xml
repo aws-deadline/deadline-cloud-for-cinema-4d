@@ -1,8 +1,8 @@
 <!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <component>
     <name>deadline_cloud_for_cinema_4d</name>
-    <description>Deadline Cloud for Cinema 4D 2024-2025</description>
-    <detailedDescription>Cinema 4D plugin for submitting jobs to AWS Deadline Cloud. Compatible with Cinema 4D 2024/2025</detailedDescription>
+    <description>Deadline Cloud for Cinema 4D 2024-2026</description>
+    <detailedDescription>Cinema 4D plugin for submitting jobs to AWS Deadline Cloud. Compatible with Cinema 4D 2024 to 2026</detailedDescription>
     <canBeEdited>1</canBeEdited>
     <selected>0</selected>
     <show>1</show>
@@ -65,7 +65,7 @@
     <parameterList>
         <stringParameter name="deadline_cloud_for_cinema_4d_summary" ask="0" cliOptionShow="0">
             <value>Deadline Cloud for Cinema 4D
-- Compatible with Cinema 4D 2024/2025
+- Compatible with Cinema 4D 2024 to 2026
 - Installs the integrated Cinema 4D submitter to the installation directory
 - Registers the extension with Cinema 4D by setting the g_additionalModulePath
 - Sets the C4DPYTHONPATH311 to retrieve deadline modules on Windows. 
@@ -179,8 +179,8 @@
                 <runProgram>
                     <program>bash</program>
                     <programArguments>-c "
-                        # Handle uninstallation for both Cinema 4D 2024 and 2025
-                        for version in 2024 2025; do
+                        # Handle uninstallation for both Cinema 4D 2024 to 2025
+                        for version in 2024 2025 2026; do
                             find \"\$HOME/Library/Preferences/Maxon\" -name 'DeadlineCloud.pyp' -path \"*/Maxon Cinema 4D \$version\_*/plugins/*\" | while read -r file; do
                                 if [ -f \"\$file\" ]; then
                                     rm -f \"\$file\"
