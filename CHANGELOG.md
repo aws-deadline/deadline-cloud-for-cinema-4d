@@ -1,3 +1,13 @@
+## 0.8.4 (2025-11-04)
+
+
+### Features
+* add submitter support for Cinema 4D to Arnold (#330) ([`dd56f41`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/dd56f411ec08590d305286131b6fa517a93bbe18))
+
+### Bug Fixes
+* Allow other users to access dependencies installed by system installation (#324) ([`5a0f997`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/5a0f997459093b46070e4f604ca9dd05c69d9f56))
+
+
 ## 0.8.3 (2025-11-04)
 
 
