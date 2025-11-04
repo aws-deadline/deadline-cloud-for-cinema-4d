@@ -89,6 +89,33 @@ if not defined g_additionalModulePath (setx g_additionalModulePath %SUBMITTER_LO
 
 ```
 
+##### System-Wide Installation for All Users
+
+For shared workstations or enterprise environments where multiple users need access to the Cinema 4D submitter, you can perform a system-wide installation.
+
+**Prerequisites:**
+- Administrator account access
+- Cinema 4D installed on the system
+
+**Installation Steps:**
+
+1. **Install the submitter as Administrator:**
+   - Run the [Deadline Cloud submitter installer][deadline-cloud-submitter] as Administrator
+   - Select "system installation" option during installation
+   - This installs the submitter to a shared location (e.g., `C:\Program Files\DeadlineCloudSubmitter\`)
+
+2. **Initial dependency setup:**
+   - Open Cinema 4D as Administrator (right-click → "Run as administrator")
+   - The first time you access the submitter (`Extensions` > `AWS Deadline Cloud Submitter`), it will prompt to install GUI dependencies
+   - Click "Yes" to install the dependencies
+   - This step configures permissions so all users can access the installed packages
+
+3. **Regular usage:**
+   - After the initial setup, any user can open Cinema 4D normally (without Administrator privileges)
+   - The AWS Deadline Cloud Submitter will be available to all users
+
+If you encounter permission errors, ensure that step 2 (initial dependency setup) was completed as Administrator.
+
 #### Mac
 
 In a Mac terminal:

@@ -84,6 +84,32 @@ A: Yes, you can set job priority levels in the submitter to control render queue
 
 A: The submitter includes built-in error detection to catch common issues like missing assets before submission. This can be deactivated in the submitter.
 
+**Q: I'm getting permission errors with a system-wide installation on Windows. How do I fix this?**
+
+A: If users encounter permission errors when accessing the submitter after a system-wide installation:
+
+1. **Verify initial setup was completed:**
+   - Ensure Cinema 4D was opened as Administrator at least once
+   - Ensure the dependency installation prompt was accepted
+   - Check that the installation completed without errors
+
+2. **Check file permissions:**
+   - Navigate to the installation directory (e.g., `C:\Program Files\DeadlineCloudSubmitter\`)
+   - Right-click → Properties → Security tab
+   - Verify that "Users" group has "Read & execute" permissions
+   - Permissions should be inherited by all subdirectories and files
+
+3. **Manual permission fix (if needed):**
+   - Open Command Prompt as Administrator
+   - Run: `icacls "C:\Program Files\DeadlineCloudSubmitter" /grant *S-1-5-32-545:(OI)(CI)(RX) /T`
+   - This grants read and execute permissions to all users
+
+4. **Verify Cinema 4D Python environment:**
+   - Open Cinema 4D as the affected user
+   - Go to `Extensions` > `Console`
+   - Try importing: `import deadline`
+   - If this fails, the permissions may not be correctly applied
+
 ## Glossary
 
 **Adaptor** - Software that runs on compute resources to execute your Cinema 4D renders or projects.

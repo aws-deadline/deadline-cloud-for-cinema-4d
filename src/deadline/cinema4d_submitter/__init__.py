@@ -29,8 +29,6 @@ def _has_windows_admin_privileges() -> bool:
         # IsUserAnAdmin() returns non-zero if the user is an admin, 0 otherwise
         return ctypes.windll.shell32.IsUserAnAdmin() != 0  # type: ignore[attr-defined]
     except Exception:
-        # If any exception occurs (e.g., attribute error, access denied),
-        # assume not running as admin and return False
         return False
 
 
@@ -73,15 +71,37 @@ def _apply_windows_read_execute_permissions_for_all_users(directory: Path) -> No
         if result.returncode == 0:
             _logger.info(f"Successfully applied Windows permissions to {directory}")
         else:
+            error_msg = result.stderr.strip() if result.stderr else "No error output"
             _logger.warning(
                 f"Failed to apply Windows permissions to {directory}. "
                 f"Exit code: {result.returncode}. "
-                f"Error: {result.stderr.strip() if result.stderr else 'No error output'}"
+                f"Error: {error_msg}"
             )
+
+            # Show user-facing dialog with actionable guidance
+            dialog_message = (
+                f"Failed to apply permissions for all users to:\n"
+                f"{directory}\n\n"
+                f"Exit code: {result.returncode}\n"
+                f"Error: {error_msg}\n\n"
+                f"To fix this manually, run as Administrator:\n"
+                f'icacls "{directory}" /grant *S-1-5-32-545:(OI)(CI)(RX) /T'
+            )
+            c4d.gui.MessageDialog(dialog_message)
     except Exception as e:
         _logger.warning(
             f"Exception occurred while applying Windows permissions to {directory}: {e}"
         )
+
+        # Show user-facing dialog with actionable guidance
+        dialog_message = (
+            f"Failed to apply permissions for all users to:\n"
+            f"{directory}\n\n"
+            f"Exception: {str(e)}\n\n"
+            f"To fix this manually, run as Administrator:\n"
+            f'icacls "{directory}" /grant *S-1-5-32-545:(OI)(CI)(RX) /T'
+        )
+        c4d.gui.MessageDialog(dialog_message)
 
 
 def has_gui_deps():
