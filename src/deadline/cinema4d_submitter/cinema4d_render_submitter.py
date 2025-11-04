@@ -618,13 +618,19 @@ def setup_attachments(render_settings: RenderSubmitterUISettings) -> AssetRefere
     )
 
 
-def get_conda_packages() -> str:
+def get_conda_packages(doc: Any) -> str:
     """
     Get the required conda packages string based on C4D version.
     """
     c4d_major_version = str(c4d.GetC4DVersion())[:4]
     adaptor_version = ".".join(str(v) for v in adaptor_version_tuple[:2])
-    return f"cinema4d={c4d_major_version}.* cinema4d-openjd={adaptor_version}.*"
+    packages = f"cinema4d={c4d_major_version}.* cinema4d-openjd={adaptor_version}.*"
+
+    render_data = doc.GetActiveRenderData()
+    if render_data[c4d.RDATA_RENDERENGINE] == 1029988:  # Arnold
+        packages += " cinema4d-c4dtoa"
+
+    return packages
 
 
 def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> None:
@@ -709,7 +715,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
     auto_detected_attachments = setup_auto_detected_attachments(takes["take_data_list"])
     attachments = setup_attachments(render_settings)
 
-    conda_packages = get_conda_packages()
+    conda_packages = get_conda_packages(doc)
 
     def on_create_job_bundle_callback(
         widget: SubmitJobToDeadlineDialog,

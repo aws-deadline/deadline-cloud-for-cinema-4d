@@ -1,5 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This file is used only for integration tests.
+from typing import Any
+
 from .cinema4d_render_submitter import (
     initialize_render_settings,
     setup_attachments,
@@ -13,7 +15,7 @@ from .takes import TakeSelection
 import c4d
 
 
-def sample_queue_params() -> list:
+def sample_queue_params(doc: Any) -> list:
     """
     This is the default queue parameters that we expect during callbacks when we submit a job.
     """
@@ -28,7 +30,7 @@ def sample_queue_params() -> list:
                 "groupLabel": "Queue Environment: Conda",
                 "label": "Conda Packages",
             },
-            "value": get_conda_packages(),
+            "value": get_conda_packages(doc),
         },
         {
             "default": "deadline-cloud",
@@ -92,6 +94,6 @@ def internal_create_job_bundle(
         takes=takes,
         job_bundle_dir=job_bundle_dir,
         asset_references=auto_detected_attachments,
-        queue_parameters=sample_queue_params(),
+        queue_parameters=sample_queue_params(doc),
         attachments=attachments,
     )
