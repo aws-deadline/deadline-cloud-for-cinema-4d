@@ -237,13 +237,22 @@ We run integration tests by running it in Cinema 4D's python i.e. c4dpy for subm
 You would have to setup Cinema 4D and Redshift licensing before you run the tests.
 For Cinema 4D licensing, set environment variable by using `$env:g_licenseServerURL = <your-license-server-host>:<port>` on Windows Powershell. 
 For redshift licensing, set the environment variable by using `$env:redshift_LICENSE = <port>@<your-license-server-host>` on Windows Powershell. 
-
+Or
+You can also run `c4dpy` and `Commandline.exe` separately and set the license information there. 
 1. Set the environment variable `C4D_LOCATION` to the installation folder of Cinema 4D.
    1. `set C4D_LOCATION=<Cinema 4D location>` on Windows Command or `$env:C4D_LOCATION = <Cinema 4D location>` on Windows Powershell.
-      1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2025\`. This location would be automatically used if the directory exists.
+      1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2026\`. This location would be automatically used if the directory exists.
 2. For running the adaptor tests, we would need to install `pywin32` to the installation paths as its an adaptor dependency.
    2.1 Run `pip install pywin32==308 -t <your Python site-packages location>`
        * e.g. `pip install pywin32==308 -t "C:\Program Files\Maxon Cinema 4D 2025\resource\modules\python\libs\win64\lib\site-packages"`
+   
    During testing, pywin32's version 308 was required because of other dependencies requiring this version.
+   2.2. Copy PyWin32 DLLs (there are some post installation things required for PyWin32):
+    * Copy `pythoncom311.dll` and `pywintypes311.dll`.
+    * From: `C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\Lib\site-packages\pywin32_system32`
+    * To: `C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\dlls`
+3. Set the environment variable `PYTHONIOENCODING` to `utf-8` so that the test can use non-ASCII characters.
+
+
 3. Run `hatch run integ:test`
 

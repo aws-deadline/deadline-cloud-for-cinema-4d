@@ -28,6 +28,33 @@ The submitter adds AWS Deadline Cloud functionality to Cinema 4D's Extensions me
 
 To update the submitter to the latest version, download and run the latest [submitter installer](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/submitter.html).
 
+## System-Wide Installation for Multiple Users (Windows)
+
+For shared workstations or enterprise environments where multiple users need access to the Cinema 4D submitter, you can perform a system-wide installation.
+
+### Prerequisites
+
+- Administrator account access
+- Cinema 4D installed on the system
+
+### Installation Steps
+
+1. **Install the submitter as Administrator:**
+   - Run the [Deadline Cloud submitter installer](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/submitter.html) as Administrator
+   - Select "system installation" option during installation
+
+2. **Initial dependency setup:**
+   - Open Cinema 4D as Administrator (right-click → "Run as administrator")
+   - Access the submitter (`Extensions` > `AWS Deadline Cloud Submitter`)
+   - Click "Yes" when prompted to install GUI dependencies
+   - This configures permissions so all users can access the installed packages
+
+3. **Regular usage:**
+   - After initial setup, any user can open Cinema 4D normally (without Administrator privileges)
+   - The AWS Deadline Cloud Submitter will be available to all users
+
+For troubleshooting permission issues, see the [FAQ and Glossary →](faq-and-glossary.md)
+
 ## Step 2: Submit Your First Render (2 minutes)
 
 1. Open Cinema 4D and load a scene.

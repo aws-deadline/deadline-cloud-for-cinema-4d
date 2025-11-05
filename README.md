@@ -26,11 +26,15 @@ For instructions on installing and using this integration, visit the [user guide
 
 This library requires:
 
-1. Cinema 4D 2024 - 2025
+1. Cinema 4D 2024 - 2026
    * Redshift is supported but not required
+   * Arnold is supported but not required
 2. Python 3.9 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
-3. Windows or macOS operating system for job submission and Windows operating system for job rendering. There are some instructions below on how to setup the adaptors for job rendering on Linux but they are experimental.
-4. When rendering using Redshift with Cinema 4D on NVIDIA GPUs, NVIDIA GRID driver version 551.78 or later is required. Using older drivers can result in job failures.
+3. Windows or macOS operating system for job submission
+4. Windows or Linux operating system for job rendering
+    * Cinema 4D 2024 - 2026 is supported on Windows
+    * Cinema 4D 2025 is supported on Linux
+5. When rendering using Redshift with Cinema 4D on NVIDIA GPUs, NVIDIA GRID driver version 551.78 or later is required. Using older drivers can result in job failures.
 
 **Important:** Workers hosts with GPUs that run the Cinema 4D adaptor must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to [unstable rendering behavior](https://help.maxon.net/c4d/s26/de-de/Content/_REDSHIFT_/html/Dealing+with+Out-Of-RAM+situations.html).
 
@@ -89,6 +93,33 @@ if not defined g_additionalModulePath (setx g_additionalModulePath %SUBMITTER_LO
 
 ```
 
+##### System-Wide Installation for All Users
+
+For shared workstations or enterprise environments where multiple users need access to the Cinema 4D submitter, you can perform a system-wide installation.
+
+**Prerequisites:**
+- Administrator account access
+- Cinema 4D installed on the system
+
+**Installation Steps:**
+
+1. **Install the submitter as Administrator:**
+   - Run the [Deadline Cloud submitter installer][deadline-cloud-submitter] as Administrator
+   - Select "system installation" option during installation
+   - This installs the submitter to a shared location (e.g., `C:\Program Files\DeadlineCloudSubmitter\`)
+
+2. **Initial dependency setup:**
+   - Open Cinema 4D as Administrator (right-click → "Run as administrator")
+   - The first time you access the submitter (`Extensions` > `AWS Deadline Cloud Submitter`), it will prompt to install GUI dependencies
+   - Click "Yes" to install the dependencies
+   - This step configures permissions so all users can access the installed packages
+
+3. **Regular usage:**
+   - After the initial setup, any user can open Cinema 4D normally (without Administrator privileges)
+   - The AWS Deadline Cloud Submitter will be available to all users
+
+If you encounter permission errors, ensure that step 2 (initial dependency setup) was completed as Administrator.
+
 #### Mac
 
 In a Mac terminal:
@@ -137,12 +168,11 @@ Both fleet types in Deadline Cloud support the Cinema 4D adaptor:
 1. Service managed fleets
 2. Customer managed fleets
 
-The Cinema 4D integration for Deadline Cloud is supported on Windows fleets (service managed and customer managed).
-Linux support is experimental and can only be done on customer managed fleets.
+The Cinema 4D integration for Deadline Cloud is supported on both Windows and Linux fleets (service managed and customer managed).
 
 ### Service managed fleets
 
-On [service managed fleets][service-managed-fleets], the Cinema 4D adaptor is automatically available via the `deadline-cloud` Conda channel with the [default Queue Environment][default-queue-environment].
+On [service managed fleets][service-managed-fleets], the Cinema 4D adaptor is automatically available via the `deadline-cloud` Conda channel with the [default Queue Environment][default-queue-environment]. This includes Redshift (built into the `cinema4d` package by default) and Arnold (can be used via the `cinema4d-c4dtoa` package).
 
 ### Customer managed fleets
 
@@ -173,7 +203,7 @@ For more information on the commands the OpenJD adaptor runtime provides, see [h
 Cinema 4D Conda packages are available in the "deadline-cloud" Conda channel on service managed Windows fleets.
 
 However, if you prefer, you can build the Cinema 4D Conda packages yourself. There are conda recipes in our samples Github repository for [`cinema4d-2025` on Windows](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/conda_recipes/cinema4d-2025) and
-[`cinema4d-openjd` on Windows and Linux](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/conda_recipes/cinema4d-openjd).
+[`cinema4d-openjd` on Windows and Linux](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/conda_recipes/cinema4d-openjd), and [`cinema4d-c4dtoa` on Windows](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/conda_recipes/cinema4d-c4dtoa-2025)
 
 For instructions on building conda recipes on Deadline Cloud, see [this article](https://aws.amazon.com/blogs/media/create-a-conda-package-and-channel-for-aws-deadline-cloud/).
 Though it refers to Blender, the process applies to Cinema 4D recipes as well.
@@ -182,7 +212,7 @@ Though it refers to Blender, the process applies to Cinema 4D recipes as well.
 
 ### Service Managed Fleets
 
-[Usage based licensing][usage-based-licensing] for Cinema 4D 2024 and 2025 is available on Deadline Cloud service managed fleets with no additional setup.
+[Usage based licensing][usage-based-licensing] for Cinema 4D 2024 - 2026, Redshift 2024 - 2026, and Arnold 2025 - 2026 is available on Deadline Cloud service managed fleets with no additional setup.
 
 If you prefer to use your own licensing for service managed fleets, you can also [connect service-managed fleets to a custom license server](https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/smf-byol.html).
 

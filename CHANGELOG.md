@@ -1,3 +1,24 @@
+## 0.8.4 (2025-11-04)
+
+
+### Features
+* add submitter support for Cinema 4D to Arnold (#330) ([`dd56f41`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/dd56f411ec08590d305286131b6fa517a93bbe18))
+
+### Bug Fixes
+* Allow other users to access dependencies installed by system installation (#324) ([`5a0f997`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/5a0f997459093b46070e4f604ca9dd05c69d9f56))
+
+
+## 0.8.3 (2025-11-04)
+
+
+### Features
+* Include fonttools in submitter installer. (#306) ([`2422e7f`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/2422e7f8000d8840933b821a58667837863cc7f1))
+
+### Bug Fixes
+* Silently log errors and continue font handling. (#326) ([`21a46da`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/21a46dad593a28c78802bbe57283c5ffa420c376))
+* Only bundle fonts on Windows as its not supported on Mac. (#294) ([`6ecebce`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/6ecebce5fc2dbf98e048adfd193511488d835dca))
+
+
 ## 0.8.2 (2025-08-12)
 
 
