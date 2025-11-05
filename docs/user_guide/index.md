@@ -21,8 +21,9 @@ Transform your Cinema 4D rendering workflow with AWS Deadline Cloud - a fully ma
 
 ## Supported Versions
 
-- **Cinema 4D 2024 - 2025**
+- **Cinema 4D 2024 - 2026**
 - **Redshift** (optional)
+- **Arnold** (optional)
 - **Windows and macOS** for job submission
 
 ## Get Started in 4 Simple Steps

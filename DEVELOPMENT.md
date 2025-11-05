@@ -15,7 +15,7 @@ Table of Contents:
       * [Running the Adaptor Locally](#running-the-adaptor-locally)
       * [Running the Adaptor on a Farm](#running-the-adaptor-on-a-farm)
       * [Testing the Adaptor](#testing-the-adaptor)
-   * [Running the integration tests](#integration-tests-currently-wip)
+   * [Running the integration tests](#integration-tests)
 
 ## Development Environment Setup
 
