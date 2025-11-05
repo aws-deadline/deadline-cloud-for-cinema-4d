@@ -4,7 +4,7 @@ Set up Cinema 4D and AWS Deadline Cloud in just a few steps.
 
 ## What You'll Need
 
-- **Cinema 4D 2024 or 2025** installed on your workstation
+- **Cinema 4D 2024 - 2026** installed on your workstation
 - **AWS Account** with Deadline Cloud access
 - **Windows or macOS** workstation for job submission
 - **Deadline Cloud monitor** ([download here](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/monitor-onboarding.html))

@@ -194,7 +194,7 @@ def _normalize_conda_packages_version(content: str) -> str:
 
     content = re.sub(
         r"cinema4d=202[4-9].\* cinema4d-openjd=0.\d.\*",
-        "cinema4d=2025.* cinema4d-openjd=0.7.*",
+        "cinema4d=2026.* cinema4d-openjd=0.8.*",
         content,
     )
     return content

@@ -244,7 +244,7 @@ You can also run `c4dpy` and `Commandline.exe` separately and set the license in
       1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2026\`. This location would be automatically used if the directory exists.
 2. For running the adaptor tests, we would need to install `pywin32` to the installation paths as its an adaptor dependency.
    2.1 Run `pip install pywin32==308 -t <your Python site-packages location>`
-       * e.g. `pip install pywin32==308 -t "C:\Program Files\Maxon Cinema 4D 2025\resource\modules\python\libs\win64\lib\site-packages"`
+       * e.g. `pip install pywin32==308 -t "C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\lib\site-packages"`
    
    During testing, pywin32's version 308 was required because of other dependencies requiring this version.
    2.2. Copy PyWin32 DLLs (there are some post installation things required for PyWin32):

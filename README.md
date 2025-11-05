@@ -74,10 +74,10 @@ In Windows `cmd`
 set SUBMITTER_LOCATION=%APPDATA%\DeadlineCloudSubmitter
 
 :: Install pip using Cinema 4D's bundled Python
-"C:\Program Files\Maxon Cinema 4D 2025\resource\modules\python\libs\win64\python.exe" -m ensurepip
+"C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\python.exe" -m ensurepip
 
 :: Install required Python packages to our custom location
-"C:\Program Files\Maxon Cinema 4D 2025\resource\modules\python\libs\win64\python.exe" -m pip install deadline-cloud-for-cinema-4d "deadline[gui]" -t %SUBMITTER_LOCATION%
+"C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\python.exe" -m pip install deadline-cloud-for-cinema-4d "deadline[gui]" -t %SUBMITTER_LOCATION%
 
 :: Create plugins directory
 md %SUBMITTER_LOCATION%\cinema_4d_plugins
@@ -144,7 +144,7 @@ curl https://raw.githubusercontent.com/aws-deadline/deadline-cloud-for-cinema-4d
 echo "#!/bin/zsh" > ~/Desktop/Cinema4D.command
 eval echo "export C4DPYTHONPATH311=${SUBMITTER_LOCATION}\${C4DPYTHONPATH311:+:\$C4DPYTHONPATH311}" >> ~/Desktop/Cinema4D.command
 eval echo "export g_additionalModulePath=${SUBMITTER_LOCATION}/cinema_4d_plugins\${g_additionalModulePath:+:\$g_additionalModulePath}" >> ~/Desktop/Cinema4D.command
-echo '"/Applications/Maxon Cinema 4D 2025/Cinema 4D.app/Contents/MacOS/Cinema 4D"' >> ~/Desktop/Cinema4D.command
+echo '"/Applications/Maxon Cinema 4D 2026/Cinema 4D.app/Contents/MacOS/Cinema 4D"' >> ~/Desktop/Cinema4D.command
 
 # Make the launch script executable
 chmod +x ~/Desktop/Cinema4D.command

@@ -38,7 +38,7 @@ parameterValues:
 - name: AFrames
   value: '1'
 - name: CondaPackages
-  value: cinema4d=2025.* cinema4d-openjd=0.7.*
+  value: cinema4d=2026.* cinema4d-openjd=0.8.*
 - name: CondaChannels
   value: deadline-cloud
 - name: deadline:targetTaskRunStatus
