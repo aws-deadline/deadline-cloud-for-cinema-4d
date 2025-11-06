@@ -317,7 +317,7 @@ V-Ray licensing is available by default on service managed fleets. To setup lice
 
 #### Version compatibility
 
-We ran V-Ray for Cineam 4D v7.10.01 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [V-Ray System Requirements](https://documentation.chaos.com/space/VC4D/116855102/System+Requirements).
+We ran V-Ray for Cinema 4D v7.10.01 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to the [V-Ray System Requirements](https://documentation.chaos.com/space/VC4D/116855102/System+Requirements).
 
 ### INSYDIUM X-Particles
 
@@ -341,8 +341,26 @@ We ran Insydium Fused v2024.4.1 on Cinema 4D 2025. But more recent versions shou
 ### Kit-Bash Cargo
 
 [Cargo](https://kit-bash.myshopify.com/pages/cargo) works without requiring
-extra fleet or submitter confuration. Use **File > Save Project with Assets** to
+extra fleet or submitter configuration. Use **File > Save Project with Assets** to
 save your scene before submitting.
+
+### Red Giant
+
+Red Giant is different from other plugins as it requires a host configuration script instead of a conda recipe. Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/host_configuration_scripts/cinema4d/cinema4d_redgiant) to setup Red Giant. 
+
+#### Installation instructions for workstations
+
+1. Install the Red Giant plugin by [following instructions here](https://support.maxon.net/hc/en-us/articles/212354258-How-do-I-install-my-products)
+2. [Optional] Learn how to use Red Giant inside Cinema 4D with [this demonstration video](https://www.youtube.com/watch?v=L6B1REPQoPU)
+3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter**
+
+#### Licensing instructions
+
+Red Giant licensing is available by default on service managed fleets. To setup licensing on a customer managed fleet, follow the [instructions here](https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/cmf-ubl.html).
+
+#### Version compatibility
+
+We ran Red Giant 2025.6.0 on Cinema 4D 2025. But more recent versions should still be compatible with latest versions of Cinema 4D, etc. For more information on compatibility refer to [the Maxon system requirements](https://support.maxon.net/hc/en-us/articles/16797414314012-System-Requirements-for-Maxon-Products).
 
 
 ## License
