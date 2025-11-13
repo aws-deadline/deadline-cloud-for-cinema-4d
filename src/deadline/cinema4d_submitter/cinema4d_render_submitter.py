@@ -29,7 +29,9 @@ from .data_classes import (
     RenderSubmitterUISettings,
 )
 from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
+from .error_collector import font_error_collector
 from .platform_utils import is_windows
+from .ui.components.font_warning_dialog import FontWarningDialog
 from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
@@ -729,6 +731,19 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
+        # Check for font errors and show warning dialog if needed
+        if font_error_collector.should_show_warnings():
+            continue_submission, dont_show_again = FontWarningDialog.show_font_warnings(
+                font_error_collector.get_errors(), widget
+            )
+            
+            if dont_show_again:
+                font_error_collector.suppress_warnings_for_session()
+            
+            if not continue_submission:
+                # User chose to cancel submission
+                raise RuntimeError("Submission cancelled due to font issues")
+        
         return create_job_bundle(
             settings,
             takes,
