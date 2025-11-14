@@ -10,12 +10,13 @@ class ErrorCollector:
 
     def __init__(self):
         self._errors: List[str] = []
-        self._session_suppress_warnings = False
 
     def add_error(self, error_message: str):
         """Add a font error message to the collection."""
-        if error_message and error_message.strip() and error_message not in self._errors:
-            self._errors.append(error_message)
+        if error_message and error_message.strip():
+            stripped_message = error_message.strip()
+            if stripped_message not in self._errors:
+                self._errors.append(stripped_message)
 
     def has_errors(self) -> bool:
         """Check if any font errors have been collected."""
@@ -29,13 +30,7 @@ class ErrorCollector:
         """Clear all collected errors."""
         self._errors.clear()
 
-    def suppress_warnings_for_session(self):
-        """Suppress font warnings for the current session."""
-        self._session_suppress_warnings = True
 
-    def should_show_warnings(self) -> bool:
-        """Check if warnings should be shown to the user."""
-        return not self._session_suppress_warnings and self.has_errors()
 
 
 # Global instance to collect font errors across the application

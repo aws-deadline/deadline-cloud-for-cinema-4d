@@ -1,5 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+from typing import List, Optional, Tuple
+
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QDialog,
@@ -19,11 +21,10 @@ class FontWarningDialog(QDialog):
     Allows users to review font issues and decide whether to continue with submission.
     """
 
-    def __init__(self, font_errors, parent=None):
+    def __init__(self, font_errors: List[str], parent: Optional[QDialog] = None):
         super().__init__(parent)
         self.font_errors = font_errors
         self.continue_submission = False
-        self.dont_show_again = False
         self._setup_ui()
 
     def _setup_ui(self):
@@ -61,9 +62,7 @@ class FontWarningDialog(QDialog):
         info_label.setStyleSheet("color: #666; margin: 10px 0;")
         layout.addWidget(info_label)
 
-        # Don't show again checkbox
-        self.dont_show_checkbox = QCheckBox("Don't show font warnings again for this session")
-        layout.addWidget(self.dont_show_checkbox)
+
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -81,7 +80,6 @@ class FontWarningDialog(QDialog):
 
     def accept(self):
         self.continue_submission = True
-        self.dont_show_again = self.dont_show_checkbox.isChecked()
         super().accept()
 
     def reject(self):
@@ -89,7 +87,7 @@ class FontWarningDialog(QDialog):
         super().reject()
 
     @staticmethod
-    def show_font_warnings(font_errors, parent=None):
+    def show_font_warnings(font_errors: List[str], parent: Optional[QDialog] = None) -> Tuple[bool, bool]:
         """
         Static method to show font warnings dialog.
         
@@ -98,11 +96,12 @@ class FontWarningDialog(QDialog):
             parent: Parent widget
             
         Returns:
-            tuple: (continue_submission: bool, dont_show_again: bool)
+            tuple: (continue_submission: bool, unused: bool)
         """
         if not font_errors:
             return True, False
             
         dialog = FontWarningDialog(font_errors, parent)
         dialog.exec_()
-        return dialog.continue_submission, dialog.dont_show_again
+        return dialog.continue_submission, False
+    
