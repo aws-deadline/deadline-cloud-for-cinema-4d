@@ -37,7 +37,7 @@ class FileSearchLineEdit(QWidget):
         super().__init__(parent=parent)
 
         if directory_only and file_format is not None:
-            raise ValueError("")
+            raise ValueError("Cannot specify file_format when directory_only is True")
 
         self.file_format = file_format
         self.directory_only = directory_only

@@ -125,7 +125,8 @@ def _get_parameter_values(
     if parameter_overlap:
         raise DeadlineOperationError(
             "The following queue parameters conflict with the Cinema4D job parameters:\n"
-            + f"{', '.join(parameter_overlap)}"
+            + f"{', '.join(parameter_overlap)}\n"
+            "Rename the parameters on the queue to continue job submissions."
         )
 
     # If we're overriding the adaptor with wheels, remove deadline_cloud_for_cinema4d from the CondaPackages
@@ -562,7 +563,8 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
         take_name = take_data.name
         if take_name in take_names:
             raise RuntimeError(
-                f"You have multiple takes named '{take_name}'. Please use unique take names."
+                f"You have multiple takes named '{take_name}' with different render settings among the takes. "
+                "Please use unique take names."
             )
         take_names.add(take_name)
 
