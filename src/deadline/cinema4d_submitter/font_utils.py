@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, List, Any
 
 from .platform_utils import is_windows
-from .error_collector import font_error_collector
+from .warning_collector import warning_collector
 
 FONTS_DIR = "fonts"
 
@@ -295,13 +295,13 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     if not font_name or not font_name.strip():
         error_msg = "Failed to copy font: font name is empty"
         logger.error(error_msg)
-        font_error_collector.add_error(error_msg)
+        warning_collector.add_warning(error_msg)
         return
 
     if not scene_location or not scene_location.exists():
         error_msg = f"Failed to copy font: scene location does not exist at {scene_location}"
         logger.error(error_msg)
-        font_error_collector.add_error(error_msg)
+        warning_collector.add_warning(error_msg)
         return
 
     font_name = font_name.strip()
@@ -313,14 +313,14 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
         # We were unable to find the font, collect the error for user display
         error_msg = f"Font '{font_name}' not found in system font directories"
         logger.error(error_msg)
-        font_error_collector.add_error(error_msg)
+        warning_collector.add_warning(error_msg)
         return
 
     # Validate the font file before copying
     if not is_font_file(font_location):
         error_msg = f"Font file validation failed: {font_location}"
         logger.error(error_msg)
-        font_error_collector.add_error(error_msg)
+        warning_collector.add_warning(error_msg)
         return
 
     # Create the fonts directory within the scene location if it doesn't exist
@@ -331,7 +331,7 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     except OSError as e:
         error_msg = f"Failed to create fonts directory '{fonts_dir}': {str(e)}"
         logger.error(error_msg)
-        font_error_collector.add_error(error_msg)
+        warning_collector.add_warning(error_msg)
         return
 
     # Copy the font file to the fonts directory
@@ -362,7 +362,7 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     except (OSError, IOError, shutil.Error) as e:
         error_msg = f"Failed to copy font '{font_name}' from '{font_location}' to '{destination}': {str(e)}"
         logger.error(error_msg)
-        font_error_collector.add_error(error_msg)
+        warning_collector.add_warning(error_msg)
         return
 
 
