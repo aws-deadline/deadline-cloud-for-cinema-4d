@@ -14,6 +14,8 @@ from qtpy.QtWidgets import (
     QMessageBox,
 )
 
+from ...style import HEADER_LABEL_STYLE
+
 
 class FontWarningDialog(QDialog):
     """
@@ -38,7 +40,7 @@ class FontWarningDialog(QDialog):
         header_label = QLabel(
             f"Found {len(self.font_errors)} font-related issue(s) in your scene:"
         )
-        header_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        header_label.setStyleSheet(HEADER_LABEL_STYLE)
         layout.addWidget(header_label)
 
         # Error details
