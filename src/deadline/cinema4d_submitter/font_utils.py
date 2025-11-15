@@ -351,7 +351,9 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
         shutil.copy2(font_location, destination)
         logger.debug(f"Successfully copied font from {font_location} to {destination}")
     except (OSError, IOError, shutil.Error) as e:
-        logger.warning(f"Failed to copy font '{font_name}' from '{font_location}' to '{destination}': {str(e)}")
+        logger.warning(
+            f"Failed to copy font '{font_name}' from '{font_location}' to '{destination}': {str(e)}"
+        )
         return
 
 

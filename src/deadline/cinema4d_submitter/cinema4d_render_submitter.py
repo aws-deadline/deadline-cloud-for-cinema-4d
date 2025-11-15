@@ -735,11 +735,11 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
             continue_submission = SubmissionWarningDialog.show_warnings(
                 warning_collector.get_warnings(), "Issues Detected", widget
             )
-            
+
             if not continue_submission:
                 # User chose to cancel submission
                 raise RuntimeError("Submission cancelled due to issues")
-        
+
         return create_job_bundle(
             settings,
             takes,
