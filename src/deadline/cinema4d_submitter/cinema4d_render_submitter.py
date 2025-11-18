@@ -28,6 +28,7 @@ from .assets import AssetIntrospector
 from .data_classes import (
     RenderSubmitterUISettings,
 )
+from .detailed_logging_utils import get_detailed_logging_environment
 from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
 from .warning_collector import warning_collector
 from .platform_utils import is_windows
@@ -100,6 +101,9 @@ def _get_parameter_values(
     parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
     parameter_values.append(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
+    )
+    parameter_values.append(
+        {"name": "DetailedLogging", "value": "1" if settings.activate_detailed_logging else "0"}
     )
 
     if per_take_frames_parameters:
@@ -284,6 +288,13 @@ def _get_job_template(
         if "jobEnvironments" not in job_template:
             job_template["jobEnvironments"] = []
         job_template["jobEnvironments"].append(override_environment["environment"])
+
+    # Add DetailedLogging job environment
+    if adaptor:
+        detailed_logging_environment = get_detailed_logging_environment()
+        if "jobEnvironments" not in job_template:
+            job_template["jobEnvironments"] = []
+        job_template["jobEnvironments"].append(detailed_logging_environment)
 
     # Conditionally add FontManager job environment if fonts are detected (Windows only)
     if adaptor and is_windows() and scene_has_fonts(Path(Scene.name()).parent):
@@ -740,7 +751,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
             if not continue_submission:
                 # User chose to cancel submission
-                raise RuntimeError("Submission cancelled due to issues")
+                raise RuntimeError("Submission cancelled")
 
         return create_job_bundle(
             settings,
