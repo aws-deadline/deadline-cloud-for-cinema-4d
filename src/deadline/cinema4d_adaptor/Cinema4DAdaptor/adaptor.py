@@ -28,7 +28,7 @@ class Cinema4DNotRunningError(Exception):
     """Error that is raised when attempting to use Cinema4D while it is not running"""
 
 
-_FIRST_CINEMA4D_ACTIONS = ["scene_file", "take", "output_path", "multi_pass_path"]
+_FIRST_CINEMA4D_ACTIONS = ["scene_file", "take", "output_path", "multi_pass_path", "cache_text"]
 _CINEMA4D_RUN_KEYS = {
     "frame",
 }
@@ -110,7 +110,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
     @property
     def integration_data_interface_version(self) -> SemanticVersion:
-        return SemanticVersion(major=0, minor=2)
+        return SemanticVersion(major=0, minor=3)
 
     @staticmethod
     def _get_timer(timeout: int | float) -> Callable[[], bool]:

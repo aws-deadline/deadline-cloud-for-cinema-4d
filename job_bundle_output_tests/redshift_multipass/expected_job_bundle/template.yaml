@@ -39,6 +39,17 @@ parameterDefinitions:
     label: Multi-pass output path
     groupLabel: Cinema4D Settings
   description: Multi-pass image output
+- name: CacheText
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Use cached text during render (only affects Linux workers)
+    groupLabel: Cinema4D Settings
+  description: Prevents incorrect or missing text on Linux renders by using cached fonts. Increases rendering time.
+  default: '0'
+  allowedValues:
+  - '1'
+  - '0'
 steps:
 - name: Main
   parameterSpace:

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import traceback
 from typing import Any, Callable, Dict
 
@@ -24,6 +25,13 @@ _RENDERRESULT = {
     c4d.RENDERRESULT_ERRORLOADINGPROJECT: "There was an error while loading the project.",
     c4d.RENDERRESULT_NOOUTPUTSPECIFIED: "Output was not specified.",
 }
+
+CACHE_TEXT_KEY = "cache_text"
+FRAME_KEY = "frame"
+OUTPUT_PATH_KEY = "output_path"
+MULTIPASS_PATH_KEY = "multi_pass_path"
+SCENE_FILE_KEY = "scene_file"
+TAKE_KEY = "take"
 
 
 def progress_callback(progress_percent, progress_type_int):
@@ -62,16 +70,18 @@ class Cinema4DHandler:
         Constructor for the c4dpy handler. Initializes action_dict and render variables
         """
         self.action_dict = {
-            "scene_file": self.set_scene_file,
-            "take": self.set_take,
-            "frame": self.set_frame,
+            SCENE_FILE_KEY: self.set_scene_file,
+            TAKE_KEY: self.set_take,
+            FRAME_KEY: self.set_frame,
             "start_render": self.start_render,
-            "output_path": self.output_path,
-            "multi_pass_path": self.multi_pass_path,
+            OUTPUT_PATH_KEY: self.output_path,
+            MULTIPASS_PATH_KEY: self.multi_pass_path,
+            CACHE_TEXT_KEY: self.should_cache_text,
         }
         self.render_kwargs = {}
         self.take = "Main"
         self.map_path = map_path
+        self.text_was_cached = False
 
     def _remap_assets(self) -> None:
         """
@@ -216,12 +226,20 @@ class Cinema4DHandler:
         return True
 
     def start_render(self, data: dict) -> None:
+        if self.text_was_cached:
+            # Close and then reload document since we collapsed some text in the previous frame
+            # and it can no longer be animated.
+            # Reloading the document will allow the next frame to have correct data.
+            self._reload_document()
+
         self.render_data = self.doc.GetActiveRenderData()
         self.render_data[c4d.RDATA_FRAMESEQUENCE] = c4d.RDATA_FRAMESEQUENCE_MANUAL
-        frame = int(self.render_kwargs.get("frame", data["frame"]))
+        self.render_kwargs[FRAME_KEY] = int(self.render_kwargs.get(FRAME_KEY, data[FRAME_KEY]))
+        frame = self.render_kwargs[FRAME_KEY]
         fps = self.doc.GetFps()
-        self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
-        self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(frame, fps)
+        frame_time = c4d.BaseTime(frame, fps)
+        self.render_data[c4d.RDATA_FRAMEFROM] = frame_time
+        self.render_data[c4d.RDATA_FRAMETO] = frame_time
         self.render_data[c4d.RDATA_FRAMESTEP] = 1
 
         if self.render_data[c4d.RDATA_PATH]:
@@ -240,6 +258,9 @@ class Cinema4DHandler:
             c4d.COLORMODE_RGB,
         )
         rd = self.render_data.GetDataInstance()
+
+        self.text_was_cached = self._cache_text_if_needed(frame_time)
+
         result = c4d.documents.RenderDocument(
             self.doc,
             rd,
@@ -256,14 +277,16 @@ class Cinema4DHandler:
             print("Finished Rendering")
 
     def output_path(self, data: dict) -> None:
-        output_path = data.get("output_path", "")
+        output_path = data.get(OUTPUT_PATH_KEY, "")
+        self.render_kwargs[OUTPUT_PATH_KEY] = output_path
         if output_path:
             doc = c4d.documents.GetActiveDocument()
             render_data = doc.GetActiveRenderData()
             render_data[c4d.RDATA_PATH] = self.map_path(output_path)
 
     def multi_pass_path(self, data: dict) -> None:
-        multi_pass_path = data.get("multi_pass_path", "")
+        multi_pass_path = data.get(MULTIPASS_PATH_KEY, "")
+        self.render_kwargs[MULTIPASS_PATH_KEY] = multi_pass_path
         if multi_pass_path:
             doc = c4d.documents.GetActiveDocument()
             render_data = doc.GetActiveRenderData()
@@ -276,7 +299,8 @@ class Cinema4DHandler:
         Args:
             data (dict):
         """
-        take_name = data.get("take", "")
+        take_name = data.get(TAKE_KEY, "")
+        self.render_kwargs[TAKE_KEY] = take_name
         doc = c4d.documents.GetActiveDocument()
         take_data = doc.GetTakeData()
         if not take_data:
@@ -301,6 +325,15 @@ class Cinema4DHandler:
             print("Error: take not found: %s" % take_name)
         take_data.SetCurrentTake(take)
 
+    def should_cache_text(self, data: dict) -> None:
+        """
+        Sets whether text should be cached on Linux
+
+        Args:
+            data (dict): the data of whether to cache the text in the format {CACHE_TEXT_KEY: bool}
+        """
+        self.render_kwargs[CACHE_TEXT_KEY] = data.get(CACHE_TEXT_KEY, False)
+
     def set_frame(self, data: dict) -> None:
         """
         Sets the frame to render
@@ -308,7 +341,7 @@ class Cinema4DHandler:
         Args:
             data (dict):
         """
-        self.render_kwargs["frame"] = int(data["frame"])
+        self.render_kwargs[FRAME_KEY] = int(data[FRAME_KEY])
 
     def set_scene_file(self, data: dict) -> None:
         """
@@ -320,7 +353,8 @@ class Cinema4DHandler:
         Raises:
             FileNotFoundError: If path to the scene file does not yield a file
         """
-        scene_file = data.get("scene_file", "")
+        scene_file = data.get(SCENE_FILE_KEY, "")
+        self.render_kwargs[SCENE_FILE_KEY] = data[SCENE_FILE_KEY]
         if not os.path.isfile(scene_file):
             raise FileNotFoundError(f"The scene file '{scene_file}' does not exist")
         doc = c4d.documents.LoadDocument(
@@ -341,3 +375,88 @@ class Cinema4DHandler:
             c4d.documents.SetActiveDocument(doc)
             self.doc = doc
             self._remap_assets()
+
+    def _has_cached_text(self) -> bool:
+        for object in self.doc.GetObjects():
+            font_index = c4d.DescID(c4d.DescLevel(2117, 1009372, 5178))  # font
+            font_container = object[font_index]
+            font = font_container.GetFont()
+            if font:
+                return True
+        return False
+
+    def _cache_text_if_needed(self, frame_time: c4d.BaseTime) -> bool:
+        """
+        On Linux, Cinema 4D cannot handle fonts procedurally, so we need to convert them to polygons first,
+        for every frame. This is a setting that the user can opt into using `cache_text` init data.
+
+        On Windows, fonts are handled correctly, so we don't need to cache it.
+
+        If text caching is needed (i.e. this is Linux, the cache_text setting is True, and there is text in the scene),
+        this will cache the text. Otherwise, it is a no-op.
+
+        Returns True if text has been cached. Returns False otherwise
+        """
+        if CACHE_TEXT_KEY not in self.render_kwargs or not self.render_kwargs[CACHE_TEXT_KEY]:
+            if sys.platform == "linux":
+                print(
+                    "If you use text in your scene, it may render incorrectly on Linux. Please set the "
+                    "'Use cached text during render' option if you see incorrect fonts or missing text."
+                )
+            return False
+
+        if sys.platform != "linux":
+            print(
+                "Text is only cached on Linux. On other operating systems, text is calculated procedurally, so the "
+                + "text caching option is ignored."
+            )
+            return False
+
+        found_font = self._has_cached_text()
+
+        if not found_font:
+            print("No fonts were found in the scene, no need to cache text.")
+            return False
+
+        print("Fonts were found in the scene")
+
+        print("Setting the correct frame/time to determine text location.")
+        c4d.documents.SetDocumentTime(self.doc, frame_time)
+
+        print(f"Animating the text for frame {self.render_kwargs[FRAME_KEY]}.")
+        self.doc.ExecutePasses(
+            bt=None, animation=True, expressions=True, caches=True, flags=c4d.BUILDFLAGS_NONE
+        )
+        print("The location of the text was recalculated. Refreshing the text object list.")
+        # we do this a second time in case objects are recalculated and have different references
+        text_objects = []
+        for object in self.doc.GetObjects():
+            font_index = c4d.DescID(c4d.DescLevel(2117, 1009372, 5178))  # font
+            bc = object[font_index]
+            font = bc.GetFont()
+            if font:
+                text_objects.append(object)
+
+        if not text_objects:
+            print("No text objects were found in the scene after animation.")
+            return False
+
+        print(f"Text objects found in scene after animation: {text_objects}")
+
+        print("Converting all parameterized text objects to polygons for correct rendering.")
+        c4d.utils.SendModelingCommand(
+            command=c4d.MCOMMAND_MAKEEDITABLE,
+            list=text_objects,
+            mode=c4d.MODELINGCOMMANDMODE_ALL,
+            doc=self.doc,
+            flags=c4d.MODELINGCOMMANDFLAGS_CREATEUNDO,
+        )
+        print("Successfully converted all text objects to polygons.")
+
+        return True
+
+    def _reload_document(self) -> None:
+        c4d.documents.KillDocument(c4d.documents.GetActiveDocument())
+        for action in [SCENE_FILE_KEY, TAKE_KEY, OUTPUT_PATH_KEY, MULTIPASS_PATH_KEY]:
+            if action in self.render_kwargs:
+                self.action_dict[action]({action: self.render_kwargs[action]})

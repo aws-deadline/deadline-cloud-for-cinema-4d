@@ -1,8 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch
 import pytest
 from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler
 from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import progress_callback
+from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import CACHE_TEXT_KEY
 import c4d
 
 
@@ -42,3 +43,377 @@ class TestCinema4DHandler:
         handler = Cinema4DHandler(mock_map_path)
         with pytest.raises(FileNotFoundError):
             handler.set_scene_file({"scene_file": "file.c4d"})
+
+
+class TestShouldCacheText:
+    """Tests for the should_cache_text method"""
+
+    def test_should_cache_text_sets_true(self):
+        """Tests that should_cache_text correctly sets cache_text to True"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.should_cache_text({CACHE_TEXT_KEY: True})
+        assert handler.render_kwargs[CACHE_TEXT_KEY] is True
+
+    def test_should_cache_text_sets_false(self):
+        """Tests that should_cache_text correctly sets cache_text to False"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.should_cache_text({CACHE_TEXT_KEY: False})
+        assert handler.render_kwargs[CACHE_TEXT_KEY] is False
+
+    def test_should_cache_text_defaults_to_false(self):
+        """Tests that should_cache_text defaults to False when key is missing"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.should_cache_text({})
+        assert handler.render_kwargs[CACHE_TEXT_KEY] is False
+
+
+class TestHasCachedText:
+    """Tests for the _has_cached_text method"""
+
+    def test_has_cached_text_returns_true_when_font_exists(self):
+        """Tests that _has_cached_text returns True when a font is found"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock objects with fonts
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        mock_object = Mock()
+        mock_object.__getitem__ = Mock(return_value=mock_font_container)
+
+        mock_doc = Mock()
+        mock_doc.GetObjects.return_value = [mock_object]
+        handler.doc = mock_doc
+
+        assert handler._has_cached_text() is True
+
+    def test_has_cached_text_returns_false_when_no_font(self):
+        """Tests that _has_cached_text returns False when no font is found"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock objects without fonts
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = None
+
+        mock_object = Mock()
+        mock_object.__getitem__ = Mock(return_value=mock_font_container)
+
+        mock_doc = Mock()
+        mock_doc.GetObjects.return_value = [mock_object]
+        handler.doc = mock_doc
+
+        assert handler._has_cached_text() is False
+
+    def test_has_cached_text_returns_false_when_no_objects(self):
+        """Tests that _has_cached_text returns False when there are no objects"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        mock_doc = Mock()
+        mock_doc.GetObjects.return_value = []
+        handler.doc = mock_doc
+
+        assert handler._has_cached_text() is False
+
+
+class TestCacheTextIfNeeded:
+    """Tests for the _cache_text_if_needed method"""
+
+    def test_cache_text_returns_false_when_not_enabled(self):
+        """Tests that _cache_text_if_needed returns False when cache_text is not enabled"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.render_kwargs = {}
+
+        mock_frame_time = Mock()
+        result = handler._cache_text_if_needed(mock_frame_time)
+
+        assert result is False
+
+    def test_cache_text_returns_false_when_disabled(self):
+        """Tests that _cache_text_if_needed returns False when cache_text is False"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.render_kwargs = {CACHE_TEXT_KEY: False}
+
+        mock_frame_time = Mock()
+        result = handler._cache_text_if_needed(mock_frame_time)
+
+        assert result is False
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "win32")
+    def test_cache_text_returns_false_on_windows(self, capsys):
+        """Tests that _cache_text_if_needed returns False on Windows"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.render_kwargs = {CACHE_TEXT_KEY: True}
+
+        mock_frame_time = Mock()
+        result = handler._cache_text_if_needed(mock_frame_time)
+
+        assert result is False
+        captured = capsys.readouterr()
+        assert "Text is only cached on Linux" in captured.out
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "linux")
+    def test_cache_text_returns_false_when_no_fonts(self, capsys):
+        """Tests that _cache_text_if_needed returns False when no fonts are found"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.render_kwargs = {CACHE_TEXT_KEY: True}
+
+        mock_doc = Mock()
+        mock_doc.GetObjects.return_value = []
+        handler.doc = mock_doc
+
+        mock_frame_time = Mock()
+        result = handler._cache_text_if_needed(mock_frame_time)
+
+        assert result is False
+        captured = capsys.readouterr()
+        assert "No fonts were found in the scene" in captured.out
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "linux")
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.SetDocumentTime"
+    )
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.utils.SendModelingCommand"
+    )
+    def test_cache_text_converts_text_to_polygons(
+        self, mock_send_modeling_command: Mock, mock_set_document_time: Mock, capsys
+    ):
+        """Tests that _cache_text_if_needed converts text objects to polygons on Linux"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.render_kwargs = {CACHE_TEXT_KEY: True, "frame": 42}
+
+        # Create mock font and text objects
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        mock_text_object = Mock()
+        mock_text_object.__getitem__ = Mock(return_value=mock_font_container)
+
+        mock_doc = Mock()
+        mock_doc.GetObjects.return_value = [mock_text_object]
+        mock_doc.ExecutePasses = Mock()
+        handler.doc = mock_doc
+
+        mock_frame_time = Mock()
+        result = handler._cache_text_if_needed(mock_frame_time)
+
+        assert result is True
+        mock_set_document_time.assert_called_once_with(mock_doc, mock_frame_time)
+        mock_doc.ExecutePasses.assert_called_once()
+        mock_send_modeling_command.assert_called_once()
+
+        captured = capsys.readouterr()
+        assert "Fonts were found in the scene" in captured.out
+        assert "Converting all parameterized text objects to polygons" in captured.out
+        assert "Successfully converted all text objects to polygons" in captured.out
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "linux")
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.SetDocumentTime"
+    )
+    def test_cache_text_returns_false_when_no_text_objects_after_animation(
+        self, mock_set_document_time: Mock, capsys
+    ):
+        """Tests that _cache_text_if_needed returns False when no text objects exist after animation"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.render_kwargs = {CACHE_TEXT_KEY: True, "frame": 42}
+
+        # Create mock font for initial check
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        mock_text_object = Mock()
+        mock_text_object.__getitem__ = Mock(return_value=mock_font_container)
+
+        # First call returns text object, second call (after animation) returns empty
+        mock_doc = Mock()
+        mock_doc.GetObjects.side_effect = [[mock_text_object], []]
+        mock_doc.ExecutePasses = Mock()
+        handler.doc = mock_doc
+
+        mock_frame_time = Mock()
+        result = handler._cache_text_if_needed(mock_frame_time)
+
+        assert result is False
+        captured = capsys.readouterr()
+        assert "No text objects were found in the scene after animation" in captured.out
+
+
+class TestReloadDocument:
+    """Tests for the _reload_document method"""
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.KillDocument")
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_reload_document_calls_actions(
+        self, mock_get_active_doc: Mock, mock_kill_document: Mock
+    ):
+        """Tests that _reload_document kills the document and reloads necessary actions"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Set up render_kwargs with actions to reload
+        handler.render_kwargs = {
+            "scene_file": "test.c4d",
+            "take": "Main",
+            "output_path": "/output",
+            "multi_pass_path": "/multipass",
+        }
+
+        # Mock the action_dict methods to avoid actual file operations
+        mock_scene_file = Mock()
+        mock_take = Mock()
+        mock_output_path = Mock()
+        mock_multi_pass_path = Mock()
+        handler.action_dict["scene_file"] = mock_scene_file
+        handler.action_dict["take"] = mock_take
+        handler.action_dict["output_path"] = mock_output_path
+        handler.action_dict["multi_pass_path"] = mock_multi_pass_path
+
+        mock_doc = Mock()
+        mock_get_active_doc.return_value = mock_doc
+
+        handler._reload_document()
+
+        mock_kill_document.assert_called_once_with(mock_doc)
+        mock_scene_file.assert_called_once_with({"scene_file": "test.c4d"})
+        mock_take.assert_called_once_with({"take": "Main"})
+        mock_output_path.assert_called_once_with({"output_path": "/output"})
+        mock_multi_pass_path.assert_called_once_with({"multi_pass_path": "/multipass"})
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.KillDocument")
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_reload_document_only_reloads_existing_actions(
+        self, mock_get_active_doc: Mock, mock_kill_document: Mock
+    ):
+        """Tests that _reload_document only reloads actions that exist in render_kwargs"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Set up render_kwargs with only some actions
+        handler.render_kwargs = {
+            "scene_file": "test.c4d",
+        }
+
+        # Mock the action_dict methods
+        mock_scene_file = Mock()
+        mock_take = Mock()
+        mock_output_path = Mock()
+        mock_multi_pass_path = Mock()
+        handler.action_dict["scene_file"] = mock_scene_file
+        handler.action_dict["take"] = mock_take
+        handler.action_dict["output_path"] = mock_output_path
+        handler.action_dict["multi_pass_path"] = mock_multi_pass_path
+
+        mock_doc = Mock()
+        mock_get_active_doc.return_value = mock_doc
+
+        handler._reload_document()
+
+        mock_kill_document.assert_called_once_with(mock_doc)
+        mock_scene_file.assert_called_once_with({"scene_file": "test.c4d"})
+        mock_take.assert_not_called()
+        mock_output_path.assert_not_called()
+        mock_multi_pass_path.assert_not_called()
+
+
+class TestStartRenderWithTextCaching:
+    """Tests for start_render method with text caching functionality"""
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_start_render_reloads_document_when_text_was_cached(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Tests that start_render reloads the document when text was cached in previous frame"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.text_was_cached = True
+
+        # Set up mock document and render data
+        mock_doc = Mock()
+        mock_render_data = MagicMock()
+        mock_render_data.GetDataInstance = Mock()
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        mock_doc.GetFps.return_value = 30
+        handler.doc = mock_doc
+
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with (
+            patch.object(handler, "_reload_document") as mock_reload,
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+        ):
+            handler.start_render({"frame": 1})
+
+        mock_reload.assert_called_once()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_start_render_does_not_reload_when_text_not_cached(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Tests that start_render does not reload the document when text was not cached"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.text_was_cached = False
+
+        # Set up mock document and render data
+        mock_doc = Mock()
+        mock_render_data = MagicMock()
+        mock_render_data.GetDataInstance = Mock()
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        mock_doc.GetFps.return_value = 30
+        handler.doc = mock_doc
+
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with (
+            patch.object(handler, "_reload_document") as mock_reload,
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+        ):
+            handler.start_render({"frame": 1})
+
+        mock_reload.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_start_render_updates_text_was_cached_flag(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Tests that start_render updates the text_was_cached flag based on _cache_text_if_needed result"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.text_was_cached = False
+
+        # Set up mock document and render data
+        mock_doc = Mock()
+        mock_render_data = MagicMock()
+        mock_render_data.GetDataInstance = Mock()
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        mock_doc.GetFps.return_value = 30
+        handler.doc = mock_doc
+
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        # First call: _cache_text_if_needed returns True
+        with (
+            patch.object(handler, "_reload_document"),
+            patch.object(handler, "_cache_text_if_needed", return_value=True),
+        ):
+            handler.start_render({"frame": 1})
+
+        assert handler.text_was_cached is True
+
+        # Second call: _cache_text_if_needed returns False (no text to cache this time)
+        with (
+            patch.object(handler, "_reload_document"),
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+        ):
+            handler.start_render({"frame": 1})
+
+        assert handler.text_was_cached is False
