@@ -63,14 +63,14 @@ def extract_redshift_log(log_file_path):
     start_pos = start_match.end()
 
     # Find the end marker
-    end_pattern = r"={70,}.*?END OF REDSHIFT DEBUG LOG"
-    end_match = re.search(end_pattern, content[start_pos:], re.DOTALL)
+    end_pattern = r"END OF REDSHIFT DEBUG LOG"
+    end_match = re.search(end_pattern, content[start_pos:])
 
     if not end_match:
         print("Error: Could not find 'END OF REDSHIFT DEBUG LOG' marker in the file.")
         return None
 
-    end_pos = start_pos + end_match.start()
+    end_pos = start_pos + end_match.start() - 2
 
     # Extract the content between markers
     extracted_content = content[start_pos:end_pos].strip()
