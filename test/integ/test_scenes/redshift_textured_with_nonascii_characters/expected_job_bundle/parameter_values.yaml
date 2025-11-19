@@ -11,6 +11,8 @@ parameterValues:
   value: ''
 - name: ActivateErrorChecking
   value: '1'
+- name: DetailedLogging
+  value: '0'
 - name: Frames
   value: '1'
 - name: CondaPackages

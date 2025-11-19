@@ -7,6 +7,8 @@ parameterValues:
   value: ''
 - name: ActivateErrorChecking
   value: '1'
+- name: DetailedLogging
+  value: '0'
 - name: MainFrames
   value: '1'
 - name: _0123456789abcdef0123456789abcdef0123456789abcdef012345678Frames

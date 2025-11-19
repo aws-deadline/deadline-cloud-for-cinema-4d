@@ -5,7 +5,7 @@ import subprocess
 import os
 from difflib import unified_diff
 import re
-from yaml import safe_load
+from yaml import safe_load, dump
 from unittest.mock import patch
 
 
@@ -115,6 +115,20 @@ def replace_backslashes(content: str) -> str:
     return content
 
 
+def _strip_job_environments_from_template(content: str) -> str:
+    """
+    Strip the jobEnvironments section from a template.yaml file.
+    """
+    try:
+        data = safe_load(content)
+        if isinstance(data, dict) and "jobEnvironments" in data:
+            del data["jobEnvironments"]
+        return dump(data, default_flow_style=False, sort_keys=True)
+    except Exception:
+        # If parsing fails, return original content
+        return content
+
+
 def assert_expected_job_bundle_and_generated_job_bundle_are_equal(
     expected_job_bundle_dir_path: Path, generated_job_bundle_dir_path: Path
 ) -> None:
@@ -168,6 +182,15 @@ def assert_expected_job_bundle_and_generated_job_bundle_are_equal(
             if file == "parameter_values.yaml":
                 content1 = _normalize_conda_packages_version(content1)
                 content2 = _normalize_conda_packages_version(content2)
+
+            # Special handling for template.yaml to strip job environments.
+            # Job environments can contain code that changes frequently
+            # We don't want to update all tests every time there's a
+            # small change in the job environment code, so we strip it before comparison.
+            # We check for the code comparison in our unit tests which should be sufficient.
+            if file == "template.yaml":
+                content1 = _strip_job_environments_from_template(content1)
+                content2 = _strip_job_environments_from_template(content2)
 
             if content1 == content2:
                 results["identical_files"].append(file)

@@ -46,6 +46,17 @@ parameterDefinitions:
   allowedValues:
   - '1'
   - '0'
+- name: DetailedLogging
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Enable Detailed Logging
+    groupLabel: Cinema4D Settings
+  description: Enable detailed Cinema 4D + Redshift renderer logging for debugging.
+  default: '0'
+  allowedValues:
+  - '1'
+  - '0'
 - name: MainFrames
   type: STRING
   userInterface:
