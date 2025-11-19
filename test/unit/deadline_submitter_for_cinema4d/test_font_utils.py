@@ -114,10 +114,10 @@ class TestFontUtils:
             ),
             mock.patch("deadline.cinema4d_submitter.font_utils.logger") as mock_logger,
         ):
-            # Should not raise exception, just log error
+            # Should not raise exception, just log warning
             copy_font_to_scene_folder("NonExistentFont", scene_location)
 
-            mock_logger.error.assert_called_with(
+            mock_logger.warning.assert_called_with(
                 "Font 'NonExistentFont' not found in system font directories"
             )
 
@@ -173,8 +173,8 @@ class TestFontUtils:
             # Should not raise exception
             copy_font_to_scene_folder("", scene_location)
 
-            # Should log error
-            mock_logger.error.assert_called_with("Failed to copy font: font name is empty")
+            # Should log warning
+            mock_logger.warning.assert_called_with("Failed to copy font: font name is empty")
 
     def test_copy_font_whitespace_only_name(self, tmp_path):
         """Test copy_font_to_scene_folder with whitespace-only font name."""
@@ -185,8 +185,8 @@ class TestFontUtils:
             # Should not raise exception
             copy_font_to_scene_folder("   ", scene_location)
 
-            # Should log error
-            mock_logger.error.assert_called_with("Failed to copy font: font name is empty")
+            # Should log warning
+            mock_logger.warning.assert_called_with("Failed to copy font: font name is empty")
 
     def test_copy_font_non_valid_scene_location(self, tmp_path):
         """Test copy_font_to_scene_folder with non-existent scene location."""
@@ -196,8 +196,8 @@ class TestFontUtils:
             # Should not raise exception
             copy_font_to_scene_folder("TestFont", scene_location)
 
-            # Should log error with path
-            mock_logger.error.assert_called_with(
+            # Should log warning with path
+            mock_logger.warning.assert_called_with(
                 f"Failed to copy font: scene location does not exist at {scene_location}"
             )
 
@@ -218,9 +218,9 @@ class TestFontUtils:
             # Should not raise exception
             copy_font_to_scene_folder("TestFont", scene_location)
 
-            # Should log error with directory path and error details
+            # Should log warning with directory path and error details
             fonts_dir = scene_location / FONTS_DIR
-            mock_logger.error.assert_called_with(
+            mock_logger.warning.assert_called_with(
                 f"Failed to create fonts directory '{fonts_dir}': Permission denied"
             )
 
@@ -242,10 +242,10 @@ class TestFontUtils:
             # Should not raise exception
             copy_font_to_scene_folder("TestFont", scene_location)
 
-            # Should log error with font name, source, destination, and error details
+            # Should log warning with font name, source, destination, and error details
             fonts_dir = scene_location / FONTS_DIR
             destination = fonts_dir / "test.ttf"
-            mock_logger.error.assert_called_with(
+            mock_logger.warning.assert_called_with(
                 f"Failed to copy font 'TestFont' from '/system/fonts/test.ttf' to '{destination}': Disk full"
             )
 
@@ -287,7 +287,7 @@ class TestFontUtils:
             # Should not raise exception
             copy_font_to_scene_folder("non_validFont", scene_location)
 
-            # Should log error
-            mock_logger.error.assert_called_with(
+            # Should log warning
+            mock_logger.warning.assert_called_with(
                 "Font file validation failed: /system/fonts/non_valid.ttf"
             )

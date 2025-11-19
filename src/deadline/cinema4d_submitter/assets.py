@@ -9,7 +9,8 @@ import c4d
 from .platform_utils import is_windows
 from .scene import Scene
 from .font_utils import is_asset_a_font, copy_font_to_scene_folder, FONTS_DIR
-from .error_collector import font_error_collector
+from .warning_collector import warning_collector
+from .path_validator import validate_asset_paths
 
 _FRAME_RE = re.compile("#+")
 
@@ -23,9 +24,9 @@ class AssetIntrospector:
         Returns:
             set[Path]: A set containing filepaths of assets needed for Rendering
         """
-        # Clear any previous font errors before processing
-        font_error_collector.clear_errors()
-        
+        # Clear any previous warnings before processing
+        warning_collector.clear_warnings()
+
         # Grab tx files (if we need to)
         assets: set[Path] = set()
 
@@ -61,5 +62,8 @@ class AssetIntrospector:
                 for font_file in fonts_dir.iterdir():
                     if font_file.is_file():
                         assets.add(font_file)
+
+        # Validate asset paths for Windows-incompatible characters
+        validate_asset_paths(assets)
 
         return assets

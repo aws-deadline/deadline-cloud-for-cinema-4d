@@ -44,7 +44,7 @@ class Cinema4DClient(ClientInterface):
         sys.exit(0)
 
     def map_path(self, path: str) -> str:
-        """
+        r"""
         Maps a path using the path mapping rules from the server.
 
         When submitting jobs from Mac, Cinema 4D's c4d.GetAllAssetsNew() API can sometimes return paths

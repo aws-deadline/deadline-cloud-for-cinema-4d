@@ -1,3 +1,11 @@
+## 0.8.5 (2025-11-19)
+
+
+### Features
+* Add detailed Cinema 4D + Redshift logging option while submitting (#342) ([`64e82a8`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/64e82a80486cfa3d88d501aab3969398b55af17f))
+
+
+
 ## 0.8.4 (2025-11-04)
 
 

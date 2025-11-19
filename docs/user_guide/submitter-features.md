@@ -41,6 +41,7 @@ Settings specific to your Cinema 4D render:
 - **Takes** - Select which Cinema 4D takes to render
 - **Override Frame Range** - Override the frame range from your scene settings
 - **Automatic Error Checking** - Optional checkbox to activate/deactivate error checking during rendering
+- **Activate detailed logging** - Enable detailed logging to capture detailed logs for debugging rendering issues. When enabled, debug logs are automatically captured and printed to the job output for easy review
 - **Task Run Timeout** - Maximum time allowed for each task to complete
 - **Cinema 4D Launch Timeout** - Maximum time allowed for Cinema 4D to start up
 - **Cinema 4D Shutdown Timeout** - Maximum time allowed for Cinema 4D to shut down cleanly
@@ -55,6 +56,58 @@ Settings specific to your Cinema 4D render:
 **Host Requirements** (optional) - Allows you to specify which types of hosts will be eligible for picking up tasks for this job.
 
 The submitter handles the technical details so you can focus on your creative work.
+
+## Detailed Logging for Debugging
+
+The **Activate detailed logging** feature helps you troubleshoot rendering issues by capturing detailed logs.
+
+### When to Use Detailed Logging
+
+Enable detailed logging when you need to:
+- Debug Redshift rendering issues or unexpected behavior
+- Investigate rendering artifacts or errors
+- Analyze renderer performance and behavior
+- Capture detailed information for technical support
+
+### How It Works
+
+When you enable the "Activate detailed logging" checkbox in the Job-Specific Settings:
+
+1. **Log Capture** - The system automatically enables Redshift debug logging by setting the `REDSHIFT_DEBUGCAPTURE` environment variable
+2. **Log Output** - After rendering completes, all Redshift logs are automatically printed to the job output for easy review
+
+### Viewing the Logs
+
+To view the detailed logs:
+
+1. Open Deadline Cloud Monitor
+2. Navigate to your completed job
+3. Right-click on a task and select "View logs"
+4. Enable the "View logs for all tasks" button.
+5. Scroll through the task run logs to find the "Shut down DetailedLogging" for detailed logs.
+
+The Redshift logs are output in HTML format and include timestamps at the start of each line. If you want to save and view the logs in a web browser without timestamps, you can use the provided cleanup utility:
+
+1. Download the detailed log file from Deadline Cloud Monitor (right-click on task → "Download logs")
+2. Run the cleanup script with the log file path:
+   ```bash
+   cd deadline-cloud-for-cinema-4d/scripts
+   python clean_redshift_detailed_logs.py /path/to/detailed_logs.log
+   ```
+   Or run it without arguments and enter the path when prompted:
+   ```bash
+   python clean_redshift_detailed_logs.py
+   ```
+3. Open the generated `redshift_log_cleaned.html` file in your web browser
+
+The cleanup script automatically extracts the Redshift HTML logs from the detailed log file and removes timestamp prefixes (e.g., `2024/11/17 14:23:45-08:00`) from each line, making the logs easier to read and compare.
+
+### Important Notes
+
+- Detailed logging is **disabled by default** to minimize overhead
+- Only enable it when you need to debug specific issues
+- Logs are captured on a per-job basis - each job has its own log output
+- The feature works across Windows, Linux worker nodes
 
 ---
 

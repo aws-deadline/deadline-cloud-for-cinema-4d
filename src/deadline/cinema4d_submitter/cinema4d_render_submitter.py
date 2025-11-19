@@ -28,14 +28,15 @@ from .assets import AssetIntrospector
 from .data_classes import (
     RenderSubmitterUISettings,
 )
+from .detailed_logging_utils import get_detailed_logging_environment
 from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
-from .error_collector import font_error_collector
+from .warning_collector import warning_collector
 from .platform_utils import is_windows
 from .scene import Animation, Scene
 from .style import C4D_STYLE
 from .takes import TakeSelection
 from .template_timeout_patcher import add_timeouts_to_job_template
-from .ui.components import SceneSettingsWidget, FontWarningDialog
+from .ui.components import SceneSettingsWidget, SubmissionWarningDialog
 
 LOADED = False
 
@@ -101,6 +102,9 @@ def _get_parameter_values(
     parameter_values.append(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
+    parameter_values.append(
+        {"name": "DetailedLogging", "value": "1" if settings.activate_detailed_logging else "0"}
+    )
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -126,7 +130,8 @@ def _get_parameter_values(
     if parameter_overlap:
         raise DeadlineOperationError(
             "The following queue parameters conflict with the Cinema4D job parameters:\n"
-            + f"{', '.join(parameter_overlap)}"
+            + f"{', '.join(parameter_overlap)}\n"
+            "Rename the parameters on the queue to continue job submissions."
         )
 
     # If we're overriding the adaptor with wheels, remove deadline_cloud_for_cinema4d from the CondaPackages
@@ -283,6 +288,13 @@ def _get_job_template(
         if "jobEnvironments" not in job_template:
             job_template["jobEnvironments"] = []
         job_template["jobEnvironments"].append(override_environment["environment"])
+
+    # Add DetailedLogging job environment
+    if adaptor:
+        detailed_logging_environment = get_detailed_logging_environment()
+        if "jobEnvironments" not in job_template:
+            job_template["jobEnvironments"] = []
+        job_template["jobEnvironments"].append(detailed_logging_environment)
 
     # Conditionally add FontManager job environment if fonts are detected (Windows only)
     if adaptor and is_windows() and scene_has_fonts(Path(Scene.name()).parent):
@@ -563,7 +575,8 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
         take_name = take_data.name
         if take_name in take_names:
             raise RuntimeError(
-                f"You have multiple takes named '{take_name}'. Please use unique take names."
+                f"You have multiple takes named '{take_name}' with different render settings among the takes. "
+                "Please use unique take names."
             )
         take_names.add(take_name)
 
@@ -730,16 +743,16 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        # Check for font errors and show warning dialog if needed
-        if font_error_collector.has_errors():
-            continue_submission, _ = FontWarningDialog.show_font_warnings(
-                font_error_collector.get_errors(), widget
+        # Check for warnings and show warning dialog if needed
+        if warning_collector.has_warnings():
+            continue_submission = SubmissionWarningDialog.show_warnings(
+                warning_collector.get_warnings(), "Issues Detected", widget
             )
-            
+
             if not continue_submission:
                 # User chose to cancel submission
-                raise RuntimeError("Submission cancelled due to font issues")
-        
+                raise RuntimeError("Submission cancelled due to issues")
+
         return create_job_bundle(
             settings,
             takes,

@@ -84,6 +84,31 @@ A: Yes, you can set job priority levels in the submitter to control render queue
 
 A: The submitter includes built-in error detection to catch common issues like missing assets before submission. This can be deactivated in the submitter.
 
+**Q: How do I enable detailed logging for debugging rendering issues?**
+
+A: The submitter includes an "Activate detailed logging" checkbox in the Job-Specific Settings that captures detailed logs for troubleshooting. When enabled:
+
+1. The system automatically enables debug logging during rendering
+2. After rendering completes, all logs are printed to the job output
+
+To view the logs:
+1. Open Deadline Cloud Monitor
+2. Navigate to your completed job
+3. Right-click on a task and select "View logs"
+4. Enable the "View logs for all tasks" button
+5. Scroll through the task run logs to find the "Shut down DetailedLogging" section for detailed logs
+
+The logs are output in HTML format with timestamps. To save and view them in a web browser without timestamps:
+
+```bash
+cd deadline-cloud-for-cinema-4d/scripts
+python clean_redshift_detailed_logs.py /path/to/detailed_logs.log
+```
+
+Or run without arguments and enter the path when prompted. This generates a `redshift_log_cleaned.html` file that's easier to read and compare.
+
+Use detailed logging when you need to debug Redshift rendering issues, investigate rendering artifacts or errors, analyze renderer performance, or capture information for technical support.
+
 **Q: I'm getting permission errors with a system-wide installation on Windows. How do I fix this?**
 
 A: If users encounter permission errors when accessing the submitter after a system-wide installation:

@@ -74,6 +74,10 @@ class RenderSubmitterUISettings:
     activate_error_checking: str = field(
         default=ErrorChecking.ACTIVATE.value, metadata={"sticky": True}
     )
+    # Activating detailed logging can significantly slow the rendering.
+    # Hence, this setting is not sticky and customers would have to manually
+    # click it everytime they want to submit such a job.
+    activate_detailed_logging: bool = field(default=False, metadata={"sticky": False})
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )

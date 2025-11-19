@@ -1,6 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # style based on redshift c4d qt ui emulation
 
+# Common styles for reuse
+HEADER_LABEL_STYLE = "font-weight: bold; font-size: 12px;"
+
 C4D_STYLE = """
 /* Redshift Rendering Technologies */
 /* Cinema 4D Dark theme emulation */
