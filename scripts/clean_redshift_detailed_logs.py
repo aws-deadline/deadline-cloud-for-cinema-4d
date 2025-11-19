@@ -52,30 +52,33 @@ def extract_redshift_log(log_file_path):
         print(f"Error reading file: {e}")
         return None
 
-    # Find the start marker
-    start_pattern = r"REDSHIFT DEBUG LOG:.*?={70,}"
-    start_match = re.search(start_pattern, content, re.DOTALL)
+    # Split by start marker
+    start_marker = "REDSHIFT DEBUG LOG:"
+    parts = content.split(start_marker, 1)
 
-    if not start_match:
+    if len(parts) < 2:
         print("Error: Could not find 'REDSHIFT DEBUG LOG:' marker in the file.")
         return None
 
-    start_pos = start_match.end()
+    # Split by end marker
+    end_marker = "END OF REDSHIFT DEBUG LOG"
+    middle_parts = parts[1].split(end_marker, 1)
 
-    # Find the end marker
-    end_pattern = r"END OF REDSHIFT DEBUG LOG"
-    end_match = re.search(end_pattern, content[start_pos:])
-
-    if not end_match:
+    if len(middle_parts) < 2:
         print("Error: Could not find 'END OF REDSHIFT DEBUG LOG' marker in the file.")
         return None
 
-    end_pos = start_pos + end_match.start() - 2
+    # Extract content and remove the separator lines (first 2 lines and last 2 lines)
+    raw_content = middle_parts[0]
+    lines = raw_content.split("\n")
 
-    # Extract the content between markers
-    extracted_content = content[start_pos:end_pos].strip()
+    # Skip first 2 lines (path line and equals line) and last 2 lines (empty and equals line)
+    if len(lines) > 4:
+        extracted_content = "\n".join(lines[2:-2])
+    else:
+        extracted_content = ""
 
-    return extracted_content
+    return extracted_content.strip()
 
 
 def remove_timestamps(input_text):

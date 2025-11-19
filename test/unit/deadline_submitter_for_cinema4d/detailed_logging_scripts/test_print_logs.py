@@ -396,7 +396,7 @@ class TestPrintLogFile:
 
         # THEN
         assert "ERROR LOG:" in captured.out
-        assert "Error: Error reading log file" in captured.out
+        assert "Error reading log file" in captured.out
 
     def test_handles_unicode_errors(self, capsys):
         """Test that unicode errors are handled with replace strategy"""

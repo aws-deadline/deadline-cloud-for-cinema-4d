@@ -84,7 +84,7 @@ To view the detailed logs:
 2. Navigate to your completed job
 3. Right-click on a task and select "View logs"
 4. Enable the "View logs for all tasks" button.
-4. Scroll through the task run logs to find the "Shut down DetailedLogging" for detailed logs.
+5. Scroll through the task run logs to find the "Shut down DetailedLogging" for detailed logs.
 
 The Redshift logs are output in HTML format and include timestamps at the start of each line. If you want to save and view the logs in a web browser without timestamps, you can use the provided cleanup utility:
 

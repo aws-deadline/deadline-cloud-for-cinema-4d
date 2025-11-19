@@ -170,7 +170,7 @@ def print_log_file(log_file, log_type="LOG"):
         with open(log_file, "r", encoding="utf-8", errors="replace") as f:
             print(f.read())
     except Exception as e:
-        print(f"Error: Error reading log file {log_file}: {e}")
+        print(f"Error reading log file {log_file}: {e}")
         return
 
     print(f"\n{'='*80}")

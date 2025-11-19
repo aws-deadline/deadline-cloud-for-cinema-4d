@@ -86,7 +86,7 @@ A: The submitter includes built-in error detection to catch common issues like m
 
 **Q: How do I enable detailed logging for debugging rendering issues?**
 
-A: The submitter includes a "Activate detailed logging" checkbox in the Job-Specific Settings that captures detailed logs for troubleshooting. When enabled:
+A: The submitter includes an "Activate detailed logging" checkbox in the Job-Specific Settings that captures detailed logs for troubleshooting. When enabled:
 
 1. The system automatically enables debug logging during rendering
 2. After rendering completes, all logs are printed to the job output
