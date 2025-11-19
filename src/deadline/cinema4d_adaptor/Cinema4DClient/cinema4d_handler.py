@@ -31,6 +31,7 @@ FRAME_KEY = "frame"
 OUTPUT_PATH_KEY = "output_path"
 MULTIPASS_PATH_KEY = "multi_pass_path"
 SCENE_FILE_KEY = "scene_file"
+START_RENDER_KEY = "start_render"
 TAKE_KEY = "take"
 
 
@@ -73,7 +74,7 @@ class Cinema4DHandler:
             SCENE_FILE_KEY: self.set_scene_file,
             TAKE_KEY: self.set_take,
             FRAME_KEY: self.set_frame,
-            "start_render": self.start_render,
+            START_RENDER_KEY: self.start_render,
             OUTPUT_PATH_KEY: self.output_path,
             MULTIPASS_PATH_KEY: self.multi_pass_path,
             CACHE_TEXT_KEY: self.should_cache_text,
@@ -378,7 +379,9 @@ class Cinema4DHandler:
 
     def _has_cached_text(self) -> bool:
         for object in self.doc.GetObjects():
-            font_index = c4d.DescID(c4d.DescLevel(2117, 1009372, 5178))  # font
+            font_index = c4d.DescID(
+                c4d.DescLevel(c4d.PRIM_TEXT_FONT, c4d.FONTCHOOSER_DATA, c4d.OBJECT_SPLINETEXT)
+            )
             font_container = object[font_index]
             font = font_container.GetFont()
             if font:
@@ -431,7 +434,9 @@ class Cinema4DHandler:
         # we do this a second time in case objects are recalculated and have different references
         text_objects = []
         for object in self.doc.GetObjects():
-            font_index = c4d.DescID(c4d.DescLevel(2117, 1009372, 5178))  # font
+            font_index = c4d.DescID(
+                c4d.DescLevel(c4d.PRIM_TEXT_FONT, c4d.FONTCHOOSER_DATA, c4d.OBJECT_SPLINETEXT)
+            )
             bc = object[font_index]
             font = bc.GetFont()
             if font:
@@ -445,11 +450,11 @@ class Cinema4DHandler:
 
         print("Converting all parameterized text objects to polygons for correct rendering.")
         c4d.utils.SendModelingCommand(
-            command=c4d.MCOMMAND_MAKEEDITABLE,
+            command=c4d.MCOMMAND_MAKEEDITABLE,  # convert the cached parameterized text to polygons
             list=text_objects,
-            mode=c4d.MODELINGCOMMANDMODE_ALL,
+            mode=c4d.MODELINGCOMMANDMODE_ALL,  # apply to all points/polygons
             doc=self.doc,
-            flags=c4d.MODELINGCOMMANDFLAGS_CREATEUNDO,
+            flags=c4d.MODELINGCOMMANDFLAGS_CREATEUNDO,  # apply to the current document
         )
         print("Successfully converted all text objects to polygons.")
 
