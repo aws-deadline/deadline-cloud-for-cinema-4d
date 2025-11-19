@@ -751,7 +751,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
             if not continue_submission:
                 # User chose to cancel submission
-                raise RuntimeError("Submission cancelled due to issues")
+                raise RuntimeError("Submission cancelled")
 
         return create_job_bundle(
             settings,

@@ -27,6 +27,9 @@ class AssetIntrospector:
         # Clear any previous warnings before processing
         warning_collector.clear_warnings()
 
+        # Clear any previous warnings before processing
+        warning_collector.clear_warnings()
+
         # Grab tx files (if we need to)
         assets: set[Path] = set()
 
