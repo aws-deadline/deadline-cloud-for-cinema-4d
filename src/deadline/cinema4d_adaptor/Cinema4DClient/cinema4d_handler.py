@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import sys
 import traceback
 from typing import Any, Callable, Dict
 
@@ -408,13 +407,15 @@ class Cinema4DHandler:
 
     def _cache_text_if_needed(self, frame_time: c4d.BaseTime) -> bool:
         """
-        On Linux, Cinema 4D cannot handle fonts procedurally, so we need to convert them to polygons first,
-        for every frame. This is a setting that the user can opt into using `use_cached_text` init data.
+        On cross-platform submissions, Cinema 4D sometimes handles fonts incorrectly.
 
-        On Windows, fonts are handled correctly, so we don't need to cache it.
+        To work around this, the user can select the `Use cached text during render` option in the submitter
+        This will convert the text to polygons first for each frame, rather than procedurally generating text.
 
-        If text caching is needed (i.e. this is Linux, the use_cached_text setting is True, and there is text in the scene),
-        this will cache the text. Otherwise, it is a no-op.
+        This option is most often used on Linux, which doesn't support procedural font rendering.
+        However, it is also relevant to cross-platform submissions from Mac -> Windows.
+
+        If text caching is needed, this function will cache the text. Otherwise, it is a no-op.
 
         Returns True if text has been cached. Returns False otherwise
         """
@@ -422,17 +423,9 @@ class Cinema4DHandler:
             USE_CACHED_TEXT_KEY not in self.render_kwargs
             or not self.render_kwargs[USE_CACHED_TEXT_KEY]
         ):
-            if sys.platform == "linux":
-                print(
-                    "If you use text in your scene, it may render incorrectly on Linux. Please set the "
-                    "'Use cached text during render' option if you see incorrect fonts or missing text."
-                )
-            return False
-
-        if sys.platform != "linux":
             print(
-                "Text is only cached on Linux. On other operating systems, text is calculated procedurally, so the "
-                + "text caching option is ignored."
+                "If you see incorrect fonts or missing text, try the 'Use cached text during render' option "
+                "under 'Job-specific settings' in the submitter."
             )
             return False
 

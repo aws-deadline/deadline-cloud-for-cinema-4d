@@ -173,14 +173,13 @@ class SceneSettingsWidget(QWidget):
         rendering_options_layout = QVBoxLayout(rendering_options_box)
 
         self.cache_text_chck = QCheckBox(
-            "Use cached text during render (only affects Linux workers)", self
+            "Use cached text during render", self
         )
         rendering_options_layout.addWidget(self.cache_text_chck)
 
         cache_text_warning_label = QLabel(
-            "Prevents incorrect or missing text on Linux renders by using cached fonts. Ignored on Windows renders. "
-            + "If there are no fonts in the scene, this is ignored. If there are fonts in the scene, this will increase "
-            + "rendering time."
+            "Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is "
+            "ignored. If there are fonts in the scene, this will increase rendering time."
         )
         cache_text_warning_label.setWordWrap(True)
         rendering_options_layout.addWidget(cache_text_warning_label)

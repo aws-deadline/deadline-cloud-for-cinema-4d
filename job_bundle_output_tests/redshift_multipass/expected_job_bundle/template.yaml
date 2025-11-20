@@ -43,9 +43,9 @@ parameterDefinitions:
   type: STRING
   userInterface:
     control: CHECK_BOX
-    label: Use cached text during render (only affects Linux workers)
+    label: Use cached text during render
     groupLabel: Cinema4D Settings
-  description: Prevents incorrect or missing text on Linux renders by using cached fonts. Increases rendering time.
+  description: Prevents incorrect or missing text by using cached fonts. Increases rendering time.
   default: '0'
   allowedValues:
   - '1'
