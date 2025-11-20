@@ -450,7 +450,7 @@ class TestCinema4DAdaptor_populate_action_queue:
         expected_order = ["scene_file", "take", "output_path", "multi_pass_path", "use_cached_text"]
         assert action_names == expected_order
 
-    def test_populate_action_queue_with_cache_text(self, init_data: dict):
+    def test_populate_action_queue_with_use_cached_text(self, init_data: dict):
         """Tests that _populate_action_queue includes use_cached_text when present in init_data"""
         # GIVEN
         init_data["use_cached_text"] = "1"
@@ -467,19 +467,19 @@ class TestCinema4DAdaptor_populate_action_queue:
                 actions.append(action)
 
         # Find the use_cached_text action
-        cache_text_action = next((a for a in actions if a.name == "use_cached_text"), None)
-        assert cache_text_action is not None, "use_cached_text action should be in the queue"
-        assert cache_text_action.args == {"use_cached_text": "1"}
+        use_cached_text_action = next((a for a in actions if a.name == "use_cached_text"), None)
+        assert use_cached_text_action is not None, "use_cached_text action should be in the queue"
+        assert use_cached_text_action.args == {"use_cached_text": "1"}
 
-    def test_populate_action_queue_without_cache_text(self):
+    def test_populate_action_queue_without_use_cached_text(self):
         """Tests that _populate_action_queue works when use_cached_text is not in init_data"""
         # GIVEN
-        init_data_without_cache_text = {
+        init_data_without_use_cached_text = {
             "scene_file": "test.c4d",
             "take": "Main",
             "activate_error_checking": "1",
         }
-        adaptor = Cinema4DAdaptor(init_data_without_cache_text)
+        adaptor = Cinema4DAdaptor(init_data_without_use_cached_text)
 
         # WHEN
         adaptor._populate_action_queue()
