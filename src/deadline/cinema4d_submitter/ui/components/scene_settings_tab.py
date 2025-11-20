@@ -172,17 +172,15 @@ class SceneSettingsWidget(QWidget):
         rendering_options_box = QGroupBox("Cinema 4D rendering options", self)
         rendering_options_layout = QVBoxLayout(rendering_options_box)
 
-        self.cache_text_chck = QCheckBox(
-            "Use cached text during render", self
-        )
-        rendering_options_layout.addWidget(self.cache_text_chck)
+        self.use_cached_text_chck = QCheckBox("Use cached text during render", self)
+        rendering_options_layout.addWidget(self.use_cached_text_chck)
 
-        cache_text_warning_label = QLabel(
+        use_cached_text_warning_label = QLabel(
             "Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is "
             "ignored. If there are fonts in the scene, this will increase rendering time."
         )
-        cache_text_warning_label.setWordWrap(True)
-        rendering_options_layout.addWidget(cache_text_warning_label)
+        use_cached_text_warning_label.setWordWrap(True)
+        rendering_options_layout.addWidget(use_cached_text_warning_label)
 
         lyt.addWidget(rendering_options_box, widget_row, 0, 1, 2)
         widget_row += 1
@@ -208,7 +206,7 @@ class SceneSettingsWidget(QWidget):
         self.frame_override_txt.setText(settings.frame_list)
         self.activate_error_checking_chck.setChecked(bool(int(settings.activate_error_checking)))
         self.activate_detailed_logging_chck.setChecked(settings.activate_detailed_logging)
-        self.cache_text_chck.setChecked(bool(int(settings.use_cached_text)))
+        self.use_cached_text_chck.setChecked(bool(int(settings.use_cached_text)))
 
         index = self.layers_box.findData(settings.take_selection)
         if index >= 0:
@@ -244,7 +242,7 @@ class SceneSettingsWidget(QWidget):
 
         settings.use_cached_text = (
             TextCaching.ACTIVATE.value
-            if self.cache_text_chck.isChecked()
+            if self.use_cached_text_chck.isChecked()
             else TextCaching.DEACTIVATE.value
         )
 

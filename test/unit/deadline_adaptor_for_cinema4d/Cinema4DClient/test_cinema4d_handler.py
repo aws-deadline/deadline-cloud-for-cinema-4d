@@ -322,6 +322,140 @@ class TestGetAllTextObjects:
         assert mock_parent_text_object in result
         assert mock_child_text_object in result
 
+    def test_get_all_text_objects_returns_children_after_parents(self):
+        """Tests that _get_all_text_objects returns children at higher indices than their parents"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        # Create mock child text object with font
+        mock_child_text_object = Mock()
+        mock_child_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child_text_object.GetChildren.return_value = []
+
+        # Create mock parent text object with font and child
+        mock_parent_text_object = Mock()
+        mock_parent_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_parent_text_object.GetChildren.return_value = [mock_child_text_object]
+
+        result = handler._get_all_text_objects([mock_parent_text_object])
+
+        # Verify parent comes before child in the list
+        assert len(result) == 2
+        parent_index = result.index(mock_parent_text_object)
+        child_index = result.index(mock_child_text_object)
+        assert parent_index < child_index, "Parent should appear before child in the list"
+
+    def test_get_all_text_objects_returns_multiple_children_after_parent(self):
+        """Tests that _get_all_text_objects returns multiple children after their parent"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        # Create mock child text objects with fonts
+        mock_child1 = Mock()
+        mock_child1.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child1.GetChildren.return_value = []
+
+        mock_child2 = Mock()
+        mock_child2.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child2.GetChildren.return_value = []
+
+        # Create mock parent text object with font and children
+        mock_parent = Mock()
+        mock_parent.__getitem__ = Mock(return_value=mock_font_container)
+        mock_parent.GetChildren.return_value = [mock_child1, mock_child2]
+
+        result = handler._get_all_text_objects([mock_parent])
+
+        # Verify parent comes before all children
+        assert len(result) == 3
+        parent_index = result.index(mock_parent)
+        child1_index = result.index(mock_child1)
+        child2_index = result.index(mock_child2)
+        assert parent_index < child1_index, "Parent should appear before child1"
+        assert parent_index < child2_index, "Parent should appear before child2"
+
+    def test_get_all_text_objects_returns_nested_children_after_all_ancestors(self):
+        """Tests that _get_all_text_objects returns deeply nested children after all their ancestors"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        # Create mock grandchild text object with font
+        mock_grandchild = Mock()
+        mock_grandchild.__getitem__ = Mock(return_value=mock_font_container)
+        mock_grandchild.GetChildren.return_value = []
+
+        # Create mock child text object with font and grandchild
+        mock_child = Mock()
+        mock_child.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child.GetChildren.return_value = [mock_grandchild]
+
+        # Create mock parent text object with font and child
+        mock_parent = Mock()
+        mock_parent.__getitem__ = Mock(return_value=mock_font_container)
+        mock_parent.GetChildren.return_value = [mock_child]
+
+        result = handler._get_all_text_objects([mock_parent])
+
+        # Verify ordering: parent < child < grandchild
+        assert len(result) == 3
+        parent_index = result.index(mock_parent)
+        child_index = result.index(mock_child)
+        grandchild_index = result.index(mock_grandchild)
+        assert (
+            parent_index < child_index < grandchild_index
+        ), "Objects should be ordered: parent, child, grandchild"
+
+    def test_get_all_text_objects_returns_siblings_in_order_after_parent(self):
+        """Tests that _get_all_text_objects maintains sibling order and places all siblings after their parent"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        # Create two parent objects with children
+        mock_child1_parent1 = Mock()
+        mock_child1_parent1.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child1_parent1.GetChildren.return_value = []
+
+        mock_parent1 = Mock()
+        mock_parent1.__getitem__ = Mock(return_value=mock_font_container)
+        mock_parent1.GetChildren.return_value = [mock_child1_parent1]
+
+        mock_child1_parent2 = Mock()
+        mock_child1_parent2.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child1_parent2.GetChildren.return_value = []
+
+        mock_parent2 = Mock()
+        mock_parent2.__getitem__ = Mock(return_value=mock_font_container)
+        mock_parent2.GetChildren.return_value = [mock_child1_parent2]
+
+        result = handler._get_all_text_objects([mock_parent1, mock_parent2])
+
+        # Verify ordering: parent1 < child1_parent1 < parent2 < child1_parent2
+        assert len(result) == 4
+        parent1_index = result.index(mock_parent1)
+        child1_parent1_index = result.index(mock_child1_parent1)
+        parent2_index = result.index(mock_parent2)
+        child1_parent2_index = result.index(mock_child1_parent2)
+
+        assert parent1_index < child1_parent1_index, "Parent1 should appear before its child"
+        assert child1_parent1_index < parent2_index, "Parent1's child should appear before parent2"
+        assert parent2_index < child1_parent2_index, "Parent2 should appear before its child"
+
 
 class TestCacheTextIfNeeded:
     """Tests for the _cache_text_if_needed method"""
@@ -346,20 +480,6 @@ class TestCacheTextIfNeeded:
 
         assert result is False
 
-    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "win32")
-    def test_cache_text_returns_false_on_windows(self, capsys):
-        """Tests that _cache_text_if_needed returns False on Windows"""
-        handler = Cinema4DHandler(mock_map_path)
-        handler.render_kwargs = {USE_CACHED_TEXT_KEY: True}
-
-        mock_frame_time = Mock()
-        result = handler._cache_text_if_needed(mock_frame_time)
-
-        assert result is False
-        captured = capsys.readouterr()
-        assert "Text is only cached on Linux" in captured.out
-
-    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "linux")
     def test_cache_text_returns_false_when_no_fonts(self, capsys):
         """Tests that _cache_text_if_needed returns False when no fonts are found"""
         handler = Cinema4DHandler(mock_map_path)
@@ -376,7 +496,6 @@ class TestCacheTextIfNeeded:
         captured = capsys.readouterr()
         assert "No fonts were found in the scene" in captured.out
 
-    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "linux")
     @patch(
         "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.SetDocumentTime"
     )
@@ -417,7 +536,6 @@ class TestCacheTextIfNeeded:
         assert "Converting all parameterized text objects to polygons" in captured.out
         assert "Successfully converted all text objects to polygons" in captured.out
 
-    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.sys.platform", "linux")
     @patch(
         "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.SetDocumentTime"
     )

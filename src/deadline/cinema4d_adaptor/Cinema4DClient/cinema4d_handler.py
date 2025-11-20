@@ -392,6 +392,10 @@ class Cinema4DHandler:
         return False
 
     def _get_all_text_objects(self, objects: list[Any]) -> list[Any]:
+        """
+        Retrieves all text objects in the scene. They will be listed with
+        all children objects AFTER (higher index in the list than) their parent objects.
+        """
         text_objects = []
         for obj in objects:
             font_container = obj[self.C4D_FONT_INDEX]
@@ -454,6 +458,17 @@ class Cinema4DHandler:
             return False
 
         print(f"Text objects found in scene after animation: {text_objects}")
+
+        # The _get_all_text_objects() function returns all text objects with the parent objects first, then children
+        # objects. However, in the modeling command below, we actually need to list the children objects before the
+        # parent objects so that each object reference remains valid when modified in order.
+        #
+        # For example, if there is parent text and child text, and the parent text is made editable (converted to
+        # polygons) first, then the child reference will no longer be valid. This breaks the child reference and causes
+        # a segmentation fault.
+        # However, if we convert the child text to polygons first, the parent text will still be valid and can be converted
+        # to polygons as well.
+        text_objects.reverse()
 
         print("Converting all parameterized text objects to polygons for correct rendering.")
         c4d.utils.SendModelingCommand(
