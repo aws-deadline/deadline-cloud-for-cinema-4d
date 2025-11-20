@@ -66,6 +66,10 @@ class Cinema4DHandler:
     render_kwargs: Dict[str, Any]
     map_path: Callable[[str], str]
 
+    C4D_FONT_INDEX = c4d.DescID(
+        c4d.DescLevel(c4d.PRIM_TEXT_FONT, c4d.FONTCHOOSER_DATA, c4d.OBJECT_SPLINETEXT)
+    )
+
     def __init__(self, map_path: Callable[[str], str]) -> None:
         """
         Constructor for the c4dpy handler. Initializes action_dict and render variables
@@ -377,16 +381,31 @@ class Cinema4DHandler:
             self.doc = doc
             self._remap_assets()
 
-    def _has_cached_text(self) -> bool:
-        for object in self.doc.GetObjects():
-            font_index = c4d.DescID(
-                c4d.DescLevel(c4d.PRIM_TEXT_FONT, c4d.FONTCHOOSER_DATA, c4d.OBJECT_SPLINETEXT)
-            )
-            font_container = object[font_index]
+    def _has_cached_text(self, objects: list[Any]) -> bool:
+        for obj in objects:
+            font_container = obj[self.C4D_FONT_INDEX]
             font = font_container.GetFont()
             if font:
                 return True
+            children = obj.GetChildren()
+            if children:
+                if self._has_cached_text(children):
+                    return True
         return False
+
+    def _get_all_text_objects(self, objects: list[Any]) -> list[Any]:
+        text_objects = []
+        for obj in objects:
+            font_container = obj[self.C4D_FONT_INDEX]
+            font = font_container.GetFont()
+            if font:
+                text_objects.append(obj)
+            # all objects, including text itself, can have nested text objects that also need to be cached
+            children = obj.GetChildren()
+            if children:
+                text_objects += self._get_all_text_objects(children)
+
+        return text_objects
 
     def _cache_text_if_needed(self, frame_time: c4d.BaseTime) -> bool:
         """
@@ -415,7 +434,7 @@ class Cinema4DHandler:
             )
             return False
 
-        found_font = self._has_cached_text()
+        found_font = self._has_cached_text(self.doc.GetObjects())
 
         if not found_font:
             print("No fonts were found in the scene, no need to cache text.")
@@ -431,16 +450,9 @@ class Cinema4DHandler:
             bt=None, animation=True, expressions=True, caches=True, flags=c4d.BUILDFLAGS_NONE
         )
         print("The location of the text was recalculated. Refreshing the text object list.")
+
         # we do this a second time in case objects are recalculated and have different references
-        text_objects = []
-        for object in self.doc.GetObjects():
-            font_index = c4d.DescID(
-                c4d.DescLevel(c4d.PRIM_TEXT_FONT, c4d.FONTCHOOSER_DATA, c4d.OBJECT_SPLINETEXT)
-            )
-            bc = object[font_index]
-            font = bc.GetFont()
-            if font:
-                text_objects.append(object)
+        text_objects = self._get_all_text_objects(self.doc.GetObjects())
 
         if not text_objects:
             print("No text objects were found in the scene after animation.")

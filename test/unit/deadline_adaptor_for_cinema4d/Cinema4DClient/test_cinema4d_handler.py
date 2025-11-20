@@ -81,12 +81,13 @@ class TestHasCachedText:
 
         mock_object = Mock()
         mock_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_object.GetChildren.return_value = []
 
         mock_doc = Mock()
         mock_doc.GetObjects.return_value = [mock_object]
         handler.doc = mock_doc
 
-        assert handler._has_cached_text() is True
+        assert handler._has_cached_text([mock_object]) is True
 
     def test_has_cached_text_returns_false_when_no_font(self):
         """Tests that _has_cached_text returns False when no font is found"""
@@ -98,12 +99,13 @@ class TestHasCachedText:
 
         mock_object = Mock()
         mock_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_object.GetChildren.return_value = []
 
         mock_doc = Mock()
         mock_doc.GetObjects.return_value = [mock_object]
         handler.doc = mock_doc
 
-        assert handler._has_cached_text() is False
+        assert handler._has_cached_text([mock_object]) is False
 
     def test_has_cached_text_returns_false_when_no_objects(self):
         """Tests that _has_cached_text returns False when there are no objects"""
@@ -113,7 +115,220 @@ class TestHasCachedText:
         mock_doc.GetObjects.return_value = []
         handler.doc = mock_doc
 
-        assert handler._has_cached_text() is False
+        assert handler._has_cached_text([]) is False
+
+    def test_has_cached_text_returns_true_for_child_objects(self):
+        """Tests that _has_cached_text returns True when child objects have fonts"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock child object with font
+        mock_font = Mock()
+        mock_child_font_container = Mock()
+        mock_child_font_container.GetFont.return_value = mock_font
+
+        mock_child_object = Mock()
+        mock_child_object.__getitem__ = Mock(return_value=mock_child_font_container)
+        mock_child_object.GetChildren.return_value = []
+
+        # Create mock parent object without font but with child
+        mock_parent_font_container = Mock()
+        mock_parent_font_container.GetFont.return_value = None
+
+        mock_parent_object = Mock()
+        mock_parent_object.__getitem__ = Mock(return_value=mock_parent_font_container)
+        mock_parent_object.GetChildren.return_value = [mock_child_object]
+
+        mock_doc = Mock()
+        mock_doc.GetObjects.return_value = [mock_parent_object]
+        handler.doc = mock_doc
+
+        assert handler._has_cached_text([mock_parent_object]) is True
+
+    def test_has_cached_text_returns_true_for_nested_child_objects(self):
+        """Tests that _has_cached_text returns True when deeply nested child objects have fonts"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock grandchild object with font
+        mock_font = Mock()
+        mock_grandchild_font_container = Mock()
+        mock_grandchild_font_container.GetFont.return_value = mock_font
+
+        mock_grandchild_object = Mock()
+        mock_grandchild_object.__getitem__ = Mock(return_value=mock_grandchild_font_container)
+        mock_grandchild_object.GetChildren.return_value = []
+
+        # Create mock child object without font but with grandchild
+        mock_child_font_container = Mock()
+        mock_child_font_container.GetFont.return_value = None
+
+        mock_child_object = Mock()
+        mock_child_object.__getitem__ = Mock(return_value=mock_child_font_container)
+        mock_child_object.GetChildren.return_value = [mock_grandchild_object]
+
+        # Create mock parent object without font but with child
+        mock_parent_font_container = Mock()
+        mock_parent_font_container.GetFont.return_value = None
+
+        mock_parent_object = Mock()
+        mock_parent_object.__getitem__ = Mock(return_value=mock_parent_font_container)
+        mock_parent_object.GetChildren.return_value = [mock_child_object]
+
+        assert handler._has_cached_text([mock_parent_object]) is True
+
+
+class TestGetAllTextObjects:
+    """Tests for the _get_all_text_objects method"""
+
+    def test_get_all_text_objects_returns_empty_list_when_no_objects(self):
+        """Tests that _get_all_text_objects returns empty list when there are no objects"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        result = handler._get_all_text_objects([])
+
+        assert result == []
+
+    def test_get_all_text_objects_returns_text_object(self):
+        """Tests that _get_all_text_objects returns text objects with fonts"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock text object with font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        mock_text_object = Mock()
+        mock_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_text_object.GetChildren.return_value = []
+
+        result = handler._get_all_text_objects([mock_text_object])
+
+        assert len(result) == 1
+        assert result[0] == mock_text_object
+
+    def test_get_all_text_objects_returns_multiple_text_objects(self):
+        """Tests that _get_all_text_objects returns multiple text objects"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create two mock text objects with fonts
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        mock_text_object1 = Mock()
+        mock_text_object1.__getitem__ = Mock(return_value=mock_font_container)
+        mock_text_object1.GetChildren.return_value = []
+
+        mock_text_object2 = Mock()
+        mock_text_object2.__getitem__ = Mock(return_value=mock_font_container)
+        mock_text_object2.GetChildren.return_value = []
+
+        result = handler._get_all_text_objects([mock_text_object1, mock_text_object2])
+
+        assert len(result) == 2
+        assert mock_text_object1 in result
+        assert mock_text_object2 in result
+
+    def test_get_all_text_objects_skips_objects_without_fonts(self):
+        """Tests that _get_all_text_objects skips objects without fonts"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock object without font
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = None
+
+        mock_object = Mock()
+        mock_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_object.GetChildren.return_value = []
+
+        result = handler._get_all_text_objects([mock_object])
+
+        assert result == []
+
+    def test_get_all_text_objects_finds_text_in_child_objects(self):
+        """Tests that _get_all_text_objects recursively finds text objects in children"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock child text object with font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        mock_child_text_object = Mock()
+        mock_child_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child_text_object.GetChildren.return_value = []
+
+        # Create mock parent object without font but with child
+        mock_parent_font_container = Mock()
+        mock_parent_font_container.GetFont.return_value = None
+
+        mock_parent_object = Mock()
+        mock_parent_object.__getitem__ = Mock(return_value=mock_parent_font_container)
+        mock_parent_object.GetChildren.return_value = [mock_child_text_object]
+
+        result = handler._get_all_text_objects([mock_parent_object])
+
+        assert len(result) == 1
+        assert result[0] == mock_child_text_object
+
+    def test_get_all_text_objects_finds_text_in_nested_children(self):
+        """Tests that _get_all_text_objects recursively finds text objects in deeply nested children"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock grandchild text object with font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        mock_grandchild_text_object = Mock()
+        mock_grandchild_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_grandchild_text_object.GetChildren.return_value = []
+
+        # Create mock child object without font but with grandchild
+        mock_child_font_container = Mock()
+        mock_child_font_container.GetFont.return_value = None
+
+        mock_child_object = Mock()
+        mock_child_object.__getitem__ = Mock(return_value=mock_child_font_container)
+        mock_child_object.GetChildren.return_value = [mock_grandchild_text_object]
+
+        # Create mock parent object without font but with child
+        mock_parent_font_container = Mock()
+        mock_parent_font_container.GetFont.return_value = None
+
+        mock_parent_object = Mock()
+        mock_parent_object.__getitem__ = Mock(return_value=mock_parent_font_container)
+        mock_parent_object.GetChildren.return_value = [mock_child_object]
+
+        result = handler._get_all_text_objects([mock_parent_object])
+
+        assert len(result) == 1
+        assert result[0] == mock_grandchild_text_object
+
+    def test_get_all_text_objects_finds_parent_and_child_text_objects(self):
+        """Tests that _get_all_text_objects finds both parent and child text objects when both have fonts"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Create mock font
+        mock_font = Mock()
+        mock_font_container = Mock()
+        mock_font_container.GetFont.return_value = mock_font
+
+        # Create mock child text object with font
+        mock_child_text_object = Mock()
+        mock_child_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_child_text_object.GetChildren.return_value = []
+
+        # Create mock parent text object with font and child
+        mock_parent_text_object = Mock()
+        mock_parent_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_parent_text_object.GetChildren.return_value = [mock_child_text_object]
+
+        result = handler._get_all_text_objects([mock_parent_text_object])
+
+        # Both parent and child should be returned since both have fonts
+        assert len(result) == 2
+        assert mock_parent_text_object in result
+        assert mock_child_text_object in result
 
 
 class TestCacheTextIfNeeded:
@@ -190,6 +405,7 @@ class TestCacheTextIfNeeded:
 
         mock_text_object = Mock()
         mock_text_object.__getitem__ = Mock(return_value=mock_font_container)
+        mock_text_object.GetChildren.return_value = []
 
         mock_doc = Mock()
         mock_doc.GetObjects.return_value = [mock_text_object]
