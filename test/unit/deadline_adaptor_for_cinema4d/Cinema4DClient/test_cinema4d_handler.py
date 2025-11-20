@@ -472,7 +472,7 @@ class TestCacheTextIfNeeded:
 
         assert result is False
 
-    def test_cache_text_returns_false_when_disabled(self):
+    def test_cache_text_returns_false_when_deactivated(self):
         """Tests that _cache_text_if_needed returns False when use_cached_text is False"""
         handler = Cinema4DHandler(mock_map_path)
         handler.render_kwargs = {USE_CACHED_TEXT_KEY: False}
