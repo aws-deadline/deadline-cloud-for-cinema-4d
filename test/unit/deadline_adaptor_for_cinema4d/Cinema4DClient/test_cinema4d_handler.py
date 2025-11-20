@@ -83,10 +83,6 @@ class TestHasCachedText:
         mock_object.__getitem__ = Mock(return_value=mock_font_container)
         mock_object.GetChildren.return_value = []
 
-        mock_doc = Mock()
-        mock_doc.GetObjects.return_value = [mock_object]
-        handler.doc = mock_doc
-
         assert handler._has_cached_text([mock_object]) is True
 
     def test_has_cached_text_returns_false_when_no_font(self):
@@ -100,10 +96,6 @@ class TestHasCachedText:
         mock_object = Mock()
         mock_object.__getitem__ = Mock(return_value=mock_font_container)
         mock_object.GetChildren.return_value = []
-
-        mock_doc = Mock()
-        mock_doc.GetObjects.return_value = [mock_object]
-        handler.doc = mock_doc
 
         assert handler._has_cached_text([mock_object]) is False
 
