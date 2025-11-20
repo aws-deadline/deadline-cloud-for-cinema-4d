@@ -336,7 +336,7 @@ class Cinema4DHandler:
         Args:
             data (dict): the data of whether to cache the text in the format {USE_CACHED_TEXT_KEY: bool}
         """
-        self.render_kwargs[USE_CACHED_TEXT_KEY] = data.get(USE_CACHED_TEXT_KEY, False)
+        self.render_kwargs[USE_CACHED_TEXT_KEY] = bool(int(data.get(USE_CACHED_TEXT_KEY, 0)))
 
     def set_frame(self, data: dict) -> None:
         """
@@ -414,14 +414,14 @@ class Cinema4DHandler:
         On cross-platform submissions, Cinema 4D sometimes handles fonts incorrectly.
 
         To work around this, the user can select the `Use cached text during render` option in the submitter
-        This will convert the text to polygons first for each frame, rather than procedurally generating text.
+        This will convert the text to polygons for each frame, rather than procedurally generating text.
 
         This option is most often used on Linux, which doesn't support procedural font rendering.
         However, it is also relevant to cross-platform submissions from Mac -> Windows.
 
         If text caching is needed, this function will cache the text. Otherwise, it is a no-op.
 
-        Returns True if text has been cached. Returns False otherwise
+        Returns True if text has been cached. Returns False otherwise.
         """
         if (
             USE_CACHED_TEXT_KEY not in self.render_kwargs

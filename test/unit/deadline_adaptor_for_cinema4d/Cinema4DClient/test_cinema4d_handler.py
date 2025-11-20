@@ -48,16 +48,18 @@ class TestCinema4DHandler:
 class TestShouldCacheText:
     """Tests for the use_cached_text method"""
 
-    def test_should_cache_text_sets_true(self):
-        """Tests that use_cached_text correctly sets use_cached_text to True"""
+    @pytest.mark.parametrize("value", [True, 1, "1"])
+    def test_should_cache_text_sets_truthy_values(self, value):
+        """Tests that use_cached_text correctly sets use_cached_text to True for truthy values"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.use_cached_text({USE_CACHED_TEXT_KEY: True})
+        handler.use_cached_text({USE_CACHED_TEXT_KEY: value})
         assert handler.render_kwargs[USE_CACHED_TEXT_KEY] is True
 
-    def test_should_cache_text_sets_false(self):
-        """Tests that use_cached_text correctly sets use_cached_text to False"""
+    @pytest.mark.parametrize("value", [False, 0, "0"])
+    def test_should_cache_text_sets_falsy_values(self, value):
+        """Tests that use_cached_text correctly sets use_cached_text to False for falsy values"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.use_cached_text({USE_CACHED_TEXT_KEY: False})
+        handler.use_cached_text({USE_CACHED_TEXT_KEY: value})
         assert handler.render_kwargs[USE_CACHED_TEXT_KEY] is False
 
     def test_should_cache_text_defaults_to_false(self):
