@@ -7,7 +7,7 @@
         "output_path": { "type": "string" },
         "multi_pass_path": { "type": "string" },
         "activate_error_checking": { "type": "string" },
-        "cache_text": {"type": "string"}
+        "use_cached_text": {"type": "string"}
     },
     "required": [ "scene_file" ]
 }

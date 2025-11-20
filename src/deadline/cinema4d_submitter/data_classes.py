@@ -78,7 +78,7 @@ class RenderSubmitterUISettings:
     # Hence, this setting is not sticky and customers would have to manually
     # click it everytime they want to submit such a job.
     activate_detailed_logging: bool = field(default=False, metadata={"sticky": False})
-    cache_text: str = field(default=TextCaching.DEACTIVATE.value, metadata={"sticky": True})
+    use_cached_text: str = field(default=TextCaching.DEACTIVATE.value, metadata={"sticky": True})
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )

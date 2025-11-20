@@ -209,7 +209,7 @@ class SceneSettingsWidget(QWidget):
         self.frame_override_txt.setText(settings.frame_list)
         self.activate_error_checking_chck.setChecked(bool(int(settings.activate_error_checking)))
         self.activate_detailed_logging_chck.setChecked(settings.activate_detailed_logging)
-        self.cache_text_chck.setChecked(bool(int(settings.cache_text)))
+        self.cache_text_chck.setChecked(bool(int(settings.use_cached_text)))
 
         index = self.layers_box.findData(settings.take_selection)
         if index >= 0:
@@ -243,7 +243,7 @@ class SceneSettingsWidget(QWidget):
 
         settings.activate_detailed_logging = self.activate_detailed_logging_chck.isChecked()
 
-        settings.cache_text = (
+        settings.use_cached_text = (
             TextCaching.ACTIVATE.value
             if self.cache_text_chck.isChecked()
             else TextCaching.DEACTIVATE.value

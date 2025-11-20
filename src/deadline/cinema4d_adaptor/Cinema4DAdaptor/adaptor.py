@@ -28,7 +28,13 @@ class Cinema4DNotRunningError(Exception):
     """Error that is raised when attempting to use Cinema4D while it is not running"""
 
 
-_FIRST_CINEMA4D_ACTIONS = ["scene_file", "take", "output_path", "multi_pass_path", "cache_text"]
+_FIRST_CINEMA4D_ACTIONS = [
+    "scene_file",
+    "take",
+    "output_path",
+    "multi_pass_path",
+    "use_cached_text",
+]
 _CINEMA4D_RUN_KEYS = {
     "frame",
 }

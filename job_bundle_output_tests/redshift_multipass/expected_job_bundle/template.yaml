@@ -39,7 +39,7 @@ parameterDefinitions:
     label: Multi-pass output path
     groupLabel: Cinema4D Settings
   description: Multi-pass image output
-- name: CacheText
+- name: UseCachedText
   type: STRING
   userInterface:
     control: CHECK_BOX

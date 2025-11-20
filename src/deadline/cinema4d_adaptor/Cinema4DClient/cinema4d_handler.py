@@ -26,7 +26,7 @@ _RENDERRESULT = {
     c4d.RENDERRESULT_NOOUTPUTSPECIFIED: "Output was not specified.",
 }
 
-CACHE_TEXT_KEY = "cache_text"
+USE_CACHED_TEXT_KEY = "use_cached_text"
 FRAME_KEY = "frame"
 OUTPUT_PATH_KEY = "output_path"
 MULTIPASS_PATH_KEY = "multi_pass_path"
@@ -81,12 +81,12 @@ class Cinema4DHandler:
             START_RENDER_KEY: self.start_render,
             OUTPUT_PATH_KEY: self.output_path,
             MULTIPASS_PATH_KEY: self.multi_pass_path,
-            CACHE_TEXT_KEY: self.should_cache_text,
+            USE_CACHED_TEXT_KEY: self.use_cached_text,
         }
         self.render_kwargs = {}
         self.take = "Main"
         self.map_path = map_path
-        self.text_was_cached = False
+        self.cached_text_was_used_in_previous_frame = False
 
     def _remap_assets(self) -> None:
         """
@@ -231,7 +231,7 @@ class Cinema4DHandler:
         return True
 
     def start_render(self, data: dict) -> None:
-        if self.text_was_cached:
+        if self.cached_text_was_used_in_previous_frame:
             # Close and then reload document since we collapsed some text in the previous frame
             # and it can no longer be animated.
             # Reloading the document will allow the next frame to have correct data.
@@ -264,7 +264,7 @@ class Cinema4DHandler:
         )
         rd = self.render_data.GetDataInstance()
 
-        self.text_was_cached = self._cache_text_if_needed(frame_time)
+        self.cached_text_was_used_in_previous_frame = self._cache_text_if_needed(frame_time)
 
         result = c4d.documents.RenderDocument(
             self.doc,
@@ -330,14 +330,14 @@ class Cinema4DHandler:
             print("Error: take not found: %s" % take_name)
         take_data.SetCurrentTake(take)
 
-    def should_cache_text(self, data: dict) -> None:
+    def use_cached_text(self, data: dict) -> None:
         """
         Sets whether text should be cached on Linux
 
         Args:
-            data (dict): the data of whether to cache the text in the format {CACHE_TEXT_KEY: bool}
+            data (dict): the data of whether to cache the text in the format {USE_CACHED_TEXT_KEY: bool}
         """
-        self.render_kwargs[CACHE_TEXT_KEY] = data.get(CACHE_TEXT_KEY, False)
+        self.render_kwargs[USE_CACHED_TEXT_KEY] = data.get(USE_CACHED_TEXT_KEY, False)
 
     def set_frame(self, data: dict) -> None:
         """
@@ -388,9 +388,8 @@ class Cinema4DHandler:
             if font:
                 return True
             children = obj.GetChildren()
-            if children:
-                if self._has_cached_text(children):
-                    return True
+            if children and self._has_cached_text(children):
+                return True
         return False
 
     def _get_all_text_objects(self, objects: list[Any]) -> list[Any]:
@@ -410,16 +409,19 @@ class Cinema4DHandler:
     def _cache_text_if_needed(self, frame_time: c4d.BaseTime) -> bool:
         """
         On Linux, Cinema 4D cannot handle fonts procedurally, so we need to convert them to polygons first,
-        for every frame. This is a setting that the user can opt into using `cache_text` init data.
+        for every frame. This is a setting that the user can opt into using `use_cached_text` init data.
 
         On Windows, fonts are handled correctly, so we don't need to cache it.
 
-        If text caching is needed (i.e. this is Linux, the cache_text setting is True, and there is text in the scene),
+        If text caching is needed (i.e. this is Linux, the use_cached_text setting is True, and there is text in the scene),
         this will cache the text. Otherwise, it is a no-op.
 
         Returns True if text has been cached. Returns False otherwise
         """
-        if CACHE_TEXT_KEY not in self.render_kwargs or not self.render_kwargs[CACHE_TEXT_KEY]:
+        if (
+            USE_CACHED_TEXT_KEY not in self.render_kwargs
+            or not self.render_kwargs[USE_CACHED_TEXT_KEY]
+        ):
             if sys.platform == "linux":
                 print(
                     "If you use text in your scene, it may render incorrectly on Linux. Please set the "

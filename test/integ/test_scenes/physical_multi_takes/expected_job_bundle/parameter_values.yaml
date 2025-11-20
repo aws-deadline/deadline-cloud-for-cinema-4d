@@ -9,7 +9,7 @@ parameterValues:
   value: '1'
 - name: DetailedLogging
   value: '0'
-- name: CacheText
+- name: UseCachedText
   value: '0'
 - name: MainFrames
   value: '1'

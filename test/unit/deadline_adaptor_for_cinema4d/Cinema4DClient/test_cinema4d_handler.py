@@ -3,7 +3,7 @@ from unittest.mock import Mock, MagicMock, patch
 import pytest
 from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler
 from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import progress_callback
-from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import CACHE_TEXT_KEY
+from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import USE_CACHED_TEXT_KEY
 import c4d
 
 
@@ -46,25 +46,25 @@ class TestCinema4DHandler:
 
 
 class TestShouldCacheText:
-    """Tests for the should_cache_text method"""
+    """Tests for the use_cached_text method"""
 
     def test_should_cache_text_sets_true(self):
-        """Tests that should_cache_text correctly sets cache_text to True"""
+        """Tests that use_cached_text correctly sets use_cached_text to True"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.should_cache_text({CACHE_TEXT_KEY: True})
-        assert handler.render_kwargs[CACHE_TEXT_KEY] is True
+        handler.use_cached_text({USE_CACHED_TEXT_KEY: True})
+        assert handler.render_kwargs[USE_CACHED_TEXT_KEY] is True
 
     def test_should_cache_text_sets_false(self):
-        """Tests that should_cache_text correctly sets cache_text to False"""
+        """Tests that use_cached_text correctly sets use_cached_text to False"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.should_cache_text({CACHE_TEXT_KEY: False})
-        assert handler.render_kwargs[CACHE_TEXT_KEY] is False
+        handler.use_cached_text({USE_CACHED_TEXT_KEY: False})
+        assert handler.render_kwargs[USE_CACHED_TEXT_KEY] is False
 
     def test_should_cache_text_defaults_to_false(self):
-        """Tests that should_cache_text defaults to False when key is missing"""
+        """Tests that use_cached_text defaults to False when key is missing"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.should_cache_text({})
-        assert handler.render_kwargs[CACHE_TEXT_KEY] is False
+        handler.use_cached_text({})
+        assert handler.render_kwargs[USE_CACHED_TEXT_KEY] is False
 
 
 class TestHasCachedText:
@@ -327,7 +327,7 @@ class TestCacheTextIfNeeded:
     """Tests for the _cache_text_if_needed method"""
 
     def test_cache_text_returns_false_when_not_enabled(self):
-        """Tests that _cache_text_if_needed returns False when cache_text is not enabled"""
+        """Tests that _cache_text_if_needed returns False when use_cached_text is not enabled"""
         handler = Cinema4DHandler(mock_map_path)
         handler.render_kwargs = {}
 
@@ -337,9 +337,9 @@ class TestCacheTextIfNeeded:
         assert result is False
 
     def test_cache_text_returns_false_when_disabled(self):
-        """Tests that _cache_text_if_needed returns False when cache_text is False"""
+        """Tests that _cache_text_if_needed returns False when use_cached_text is False"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.render_kwargs = {CACHE_TEXT_KEY: False}
+        handler.render_kwargs = {USE_CACHED_TEXT_KEY: False}
 
         mock_frame_time = Mock()
         result = handler._cache_text_if_needed(mock_frame_time)
@@ -350,7 +350,7 @@ class TestCacheTextIfNeeded:
     def test_cache_text_returns_false_on_windows(self, capsys):
         """Tests that _cache_text_if_needed returns False on Windows"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.render_kwargs = {CACHE_TEXT_KEY: True}
+        handler.render_kwargs = {USE_CACHED_TEXT_KEY: True}
 
         mock_frame_time = Mock()
         result = handler._cache_text_if_needed(mock_frame_time)
@@ -363,7 +363,7 @@ class TestCacheTextIfNeeded:
     def test_cache_text_returns_false_when_no_fonts(self, capsys):
         """Tests that _cache_text_if_needed returns False when no fonts are found"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.render_kwargs = {CACHE_TEXT_KEY: True}
+        handler.render_kwargs = {USE_CACHED_TEXT_KEY: True}
 
         mock_doc = Mock()
         mock_doc.GetObjects.return_value = []
@@ -388,7 +388,7 @@ class TestCacheTextIfNeeded:
     ):
         """Tests that _cache_text_if_needed converts text objects to polygons on Linux"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.render_kwargs = {CACHE_TEXT_KEY: True, "frame": 42}
+        handler.render_kwargs = {USE_CACHED_TEXT_KEY: True, "frame": 42}
 
         # Create mock font and text objects
         mock_font = Mock()
@@ -426,7 +426,7 @@ class TestCacheTextIfNeeded:
     ):
         """Tests that _cache_text_if_needed returns False when no text objects exist after animation"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.render_kwargs = {CACHE_TEXT_KEY: True, "frame": 42}
+        handler.render_kwargs = {USE_CACHED_TEXT_KEY: True, "frame": 42}
 
         # Create mock font for initial check
         mock_font = Mock()
@@ -540,7 +540,7 @@ class TestStartRenderWithTextCaching:
     ):
         """Tests that start_render reloads the document when text was cached in previous frame"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.text_was_cached = True
+        handler.cached_text_was_used_in_previous_frame = True
 
         # Set up mock document and render data
         mock_doc = Mock()
@@ -568,7 +568,7 @@ class TestStartRenderWithTextCaching:
     ):
         """Tests that start_render does not reload the document when text was not cached"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.text_was_cached = False
+        handler.cached_text_was_used_in_previous_frame = False
 
         # Set up mock document and render data
         mock_doc = Mock()
@@ -594,9 +594,9 @@ class TestStartRenderWithTextCaching:
     def test_start_render_updates_text_was_cached_flag(
         self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
     ):
-        """Tests that start_render updates the text_was_cached flag based on _cache_text_if_needed result"""
+        """Tests that start_render updates the cached_text_was_used_in_previous_frame flag based on _cache_text_if_needed result"""
         handler = Cinema4DHandler(mock_map_path)
-        handler.text_was_cached = False
+        handler.cached_text_was_used_in_previous_frame = False
 
         # Set up mock document and render data
         mock_doc = Mock()
@@ -615,7 +615,7 @@ class TestStartRenderWithTextCaching:
         ):
             handler.start_render({"frame": 1})
 
-        assert handler.text_was_cached is True
+        assert handler.cached_text_was_used_in_previous_frame is True
 
         # Second call: _cache_text_if_needed returns False (no text to cache this time)
         with (
@@ -624,4 +624,4 @@ class TestStartRenderWithTextCaching:
         ):
             handler.start_render({"frame": 1})
 
-        assert handler.text_was_cached is False
+        assert handler.cached_text_was_used_in_previous_frame is False
