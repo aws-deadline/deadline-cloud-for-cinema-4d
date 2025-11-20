@@ -10,6 +10,7 @@ from .platform_utils import is_windows
 from .scene import Scene
 from .font_utils import is_asset_a_font, copy_font_to_scene_folder, FONTS_DIR
 from .warning_collector import warning_collector
+from .path_validator import validate_asset_paths
 
 _FRAME_RE = re.compile("#+")
 
@@ -61,5 +62,8 @@ class AssetIntrospector:
                 for font_file in fonts_dir.iterdir():
                     if font_file.is_file():
                         assets.add(font_file)
+
+        # Validate asset paths for Windows-incompatible characters
+        validate_asset_paths(assets)
 
         return assets
