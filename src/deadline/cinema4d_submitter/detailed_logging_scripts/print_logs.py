@@ -1,258 +1,271 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 """Find and print Cinema 4D and Redshift log files after rendering."""
-from dataclasses import dataclass, field
 import os
+import shutil
 import sys
-import tempfile
+from pathlib import Path
 
-# Cinema 4D detailed log filename constant
+# Constants
 C4D_DETAILED_LOG_FILENAME = "c4d_detailed_logs.txt"
+C4D_SECURE_TEMP_DIR_ENV_VAR = "C4D_DETAILED_LOG_DIR"
+CONDA_PREFIX_ENV_VAR = "CONDA_PREFIX"
+REDSHIFT_LOCALDATAPATH_ENV_VAR = "REDSHIFT_LOCALDATAPATH"
+REDSHIFT_COREDATAPATH_ENV_VAR = "REDSHIFT_COREDATAPATH"
 
 
-@dataclass
-class FoundLogs:
-    """Container for discovered log files."""
-
-    redshift: list[str] = field(default_factory=list)
-    bugreport: list[str] = field(default_factory=list)
-    c4d_detailed: list[str] = field(default_factory=list)
+def get_conda_prefix() -> str:
+    """Get the CONDA_PREFIX environment variable value."""
+    return os.environ.get(CONDA_PREFIX_ENV_VAR, "")
 
 
-def _find_redshift_log_in_path(base_path: str, path_components: list[str]) -> list[str]:
-    """Search for Redshift log file in the specified path.
+def _get_redshift_log_paths_windows() -> list[str]:
+    """Get potential Redshift log file paths for Windows.
 
-    Args:
-        base_path: The base directory to search in.
-        path_components: List of path components to join with base_path.
+    Returns:
+        List of unique complete log file paths to check on Windows.
+    """
+    paths = set()
+    conda_prefix = get_conda_prefix()
+    log_subpath = os.path.join("Log", "Log.Latest.0", "log.html")
+
+    # CONDA_PREFIX location
+    if conda_prefix:
+        paths.add(os.path.join(conda_prefix, "cinema4d", "RedshiftData", log_subpath))
+
+    # Custom REDSHIFT_LOCALDATAPATH location
+    custom_path = os.environ.get(REDSHIFT_LOCALDATAPATH_ENV_VAR)
+    if custom_path:
+        print(f"Found {REDSHIFT_LOCALDATAPATH_ENV_VAR} environment variable: {custom_path}")
+        paths.add(os.path.join(custom_path, log_subpath))
+
+    # Windows default location
+    paths.add(os.path.join(r"C:\ProgramData\Redshift", log_subpath))
+
+    return list(paths)
+
+
+def _get_redshift_log_paths_linux() -> list[str]:
+    """Get potential Redshift log file paths for Linux/macOS.
+
+    Returns:
+        List of unique complete log file paths to check on Linux/macOS.
+    """
+    paths = set()
+    conda_prefix = get_conda_prefix()
+    log_subpath = os.path.join("log", "log.latest.0", "log.html")
+
+    # CONDA_PREFIX location
+    if conda_prefix:
+        paths.add(os.path.join(conda_prefix, "redshiftlocaldata", log_subpath))
+
+    # Custom REDSHIFT_LOCALDATAPATH location
+    custom_path = os.environ.get(REDSHIFT_LOCALDATAPATH_ENV_VAR)
+    if custom_path:
+        print(f"Found {REDSHIFT_LOCALDATAPATH_ENV_VAR} environment variable: {custom_path}")
+        paths.add(os.path.join(custom_path, log_subpath))
+
+    # Linux/macOS default location
+    home_dir = os.path.expanduser("~")
+    paths.add(os.path.join(home_dir, "redshift", log_subpath))
+
+    return list(paths)
+
+
+def _get_redshift_log_paths() -> list[str]:
+    """Get potential Redshift log file paths.
+
+    Returns:
+        List of potential paths to check for Redshift log.html files.
+    """
+    if sys.platform == "win32":
+        return _get_redshift_log_paths_windows()
+    else:
+        return _get_redshift_log_paths_linux()
+
+
+def _find_redshift_log() -> list[str]:
+    """Search for Redshift log file.
 
     Returns:
         List containing the Redshift log path if found, empty list otherwise.
     """
-    if not base_path or not os.path.exists(base_path):
-        return []
+    paths = _get_redshift_log_paths()
+    return _find_log_file(paths, "Redshift log")
 
-    redshift_log_path = os.path.join(base_path, *path_components)
-    print(f"Checking for Redshift log at: {redshift_log_path}")
 
-    if os.path.exists(redshift_log_path):
-        print(f"Found Redshift log: {redshift_log_path}")
-        return [redshift_log_path]
+def _get_c4d_detailed_log_paths() -> list[str]:
+    """Get potential Cinema 4D detailed log file paths.
+
+    Checks locations in priority order (matching setup_logging.py logic):
+    1. CONDA_PREFIX location (preferred)
+    2. C4D_DETAILED_LOG_DIR environment variable (secure temp directory fallback)
+
+    Returns:
+        List containing the log file path to check.
+    """
+    # Check CONDA_PREFIX location first (preferred)
+    conda_prefix = get_conda_prefix()
+    if conda_prefix:
+        return [os.path.join(conda_prefix, C4D_DETAILED_LOG_FILENAME)]
+
+    # Fallback to secure temp directory
+    secure_temp_dir = os.environ.get(C4D_SECURE_TEMP_DIR_ENV_VAR)
+    if secure_temp_dir:
+        return [os.path.join(secure_temp_dir, C4D_DETAILED_LOG_FILENAME)]
+
+    # Neither location is available
+    print(f"Neither {CONDA_PREFIX_ENV_VAR} nor {C4D_SECURE_TEMP_DIR_ENV_VAR} is set")
     return []
 
 
-def _get_redshift_local_data_paths() -> list[str]:
-    """Get potential Redshift local data paths to search for logs.
-
-    Returns paths in priority order:
-    1. CONDA_PREFIX-based paths (for conda environments)
-    2. REDSHIFT_LOCALDATAPATH environment variable (if set)
-    3. Platform-specific default paths
-
-    Returns:
-        List of paths to check for Redshift logs.
-    """
-    paths = []
-
-    # Add conda prefix path first if available (most likely in rendering environment)
-    conda_prefix = os.environ.get("CONDA_PREFIX")
-    if conda_prefix:
-        if sys.platform == "win32":
-            paths.append(os.path.join(conda_prefix, "cinema4d", "RedshiftData"))
-        else:
-            paths.append(os.path.join(conda_prefix, "redshiftlocaldata"))
-
-    # Check for custom path via environment variable
-    custom_path = os.environ.get("REDSHIFT_LOCALDATAPATH")
-    if custom_path:
-        print(f"Found REDSHIFT_LOCALDATAPATH environment variable: {custom_path}")
-        paths.append(custom_path)
-
-    # Add platform-specific default paths
-    if sys.platform == "win32":
-        # Windows default: C:\ProgramData\Redshift
-        paths.append(r"C:\ProgramData\Redshift")
-    else:
-        # Linux/macOS default: ~/redshift
-        home_dir = os.path.expanduser("~")
-        paths.append(os.path.join(home_dir, "redshift"))
-
-    return paths
-
-
-def _find_c4d_detailed_log(conda_prefix: str) -> list[str]:
-    """Search for Cinema 4D detailed log file.
+def _find_log_file(paths: list[str], log_description: str) -> list[str]:
+    """Search for a log file in a list of potential paths.
 
     Args:
-        conda_prefix: The CONDA_PREFIX environment variable value.
+        paths: List of paths to check for the log file.
+        log_description: Description of the log type for debug messages.
+
+    Returns:
+        List containing the first found log file path, or empty list if not found.
+    """
+    # Guard clause: handle empty paths early
+    if not paths:
+        print(f"{log_description} not found - no paths to check")
+        return []
+
+    for path in paths:
+        print(f"Checking for {log_description} at: {path}")
+        if os.path.exists(path):
+            print(f"Found {log_description}: {path}")
+            return [path]
+
+    print(f"{log_description} not found in any expected location")
+    return []
+
+
+def _find_c4d_detailed_log() -> list[str]:
+    """Search for Cinema 4D detailed log file.
 
     Returns:
         List containing the Cinema 4D detailed log path if found, empty list otherwise.
     """
-    # Try CONDA_PREFIX first if available
-    if conda_prefix and os.path.exists(conda_prefix):
-        c4d_log_path = os.path.join(conda_prefix, C4D_DETAILED_LOG_FILENAME)
-        print(f"Checking for Cinema 4D detailed log at: {c4d_log_path}")
+    paths = _get_c4d_detailed_log_paths()
+    return _find_log_file(paths, "Cinema 4D detailed log")
 
-        if os.path.exists(c4d_log_path):
-            print(f"Found Cinema 4D detailed log: {c4d_log_path}")
-            return [c4d_log_path]
-        else:
-            print("Cinema 4D detailed log not found in CONDA_PREFIX")
+
+def _get_bug_report_search_path() -> tuple[str, str]:
+    """Get platform-specific bug report search parameters.
+
+    Returns:
+        Tuple of (base_path, directory_prefix) for searching bug reports.
+    """
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA", "")
+        base_path = os.path.join(appdata, "Maxon") if appdata else ""
+        dir_prefix = "cinema4d_"
     else:
-        print("CONDA_PREFIX not set or doesn't exist")
+        home_dir = os.path.expanduser("~")
+        base_path = os.path.join(home_dir, "Maxon")
+        dir_prefix = "bin_"
 
-    # Fallback to temp directory
-    temp_dir = tempfile.gettempdir()
-    temp_log_path = os.path.join(temp_dir, C4D_DETAILED_LOG_FILENAME)
-    print(f"Checking for Cinema 4D detailed log in temp directory: {temp_log_path}")
-
-    if os.path.exists(temp_log_path):
-        print(f"Found Cinema 4D detailed log in temp directory: {temp_log_path}")
-        return [temp_log_path]
-    else:
-        print("Cinema 4D detailed log not found in temp directory either")
-        return []
+    return base_path, dir_prefix
 
 
-def _find_bug_reports(base_path: str, dir_prefix: str) -> list[str]:
-    """Search for Cinema 4D bug report files.
+def _scan_for_bug_reports(base_path: str, dir_prefix: str) -> list[str]:
+    """Scan directory for Cinema 4D bug report files.
 
     Args:
-        base_path: Base directory to search in (e.g., ~/Maxon or %APPDATA%/Maxon).
-        dir_prefix: Prefix of directories to search (e.g., "bin_" or "cinema4d_").
+        base_path: Base directory to search in.
+        dir_prefix: Prefix of Cinema 4D directories to search.
 
     Returns:
         List of bug report file paths found.
     """
-    bug_reports: list[str] = []
-
-    if not os.path.exists(base_path):
-        print(f"{base_path} doesn't exist, skipping bug report search")
+    try:
+        base = Path(base_path)
+        bug_reports = [
+            str(bugreports_dir / "_BugReport.txt")
+            for item in base.iterdir()
+            if item.is_dir() and item.name.startswith(dir_prefix)
+            for bugreports_dir in [item / "_bugreports"]
+            if bugreports_dir.exists() and (bugreports_dir / "_BugReport.txt").exists()
+        ]
         return bug_reports
+    except Exception as e:
+        print(f"Error scanning for bug reports: {e}")
+        return []
+
+
+def _find_bug_reports() -> list[str]:
+    """Search for Cinema 4D bug report files.
+
+    Returns:
+        List of bug report file paths found.
+    """
+    base_path, dir_prefix = _get_bug_report_search_path()
+
+    # Guard clause: check if base path exists
+    if not base_path or not os.path.exists(base_path):
+        return []
 
     print(f"Checking for bug reports in: {base_path}")
-    bugreports_dirs_found = []
-
-    try:
-        for item in os.listdir(base_path):
-            if item.startswith(dir_prefix):
-                bugreports_dir = os.path.join(base_path, item, "_bugreports")
-                if os.path.exists(bugreports_dir):
-                    bugreports_dirs_found.append(bugreports_dir)
-                    print(f"Found _bugreports directory: {bugreports_dir}")
-
-                    bug_reports_in_dir = []
-                    for file in os.listdir(bugreports_dir):
-                        if file.endswith("_BugReport.txt"):
-                            bug_report_path = os.path.join(bugreports_dir, file)
-                            bug_reports.append(bug_report_path)
-                            bug_reports_in_dir.append(bug_report_path)
-                            print(f"Found bug report: {bug_report_path}")
-
-                    if not bug_reports_in_dir:
-                        print(
-                            f"_bugreports directory exists but no bug report files found inside: {bugreports_dir}"
-                        )
-
-        if not bugreports_dirs_found:
-            print("No _bugreports directories found")
-    except Exception as e:
-        print(f"Error searching for bug reports: {e}")
-
-    return bug_reports
+    return _scan_for_bug_reports(base_path, dir_prefix)
 
 
-def find_log_files_linux() -> FoundLogs:
-    """Search for log files on Linux/Mac using known paths.
-
-    Returns:
-        FoundLogs: Container with redshift and bugreport log file paths.
-    """
-    found_logs = FoundLogs()
-    conda_prefix = os.environ.get("CONDA_PREFIX", "")
-    home_dir = os.path.expanduser("~")
-
-    print("Searching for log files...")
-
-    # Check for Redshift log.html in multiple possible locations
-    redshift_paths = _get_redshift_local_data_paths()
-    for base_path in redshift_paths:
-        result = _find_redshift_log_in_path(base_path, ["log", "log.latest.0", "log.html"])
-        if result:
-            found_logs.redshift = result
-            break
-
-    if not found_logs.redshift:
-        print("Redshift log not found in any expected location")
-
-    # Check for Cinema 4D detailed log: $CONDA_PREFIX/c4d_detailed_logs.txt
-    found_logs.c4d_detailed = _find_c4d_detailed_log(conda_prefix)
-
-    # Check for bug reports: ~/Maxon/bin_*/_bugreports/*_BugReport.txt
-    maxon_path = os.path.join(home_dir, "Maxon")
-    found_logs.bugreport = _find_bug_reports(maxon_path, "bin_")
-
-    return found_logs
-
-
-def find_log_files_windows() -> FoundLogs:
-    """Search for log files on Windows using known paths.
-
-    Returns:
-        FoundLogs: Container with redshift and bugreport log file paths.
-    """
-    found_logs = FoundLogs()
-    conda_prefix = os.environ.get("CONDA_PREFIX", "")
-    appdata = os.environ.get("APPDATA", "")
-
-    print("Searching for log files...")
-
-    # Check for Redshift log.html in multiple possible locations
-    redshift_paths = _get_redshift_local_data_paths()
-    for base_path in redshift_paths:
-        result = _find_redshift_log_in_path(base_path, ["Log", "Log.Latest.0", "log.html"])
-        if result:
-            found_logs.redshift = result
-            break
-
-    if not found_logs.redshift:
-        print("Redshift log not found in any expected location")
-
-    # Check for Cinema 4D detailed log: $CONDA_PREFIX\c4d_detailed_logs.txt
-    found_logs.c4d_detailed = _find_c4d_detailed_log(conda_prefix)
-
-    # Check for bug reports: %APPDATA%\Maxon\cinema4d_*\_bugreports\*_BugReport.txt
-    if appdata and os.path.exists(appdata):
-        maxon_path = os.path.join(appdata, "Maxon")
-        found_logs.bugreport = _find_bug_reports(maxon_path, "cinema4d_")
-    else:
-        print("APPDATA not set or doesn't exist, skipping bug report search")
-
-    return found_logs
-
-
-def find_log_files() -> FoundLogs:
-    """Search for Cinema 4D and Redshift log files.
-
-    Returns:
-        FoundLogs: Container with redshift and bugreport log file paths.
-    """
-    # Print environment variables for debugging
+def _print_environment_info() -> None:
+    """Print relevant environment variables for debugging."""
     print("Environment variables:")
-    print(f"  CONDA_PREFIX: {os.environ.get('CONDA_PREFIX', 'NOT SET')}")
+    print(f"  {CONDA_PREFIX_ENV_VAR}: {get_conda_prefix() or 'NOT SET'}")
+    print(
+        f"  {C4D_SECURE_TEMP_DIR_ENV_VAR}: {os.environ.get(C4D_SECURE_TEMP_DIR_ENV_VAR, 'NOT SET')}"
+    )
     print(f"  HOME: {os.environ.get('HOME', 'NOT SET')}")
     print(f"  USER: {os.environ.get('USER', 'NOT SET')}")
-    print(f"  REDSHIFT_LOCALDATAPATH: {os.environ.get('REDSHIFT_LOCALDATAPATH', 'NOT SET')}")
-    print(f"  REDSHIFT_COREDATAPATH: {os.environ.get('REDSHIFT_COREDATAPATH', 'NOT SET')}")
-
-    # Use platform-specific search
-    if sys.platform == "win32":
-        return find_log_files_windows()
-    else:
-        return find_log_files_linux()
+    print(
+        f"  {REDSHIFT_LOCALDATAPATH_ENV_VAR}: {os.environ.get(REDSHIFT_LOCALDATAPATH_ENV_VAR, 'NOT SET')}"
+    )
+    print(
+        f"  {REDSHIFT_COREDATAPATH_ENV_VAR}: {os.environ.get(REDSHIFT_COREDATAPATH_ENV_VAR, 'NOT SET')}"
+    )
 
 
-def print_log_file(log_file, log_type="LOG"):
+def _find_and_print_redshift_logs() -> None:
+    """Find and print Redshift debug logs."""
+    log_files = _find_redshift_log()
+    _print_logs_by_type(
+        log_files,
+        "REDSHIFT DEBUG LOG",
+        "Redshift log file(s)",
+        "No Redshift debug logs (log.html) found.\n"
+        "This may be normal if Redshift was not used for rendering.",
+    )
+
+
+def _find_and_print_c4d_detailed_logs() -> None:
+    """Find and print Cinema 4D detailed logs."""
+    log_files = _find_c4d_detailed_log()
+    _print_logs_by_type(
+        log_files,
+        "CINEMA 4D DETAILED LOG",
+        "Cinema 4D detailed log file(s)",
+        f"No Cinema 4D detailed log ({C4D_DETAILED_LOG_FILENAME}) found.\n"
+        "This is unexpected - the log file should have been created by Cinema 4D.",
+    )
+
+
+def _find_and_print_bug_reports() -> None:
+    """Find and print Cinema 4D bug reports."""
+    log_files = _find_bug_reports()
+    _print_logs_by_type(
+        log_files,
+        "CINEMA 4D BUG REPORT",
+        "Cinema 4D bug report(s)",
+        "No Cinema 4D bug reports (*_BugReport.txt) found.\n"
+        "This may be normal if no crashes occurred.",
+    )
+
+
+def print_log_file(log_file, log_type="LOG") -> None:
     """Print the contents of a log file.
 
     Args:
@@ -286,50 +299,50 @@ def _print_logs_by_type(
         description: Human-readable description of the log type.
         not_found_message: Message to display when no logs are found.
     """
-    if log_files:
-        print(f"\nFound {len(log_files)} {description}")
-        for log_file in log_files:
-            print_log_file(log_file, log_type)
-    else:
+    # Guard clause: handle empty log files list early
+    if not log_files:
         print(f"\n{not_found_message}")
+        return
+
+    print(f"\nFound {len(log_files)} {description}")
+    for log_file in log_files:
+        print_log_file(log_file, log_type)
 
 
-def print_detailed_logs(enabled: str):
+def _cleanup_temporary_directory() -> None:
+    """Clean up temporary directory if it was created during setup."""
+    temp_dir = os.environ.get(C4D_SECURE_TEMP_DIR_ENV_VAR)
+    if temp_dir and os.path.exists(temp_dir):
+        try:
+            shutil.rmtree(temp_dir)
+            print(f"Cleaned up temporary directory: {temp_dir}")
+        except Exception as e:
+            print(f"Note: Could not clean up temporary directory {temp_dir}: {e}")
+
+
+def _cleanup_environment_variables() -> None:
+    """Clean up Cinema 4D environment variables set during setup."""
+    print("openjd_unset_env: g_alloc")
+    print("openjd_unset_env: g_logfile")
+    print("Environment variables cleaned up")
+
+
+def print_detailed_logs(enabled: str) -> None:
     """Print detailed logs if enabled."""
     if enabled != "1":
         print("Detailed logging is deactivated, skipping log output.")
         return
 
-    found_logs = find_log_files()
+    _print_environment_info()
 
-    _print_logs_by_type(
-        found_logs.redshift,
-        "REDSHIFT DEBUG LOG",
-        "Redshift log file(s)",
-        "No Redshift debug logs (log.html) found.\n"
-        "This may be normal if Redshift was not used for rendering.",
-    )
+    print("Searching for log files...")
 
-    _print_logs_by_type(
-        found_logs.c4d_detailed,
-        "CINEMA 4D DETAILED LOG",
-        "Cinema 4D detailed log file(s)",
-        f"No Cinema 4D detailed log ({C4D_DETAILED_LOG_FILENAME}) found.\n"
-        "This is unexpected - the log file should have been created by Cinema 4D.",
-    )
+    _find_and_print_redshift_logs()
+    _find_and_print_c4d_detailed_logs()
+    _find_and_print_bug_reports()
 
-    _print_logs_by_type(
-        found_logs.bugreport,
-        "CINEMA 4D BUG REPORT",
-        "Cinema 4D bug report(s)",
-        "No Cinema 4D bug reports (*_BugReport.txt) found.\n"
-        "This may be normal if no crashes occurred.",
-    )
-
-    # Clean up environment variables set during setup
-    print("openjd_unset_env: g_alloc")
-    print("openjd_unset_env: g_logfile")
-    print("Environment variables cleaned up")
+    _cleanup_temporary_directory()
+    _cleanup_environment_variables()
 
 
 if __name__ == "__main__":
