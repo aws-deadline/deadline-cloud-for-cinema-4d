@@ -11,7 +11,7 @@ from pathlib import Path
 from deadline.client.ui.dataclasses.timeouts import TimeoutEntry, TimeoutTableEntries
 
 from .takes import TakeSelection  # type: ignore
-from .error_checking import ErrorChecking
+from .enums import ErrorChecking, TextCaching
 from datetime import timedelta
 
 RENDER_SUBMITTER_SETTINGS_FILE_EXT = ".deadline_render_settings.json"
@@ -78,6 +78,7 @@ class RenderSubmitterUISettings:
     # Hence, this setting is not sticky and customers would have to manually
     # click it everytime they want to submit such a job.
     activate_detailed_logging: bool = field(default=False, metadata={"sticky": False})
+    use_cached_text: str = field(default=TextCaching.DEACTIVATE.value, metadata={"sticky": True})
     timeouts: TimeoutTableEntries = field(
         default_factory=default_timeout_entries, metadata={"sticky": True}
     )

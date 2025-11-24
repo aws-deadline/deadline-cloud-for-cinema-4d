@@ -5,3 +5,8 @@ from enum import Enum
 class ErrorChecking(Enum):
     DEACTIVATE = "0"
     ACTIVATE = "1"
+
+
+class TextCaching(Enum):
+    DEACTIVATE = "0"
+    ACTIVATE = "1"

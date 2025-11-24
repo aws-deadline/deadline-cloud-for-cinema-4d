@@ -6,7 +6,8 @@
         "take": { "type": "string" },
         "output_path": { "type": "string" },
         "multi_pass_path": { "type": "string" },
-        "activate_error_checking": { "type": "string" }
+        "activate_error_checking": { "type": "string" },
+        "use_cached_text": {"type": "string"}
     },
     "required": [ "scene_file" ]
 }

@@ -46,6 +46,28 @@ parameterDefinitions:
   allowedValues:
   - '1'
   - '0'
+- name: DetailedLogging
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Enable Detailed Logging
+    groupLabel: Cinema4D Settings
+  description: Enable detailed Cinema 4D + Redshift renderer logging for debugging.
+  default: '0'
+  allowedValues:
+  - '1'
+  - '0'
+- name: UseCachedText
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Use cached text during render
+    groupLabel: Cinema4D Settings
+  description: Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is ignored. If there are fonts in the scene, this will increase rendering time.
+  default: '0'
+  allowedValues:
+  - '1'
+  - '0'
 - name: MainFrames
   type: STRING
   userInterface:
@@ -189,6 +211,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -256,6 +279,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -320,6 +344,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -384,6 +409,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -448,6 +474,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -512,6 +539,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -576,6 +604,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -640,6 +669,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -704,6 +734,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -768,6 +799,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -832,6 +864,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -896,6 +929,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -960,6 +994,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -1024,6 +1059,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -1088,6 +1124,7 @@ steps:
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
       actions:
         onEnter:
           command: cinema4d-openjd

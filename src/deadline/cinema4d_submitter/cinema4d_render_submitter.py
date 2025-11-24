@@ -105,6 +105,7 @@ def _get_parameter_values(
     parameter_values.append(
         {"name": "DetailedLogging", "value": "1" if settings.activate_detailed_logging else "0"}
     )
+    parameter_values.append({"name": "UseCachedText", "value": settings.use_cached_text})
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -130,7 +131,7 @@ def _get_parameter_values(
     if parameter_overlap:
         raise DeadlineOperationError(
             "The following queue parameters conflict with the Cinema4D job parameters:\n"
-            + f"{', '.join(parameter_overlap)}\n"
+            + f"{', '.join(parameter_overlap)}"
             "Rename the parameters on the queue to continue job submissions."
         )
 
@@ -221,7 +222,7 @@ def _get_job_template(
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
             init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'"
+                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
                 % take_data.name
             )
 

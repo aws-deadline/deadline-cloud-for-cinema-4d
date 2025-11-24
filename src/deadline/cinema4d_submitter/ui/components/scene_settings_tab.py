@@ -21,7 +21,7 @@ from qtpy.QtWidgets import (  # type: ignore
 from deadline.client.ui.widgets.job_timeouts_widget import TimeoutTableWidget
 
 from ...takes import TakeSelection
-from ...error_checking import ErrorChecking
+from ...enums import ErrorChecking, TextCaching
 
 """
 UI widgets for the Scene Settings tab.
@@ -101,17 +101,22 @@ class SceneSettingsWidget(QWidget):
 
     def _build_ui(self, settings):
         lyt = QGridLayout(self)
+
+        widget_row = 1
+
         self.op_path_chck = QCheckBox("Override Output Path", self)
         self.op_path_txt = FileSearchLineEdit(directory_only=True)
-        lyt.addWidget(self.op_path_chck, 1, 0)
-        lyt.addWidget(self.op_path_txt, 1, 1)
+        lyt.addWidget(self.op_path_chck, widget_row, 0)
+        lyt.addWidget(self.op_path_txt, widget_row, 1)
         self.op_path_chck.stateChanged.connect(self.activate_path_changed)
+        widget_row += 1
 
         self.op_multi_path_chck = QCheckBox("Override Multi-Pass Path", self)
         self.op_multi_path_txt = FileSearchLineEdit(directory_only=True)
-        lyt.addWidget(self.op_multi_path_chck, 2, 0)
-        lyt.addWidget(self.op_multi_path_txt, 2, 1)
+        lyt.addWidget(self.op_multi_path_chck, widget_row, 0)
+        lyt.addWidget(self.op_multi_path_txt, widget_row, 1)
         self.op_multi_path_chck.stateChanged.connect(self.activate_multi_path_changed)
+        widget_row += 1
 
         self.layers_box = QComboBox(self)
         layer_items = [
@@ -122,24 +127,29 @@ class SceneSettingsWidget(QWidget):
         ]
         for layer_value, text in layer_items:
             self.layers_box.addItem(text, layer_value)
-        lyt.addWidget(QLabel("Takes"), 3, 0)
-        lyt.addWidget(self.layers_box, 3, 1)
+        lyt.addWidget(QLabel("Takes"), widget_row, 0)
+        lyt.addWidget(self.layers_box, widget_row, 1)
+        widget_row += 1
 
         self.frame_override_chck = QCheckBox("Override Frame Range", self)
         self.frame_override_txt = QLineEdit(self)
         self.frame_override_txt.setMaxLength(32767)
-        lyt.addWidget(self.frame_override_chck, 4, 0)
-        lyt.addWidget(self.frame_override_txt, 4, 1)
+        lyt.addWidget(self.frame_override_chck, widget_row, 0)
+        lyt.addWidget(self.frame_override_txt, widget_row, 1)
         self.frame_override_chck.stateChanged.connect(self.activate_frame_override_changed)
+        widget_row += 1
 
         self.activate_error_checking_chck = QCheckBox("Activate automatic error checking", self)
-        lyt.addWidget(self.activate_error_checking_chck, 5, 0)
+        lyt.addWidget(self.activate_error_checking_chck, widget_row, 0)
+        widget_row += 1
 
         self.activate_detailed_logging_chck = QCheckBox("Activate detailed logging", self)
-        lyt.addWidget(self.activate_detailed_logging_chck, 6, 0)
+        lyt.addWidget(self.activate_detailed_logging_chck, widget_row, 0)
+        widget_row += 1
 
         self.timeout_settings_box = TimeoutTableWidget(timeouts=settings.timeouts, parent=self)
-        lyt.addWidget(self.timeout_settings_box, 7, 0, 1, 2)
+        lyt.addWidget(self.timeout_settings_box, widget_row, 0, 1, 2)
+        widget_row += 1
 
         # Create a group box for the export job bundle option
         export_group_box = QGroupBox("Cinema 4D submission options", self)
@@ -156,16 +166,33 @@ class SceneSettingsWidget(QWidget):
         )
         warning_label.setWordWrap(True)
         export_layout.addWidget(warning_label)
+        lyt.addWidget(export_group_box, widget_row, 0, 1, 2)
+        widget_row += 1
 
-        lyt.addWidget(export_group_box, 8, 0, 1, 2)
+        rendering_options_box = QGroupBox("Cinema 4D rendering options", self)
+        rendering_options_layout = QVBoxLayout(rendering_options_box)
+
+        self.use_cached_text_chck = QCheckBox("Use cached text during render", self)
+        rendering_options_layout.addWidget(self.use_cached_text_chck)
+
+        use_cached_text_warning_label = QLabel(
+            "Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is "
+            "ignored. If there are fonts in the scene, this will increase rendering time."
+        )
+        use_cached_text_warning_label.setWordWrap(True)
+        rendering_options_layout.addWidget(use_cached_text_warning_label)
+
+        lyt.addWidget(rendering_options_box, widget_row, 0, 1, 2)
+        widget_row += 1
 
         if self.developer_options:
             self.include_adaptor_wheels = QCheckBox(
                 "Developer Option: Include Adaptor Wheels", self
             )
-            lyt.addWidget(self.include_adaptor_wheels, 9, 0)
+            lyt.addWidget(self.include_adaptor_wheels, widget_row, 0)
+            widget_row += 1
 
-        lyt.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding), 11, 0)
+        lyt.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding), widget_row, 0)
 
     def _configure_settings(self, settings):
         self.op_path_chck.setChecked(settings.override_output_path)
@@ -179,6 +206,7 @@ class SceneSettingsWidget(QWidget):
         self.frame_override_txt.setText(settings.frame_list)
         self.activate_error_checking_chck.setChecked(bool(int(settings.activate_error_checking)))
         self.activate_detailed_logging_chck.setChecked(settings.activate_detailed_logging)
+        self.use_cached_text_chck.setChecked(bool(int(settings.use_cached_text)))
 
         index = self.layers_box.findData(settings.take_selection)
         if index >= 0:
@@ -211,6 +239,12 @@ class SceneSettingsWidget(QWidget):
         )
 
         settings.activate_detailed_logging = self.activate_detailed_logging_chck.isChecked()
+
+        settings.use_cached_text = (
+            TextCaching.ACTIVATE.value
+            if self.use_cached_text_chck.isChecked()
+            else TextCaching.DEACTIVATE.value
+        )
 
         self.timeout_settings_box.update_settings(settings.timeouts)
 

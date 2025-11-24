@@ -1,6 +1,11 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 from __future__ import annotations
 
+# NOTE: All tests in this file use @pytest.mark.xdist_group(name="adaptor_tests")
+# to run serially on the same worker. This is necessary because all tests share
+# the same Cinema4DAdaptor action queue, which can cause race conditions and
+# test failures when tests run in parallel across multiple workers.
+
 import json
 from pathlib import Path
 from unittest.mock import Mock, PropertyMock, patch
@@ -21,6 +26,7 @@ REFERENCE_INIT_DATA_SCHEMA = {
         "output_path": {"type": "string"},
         "multi_pass_path": {"type": "string"},
         "activate_error_checking": {"type": "string"},
+        "use_cached_text": {"type": "string"},
     },
     "required": ["scene_file"],
 }
@@ -47,9 +53,11 @@ def init_data() -> dict:
         "output_path": "C:\\Users\\user123\\test_render",
         "multi_pass_path": "",
         "activate_error_checking": "1",
+        "use_cached_text": "0",
     }
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_errors_on_cleanup:
     @pytest.mark.parametrize(
         "stdout,error_expected",
@@ -138,18 +146,21 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         )
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 def test_adaptor_rejects_malformed_init_data():
     adapter = Cinema4DAdaptor({"invalid": "data"})
     with pytest.raises(ValidationError):
         adapter.on_start()
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 def test_adaptor_rejects_malformed_run_data(init_data: dict):
     adapter = Cinema4DAdaptor(init_data)
     with pytest.raises(ValidationError):
         adapter.on_run({"invalid": "data"})
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 def test_if_init_data_and_run_data_schema_are_changed_schema_version_is_bumped(init_data):
     """
     Test to validate that if the init data or run data schema are changed, we also bump the
@@ -157,7 +168,7 @@ def test_if_init_data_and_run_data_schema_are_changed_schema_version_is_bumped(i
     """
     # Expected version for these reference schemas
     EXPECTED_MAJOR = 0
-    EXPECTED_MINOR = 2
+    EXPECTED_MINOR = 3
 
     # Get the current version from the adaptor
     adapter = Cinema4DAdaptor(init_data)
@@ -192,6 +203,7 @@ def test_if_init_data_and_run_data_schema_are_changed_schema_version_is_bumped(i
     )
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 def test_adaptor_prints_version_on_init(init_data, capfd):
     """
     Test that the adaptor prints its version during initialization
@@ -204,6 +216,7 @@ def test_adaptor_prints_version_on_init(init_data, capfd):
     ), f"Expected output to contain {expected_output}, but got {captured.out}"
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 @pytest.mark.parametrize("activate_error_checking", [0, 1])
 def test_activate_error_checking(init_data: dict, activate_error_checking: int) -> None:
     """
@@ -243,6 +256,7 @@ def run_data() -> dict:
     return {"frame": 42}
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_on_start:
     @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)
     @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.LoggingSubprocess")
@@ -286,6 +300,7 @@ class TestCinema4DAdaptor_on_start:
         assert mock_sleep.call_count == 3
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_on_run:
     @patch("time.sleep")
     @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)
@@ -316,6 +331,7 @@ class TestCinema4DAdaptor_on_run:
         mock_sleep.assert_called_once_with(0.1)
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_on_cleanup:
     @patch("time.sleep")
     @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor._logger")
@@ -344,6 +360,7 @@ class TestCinema4DAdaptor_on_cleanup:
         mock_client.terminate.assert_called_once()
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_on_cancel:
     """Tests for Cinema4DAdaptor.on_cancel"""
 
@@ -376,3 +393,160 @@ class TestCinema4DAdaptor_on_cancel:
         # THEN
         assert "CANCEL REQUESTED" in caplog.text
         assert "Nothing to cancel because Cinema4D is not running" in caplog.text
+
+
+@pytest.mark.xdist_group(name="adaptor_tests")
+class TestCinema4DAdaptor_populate_action_queue:
+    """Tests for Cinema4DAdaptor._populate_action_queue"""
+
+    @pytest.fixture(autouse=True)
+    def cleanup_action_queue(self):
+        """Fixture to clean up the shared action queue before and after each test"""
+        # Create a temporary adaptor to access the shared action queue
+        temp_adaptor = Cinema4DAdaptor({"scene_file": "test.c4d"})
+
+        # Clear the queue before the test
+        while len(temp_adaptor._action_queue) > 0:
+            temp_adaptor._action_queue.dequeue_action()
+
+        yield
+
+        # Clear the queue after the test
+        while len(temp_adaptor._action_queue) > 0:
+            temp_adaptor._action_queue.dequeue_action()
+
+    def test_populate_action_queue_with_all_actions(self):
+        """Tests that _populate_action_queue adds all available actions from init_data"""
+        # GIVEN
+        init_data_with_all_actions = {
+            "scene_file": "test.c4d",
+            "take": "Main",
+            "output_path": "/output",
+            "multi_pass_path": "/multipass",
+            "use_cached_text": "1",
+            "activate_error_checking": "1",
+        }
+        adaptor = Cinema4DAdaptor(init_data_with_all_actions)
+
+        # WHEN
+        adaptor._populate_action_queue()
+
+        # THEN
+        # Verify that all expected actions are in the queue
+        actions = []
+        while len(adaptor._action_queue) > 0:
+            action = adaptor._action_queue.dequeue_action()
+            if action:
+                actions.append(action)
+
+        action_names = [action.name for action in actions]
+        assert "scene_file" in action_names
+        assert "take" in action_names
+        assert "output_path" in action_names
+        assert "multi_pass_path" in action_names
+        assert "use_cached_text" in action_names
+
+        # Verify the order matches _FIRST_CINEMA4D_ACTIONS
+        expected_order = ["scene_file", "take", "output_path", "multi_pass_path", "use_cached_text"]
+        assert action_names == expected_order
+
+    def test_populate_action_queue_with_use_cached_text(self, init_data: dict):
+        """Tests that _populate_action_queue includes use_cached_text when present in init_data"""
+        # GIVEN
+        init_data["use_cached_text"] = "1"
+        adaptor = Cinema4DAdaptor(init_data)
+
+        # WHEN
+        adaptor._populate_action_queue()
+
+        # THEN
+        actions = []
+        while len(adaptor._action_queue) > 0:
+            action = adaptor._action_queue.dequeue_action()
+            if action:
+                actions.append(action)
+
+        # Find the use_cached_text action
+        use_cached_text_action = next((a for a in actions if a.name == "use_cached_text"), None)
+        assert use_cached_text_action is not None, "use_cached_text action should be in the queue"
+        assert use_cached_text_action.args == {"use_cached_text": "1"}
+
+    def test_populate_action_queue_without_use_cached_text(self):
+        """Tests that _populate_action_queue works when use_cached_text is not in init_data"""
+        # GIVEN
+        init_data_without_use_cached_text = {
+            "scene_file": "test.c4d",
+            "take": "Main",
+            "activate_error_checking": "1",
+        }
+        adaptor = Cinema4DAdaptor(init_data_without_use_cached_text)
+
+        # WHEN
+        adaptor._populate_action_queue()
+
+        # THEN
+        actions = []
+        while len(adaptor._action_queue) > 0:
+            action = adaptor._action_queue.dequeue_action()
+            if action:
+                actions.append(action)
+
+        action_names = [action.name for action in actions]
+        assert "use_cached_text" not in action_names
+        assert "scene_file" in action_names
+        assert "take" in action_names
+
+    def test_populate_action_queue_only_includes_first_actions(self):
+        """Tests that _populate_action_queue only includes actions from _FIRST_CINEMA4D_ACTIONS"""
+        # GIVEN
+        init_data_with_extra = {
+            "scene_file": "test.c4d",
+            "take": "Main",
+            "use_cached_text": "0",
+            "activate_error_checking": "1",
+            "frame": 42,  # This is a run action, not an init action
+            "extra_field": "should_not_be_included",
+        }
+        adaptor = Cinema4DAdaptor(init_data_with_extra)
+
+        # WHEN
+        adaptor._populate_action_queue()
+
+        # THEN
+        actions = []
+        while len(adaptor._action_queue) > 0:
+            action = adaptor._action_queue.dequeue_action()
+            if action:
+                actions.append(action)
+
+        action_names = [action.name for action in actions]
+        # Should only include actions from _FIRST_CINEMA4D_ACTIONS
+        assert "scene_file" in action_names
+        assert "take" in action_names
+        assert "use_cached_text" in action_names
+        # Should NOT include run actions or extra fields
+        assert "frame" not in action_names
+        assert "extra_field" not in action_names
+        assert "activate_error_checking" not in action_names
+
+    def test_populate_action_queue_with_minimal_init_data(self):
+        """Tests that _populate_action_queue works with minimal init_data (only scene_file)"""
+        # GIVEN
+        minimal_init_data = {
+            "scene_file": "test.c4d",
+        }
+        adaptor = Cinema4DAdaptor(minimal_init_data)
+
+        # WHEN
+        adaptor._populate_action_queue()
+
+        # THEN
+        actions = []
+        while len(adaptor._action_queue) > 0:
+            action = adaptor._action_queue.dequeue_action()
+            if action:
+                actions.append(action)
+
+        action_names = [action.name for action in actions]
+        assert action_names == ["scene_file"]
+        assert len(actions) == 1
