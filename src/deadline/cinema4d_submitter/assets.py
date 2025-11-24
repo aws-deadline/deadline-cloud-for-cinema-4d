@@ -11,9 +11,12 @@ from .platform_utils import is_windows
 from .scene import Scene
 from .font_utils import is_asset_a_font, copy_font_to_scene_folder, FONTS_DIR
 from .warning_collector import warning_collector
+from .warning_logging_handler import WarningCollectorHandler
 from .path_validator import validate_asset_paths
 
 logger = logging.getLogger(__name__)
+if not any(isinstance(h, WarningCollectorHandler) for h in logger.handlers):
+    logger.addHandler(WarningCollectorHandler())
 
 _FRAME_RE = re.compile("#+")
 
@@ -48,8 +51,6 @@ class AssetIntrospector:
             flags=c4d.ASSETDATA_FLAG_WITHFONTS,
         )
 
-        print(f"[Deadline Cloud] Total assets found: {len(asset_list)}")
-
         for asset in asset_list:
             # Only process fonts on Windows. Mac font functionality is not supported
             if is_windows() and is_asset_a_font(asset):
@@ -58,13 +59,9 @@ class AssetIntrospector:
             filename = asset.get("filename", None)
             exists = asset.get("exists", False)
 
-            # Debug: print all filenames to see what we're getting
-            if filename:
-                print(f"[Deadline Cloud] Asset: {filename} (exists={exists})")
-
             # Filter out Maxon DB assets (starting with "asset:" or "assetdb://") as they don't exist on local filesystem
             if filename is not None and filename.startswith(("asset:", "assetdb://")):
-                print(f"[Deadline Cloud] *** EXCLUDING Maxon DB asset: {filename}")
+                logger.warning(f"Excluding Maxon DB asset from job bundle: {filename}")
             elif exists is True and filename is not None:
                 assets.add(Path(filename))
 
