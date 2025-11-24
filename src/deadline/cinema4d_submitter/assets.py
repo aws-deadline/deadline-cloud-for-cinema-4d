@@ -62,7 +62,9 @@ class AssetIntrospector:
             # Filter out Maxon DB assets (starting with "asset:" or "assetdb://") as they don't exist on local filesystem
             if filename is not None and filename.startswith(("asset:", "assetdb://")):
                 logger.warning(f"Excluding Maxon DB asset from job bundle: {filename}")
-            elif exists is True and filename is not None:
+                continue
+
+            if exists is True and filename is not None:
                 assets.add(Path(filename))
 
         # Add all font files from the fonts directory to assets (Windows only)
