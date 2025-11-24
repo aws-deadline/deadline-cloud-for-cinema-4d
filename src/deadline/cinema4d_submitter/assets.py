@@ -52,7 +52,8 @@ class AssetIntrospector:
 
             filename = asset.get("filename", None)
             exists = asset.get("exists", False)
-            if exists is True and filename is not None:
+            # Filter out Maxon DB assets (starting with "asset:" or "assetdb://") as they don't exist on local filesystem
+            if exists is True and filename is not None and not filename.startswith(("asset:", "assetdb://")):
                 assets.add(Path(filename))
 
         # Add all font files from the fonts directory to assets (Windows only)
