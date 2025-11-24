@@ -49,7 +49,7 @@ class AssetIntrospector:
         )
 
         print(f"[Deadline Cloud] Total assets found: {len(asset_list)}")
-        
+
         for asset in asset_list:
             # Only process fonts on Windows. Mac font functionality is not supported
             if is_windows() and is_asset_a_font(asset):
@@ -57,11 +57,11 @@ class AssetIntrospector:
 
             filename = asset.get("filename", None)
             exists = asset.get("exists", False)
-            
+
             # Debug: print all filenames to see what we're getting
             if filename:
                 print(f"[Deadline Cloud] Asset: {filename} (exists={exists})")
-            
+
             # Filter out Maxon DB assets (starting with "asset:" or "assetdb://") as they don't exist on local filesystem
             if filename is not None and filename.startswith(("asset:", "assetdb://")):
                 print(f"[Deadline Cloud] *** EXCLUDING Maxon DB asset: {filename}")
