@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from .scene import Scene
 from .font_utils import is_asset_a_font, copy_font_to_scene_folder, FONTS_DIR
 from .warning_collector import warning_collector
 from .path_validator import validate_asset_paths
+
+logger = logging.getLogger(__name__)
 
 _FRAME_RE = re.compile("#+")
 
@@ -45,6 +48,8 @@ class AssetIntrospector:
             flags=c4d.ASSETDATA_FLAG_WITHFONTS,
         )
 
+        print(f"[Deadline Cloud] Total assets found: {len(asset_list)}")
+        
         for asset in asset_list:
             # Only process fonts on Windows. Mac font functionality is not supported
             if is_windows() and is_asset_a_font(asset):
@@ -52,7 +57,15 @@ class AssetIntrospector:
 
             filename = asset.get("filename", None)
             exists = asset.get("exists", False)
-            if exists is True and filename is not None:
+            
+            # Debug: print all filenames to see what we're getting
+            if filename:
+                print(f"[Deadline Cloud] Asset: {filename} (exists={exists})")
+            
+            # Filter out Maxon DB assets (starting with "asset:" or "assetdb://") as they don't exist on local filesystem
+            if filename is not None and filename.startswith(("asset:", "assetdb://")):
+                print(f"[Deadline Cloud] *** EXCLUDING Maxon DB asset: {filename}")
+            elif exists is True and filename is not None:
                 assets.add(Path(filename))
 
         # Add all font files from the fonts directory to assets (Windows only)
