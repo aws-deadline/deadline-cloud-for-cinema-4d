@@ -63,6 +63,7 @@ class AssetIntrospector:
             if filename is not None and filename.startswith(("asset:", "assetdb://")):
                 logger.warning(
                     f"Excluding Maxon DB asset from job bundle: {filename}\n"
+                    "These assets will be downloaded directly from Maxon during the render. "
                     "To include assets with job submission, use 'File > Save Project with Assets' to localize them first."
                 )
                 continue

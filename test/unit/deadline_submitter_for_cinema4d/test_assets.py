@@ -215,3 +215,55 @@ class TestAssetIntrospectorFonts:
             assert {scene_file, Path("C:\\Users\\test-user\\texture.png"), font_file}.issubset(
                 assets
             )
+
+
+class TestMaxonDBAssets:
+    """Test Maxon DB asset filtering and warning messages"""
+
+    @pytest.mark.parametrize(
+        "asset_filename,should_exclude",
+        [
+            ("asset://some-asset-id", True),
+            ("assetdb://another-asset", True),
+            ("C:\\\\Users\\\\test-user\\\\texture.png", False),
+            ("/home/user/texture.png", False),
+        ],
+    )
+    def test_maxon_db_asset_exclusion(self, asset_filename, should_exclude, caplog):
+        """Test that Maxon DB assets are excluded from job bundle"""
+        with (
+            mock.patch.object(Scene, "name", return_value=TEST_SCENE_FILE_LOCATION),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [{"filename": asset_filename, "exists": True}], kwargs["assetList"]
+            )
+
+            assets = AssetIntrospector().parse_scene_assets()
+
+            if should_exclude:
+                assert Path(asset_filename) not in assets
+                assert "Excluding Maxon DB asset from job bundle" in caplog.text
+                assert "downloaded directly from Maxon during the render" in caplog.text
+            else:
+                assert Path(asset_filename) in assets
+
+    def test_maxon_db_warning_message_content(self, caplog):
+        """Test the complete warning message for Maxon DB assets"""
+        maxon_asset = "asset://test-asset-123"
+        with (
+            mock.patch.object(Scene, "name", return_value=TEST_SCENE_FILE_LOCATION),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [{"filename": maxon_asset, "exists": True}], kwargs["assetList"]
+            )
+
+            AssetIntrospector().parse_scene_assets()
+
+            assert maxon_asset in caplog.text
+            assert (
+                "These assets will be downloaded directly from Maxon during the render"
+                in caplog.text
+            )
+            assert "File > Save Project with Assets" in caplog.text
