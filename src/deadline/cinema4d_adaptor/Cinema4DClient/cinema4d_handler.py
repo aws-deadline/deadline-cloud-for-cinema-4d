@@ -236,7 +236,7 @@ class Cinema4DHandler:
             # Reloading the document will allow the next frame to have correct data.
             self._reload_document()
 
-        self.render_data = self.doc.GetActiveRenderData()
+        self.render_data = self._get_take_render_data(self.doc)
         self.render_data[c4d.RDATA_FRAMESEQUENCE] = c4d.RDATA_FRAMESEQUENCE_MANUAL
         self.render_kwargs[FRAME_KEY] = int(self.render_kwargs.get(FRAME_KEY, data[FRAME_KEY]))
         frame = self.render_kwargs[FRAME_KEY]
@@ -246,9 +246,21 @@ class Cinema4DHandler:
         self.render_data[c4d.RDATA_FRAMETO] = frame_time
         self.render_data[c4d.RDATA_FRAMESTEP] = 1
 
-        if self.render_data[c4d.RDATA_PATH]:
+        # Resolve and set output paths with tokens like $take, $prj
+        if OUTPUT_PATH_KEY in self.render_kwargs and self.render_kwargs[OUTPUT_PATH_KEY]:
+            resolved_path = self._resolve_render_tokens(
+                self.render_kwargs[OUTPUT_PATH_KEY], self.doc, self.render_data
+            )
+            self.render_data[c4d.RDATA_PATH] = self.map_path(resolved_path)
+        elif self.render_data[c4d.RDATA_PATH]:
             self.render_data[c4d.RDATA_PATH] = self.map_path(self.render_data[c4d.RDATA_PATH])
-        if (
+
+        if MULTIPASS_PATH_KEY in self.render_kwargs and self.render_kwargs[MULTIPASS_PATH_KEY]:
+            resolved_path = self._resolve_render_tokens(
+                self.render_kwargs[MULTIPASS_PATH_KEY], self.doc, self.render_data
+            )
+            self.render_data[c4d.RDATA_MULTIPASS_FILENAME] = self.map_path(resolved_path)
+        elif (
             self.render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]
             and self.render_data[c4d.RDATA_MULTIPASS_FILENAME]
         ):
@@ -283,18 +295,38 @@ class Cinema4DHandler:
     def output_path(self, data: dict) -> None:
         output_path = data.get(OUTPUT_PATH_KEY, "")
         self.render_kwargs[OUTPUT_PATH_KEY] = output_path
-        if output_path:
-            doc = c4d.documents.GetActiveDocument()
-            render_data = doc.GetActiveRenderData()
-            render_data[c4d.RDATA_PATH] = self.map_path(output_path)
 
     def multi_pass_path(self, data: dict) -> None:
         multi_pass_path = data.get(MULTIPASS_PATH_KEY, "")
         self.render_kwargs[MULTIPASS_PATH_KEY] = multi_pass_path
-        if multi_pass_path:
-            doc = c4d.documents.GetActiveDocument()
-            render_data = doc.GetActiveRenderData()
-            render_data[c4d.RDATA_MULTIPASS_FILENAME] = self.map_path(multi_pass_path)
+
+    def _get_take_render_data(self, doc):
+        """Get the render data for the current take."""
+        take_data = doc.GetTakeData()
+        if take_data:
+            current_take = take_data.GetCurrentTake()
+            take_erd = current_take.GetEffectiveRenderData(take_data)
+            if take_erd:
+                return take_erd[0]
+        return doc.GetActiveRenderData()
+
+    def _resolve_render_tokens(self, path, doc, render_data):
+        """Resolve Cinema 4D render tokens like $take, $prj, etc."""
+        take_data = doc.GetTakeData()
+        current_take = take_data.GetCurrentTake() if take_data else None
+        
+        render_path_data = {
+            "_doc": doc,
+            "_rData": render_data,
+            "_rBc": render_data.GetDataInstance(),
+            "_frame": doc.GetTime().GetFrame(doc.GetFps()),
+        }
+        if current_take:
+            render_path_data["_take"] = current_take
+        
+        resolved = c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
+        print(f"Token resolution: '{path}' -> '{resolved}' (take: {current_take.GetName() if current_take else 'None'})")
+        return resolved
 
     def set_take(self, data: dict) -> None:
         """

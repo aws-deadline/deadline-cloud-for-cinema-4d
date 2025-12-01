@@ -188,6 +188,14 @@ class Scene:
         if render_data is None:
             render_data = Scene.get_render_data(doc=doc, take=take)
 
+        # Store the current take to restore it later
+        take_data = doc.GetTakeData()
+        original_take = take_data.GetCurrentTake() if take_data else None
+        
+        # Temporarily set the document's current take to the one we're processing
+        if take and take_data:
+            take_data.SetCurrentTake(take)
+
         render_path_data = {
             "_doc": doc,
             "_rData": render_data,
@@ -197,7 +205,13 @@ class Scene:
         if take:
             render_path_data["_take"] = take
 
-        return c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
+        result = c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
+        
+        # Restore the original take
+        if original_take and take_data:
+            take_data.SetCurrentTake(original_take)
+        
+        return result
 
     @staticmethod
     def get_output_paths(take=None) -> Tuple[str, str]:

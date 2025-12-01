@@ -478,24 +478,60 @@ def create_job_bundle(
     elif settings.take_selection == TakeSelection.CURRENT:
         submit_takes = takes["current_data_list"]
 
-    # Add overrides to asset references and update the paths with C4D render path tokens.
+    # Resolve output paths per-take to properly handle $take tokens
+    doc = c4d.documents.GetActiveDocument()
+    take_data_obj = doc.GetTakeData()
+    
+    def find_take_by_name(take_data_obj, name):
+        """Find a take by name in the take hierarchy."""
+        main_take = take_data_obj.GetMainTake()
+        
+        def search_take(take, target_name):
+            if take.GetName() == target_name:
+                return take
+            for child in take.GetChildren():
+                result = search_take(child, target_name)
+                if result:
+                    return result
+            return None
+        
+        return search_take(main_take, name)
+    
+    for take_data in submit_takes:
+        take_obj = find_take_by_name(take_data_obj, take_data.name)
+        
+        if settings.override_output_path:
+            if settings.output_path:
+                resolved_path = Scene.replace_render_path_tokens(settings.output_path, doc=doc, take=take_obj)
+                asset_references.output_directories.add(os.path.dirname(resolved_path))
+        else:
+            if scene_output_path:
+                resolved_path = Scene.replace_render_path_tokens(scene_output_path, doc=doc, take=take_obj)
+                asset_references.output_directories.add(os.path.dirname(resolved_path))
+        
+        if settings.override_multi_pass_path:
+            if settings.multi_pass_path:
+                resolved_path = Scene.replace_render_path_tokens(settings.multi_pass_path, doc=doc, take=take_obj)
+                asset_references.output_directories.add(os.path.dirname(resolved_path))
+        else:
+            if scene_multi_pass_path:
+                resolved_path = Scene.replace_render_path_tokens(scene_multi_pass_path, doc=doc, take=take_obj)
+                asset_references.output_directories.add(os.path.dirname(resolved_path))
+    
+    # Set the global output paths (these will be used as fallback in parameter values)
     if settings.override_output_path:
         if settings.output_path:
             settings.output_path = Scene.replace_render_path_tokens(settings.output_path)
-            asset_references.output_directories.add(os.path.dirname(settings.output_path))
     else:
         if scene_output_path:
             settings.output_path = Scene.replace_render_path_tokens(scene_output_path)
-            asset_references.output_directories.add(os.path.dirname(scene_output_path))
-
+    
     if settings.override_multi_pass_path:
         if settings.multi_pass_path:
             settings.multi_pass_path = Scene.replace_render_path_tokens(settings.multi_pass_path)
-            asset_references.output_directories.add(os.path.dirname(settings.multi_pass_path))
     else:
         if scene_multi_pass_path:
             settings.multi_pass_path = Scene.replace_render_path_tokens(scene_multi_pass_path)
-            asset_references.output_directories.add(os.path.dirname(scene_multi_pass_path))
 
     # # Check if there are multiple frame ranges across the takes
     first_frame_range = submit_takes[0].frame_range
