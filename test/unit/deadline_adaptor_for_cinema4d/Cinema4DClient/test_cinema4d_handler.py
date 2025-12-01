@@ -666,7 +666,6 @@ class TestStartRenderWithTextCaching:
         mock_doc = Mock()
         mock_render_data = MagicMock()
         mock_render_data.GetDataInstance = Mock()
-        mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
 
@@ -675,10 +674,14 @@ class TestStartRenderWithTextCaching:
         with (
             patch.object(handler, "_reload_document") as mock_reload,
             patch.object(handler, "_cache_text_if_needed", return_value=False),
+            patch.object(
+                handler, "_get_take_render_data", return_value=mock_render_data
+            ) as mock_get_take,
         ):
             handler.start_render({"frame": 1})
 
         mock_reload.assert_called_once()
+        mock_get_take.assert_called_once_with(mock_doc)
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
@@ -694,7 +697,6 @@ class TestStartRenderWithTextCaching:
         mock_doc = Mock()
         mock_render_data = MagicMock()
         mock_render_data.GetDataInstance = Mock()
-        mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
 
@@ -703,10 +705,14 @@ class TestStartRenderWithTextCaching:
         with (
             patch.object(handler, "_reload_document") as mock_reload,
             patch.object(handler, "_cache_text_if_needed", return_value=False),
+            patch.object(
+                handler, "_get_take_render_data", return_value=mock_render_data
+            ) as mock_get_take,
         ):
             handler.start_render({"frame": 1})
 
         mock_reload.assert_not_called()
+        mock_get_take.assert_called_once_with(mock_doc)
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
@@ -722,7 +728,6 @@ class TestStartRenderWithTextCaching:
         mock_doc = Mock()
         mock_render_data = MagicMock()
         mock_render_data.GetDataInstance = Mock()
-        mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
 
@@ -732,6 +737,7 @@ class TestStartRenderWithTextCaching:
         with (
             patch.object(handler, "_reload_document"),
             patch.object(handler, "_cache_text_if_needed", return_value=True),
+            patch.object(handler, "_get_take_render_data", return_value=mock_render_data),
         ):
             handler.start_render({"frame": 1})
 
@@ -741,6 +747,7 @@ class TestStartRenderWithTextCaching:
         with (
             patch.object(handler, "_reload_document"),
             patch.object(handler, "_cache_text_if_needed", return_value=False),
+            patch.object(handler, "_get_take_render_data", return_value=mock_render_data),
         ):
             handler.start_render({"frame": 1})
 

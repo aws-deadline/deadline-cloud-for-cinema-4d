@@ -191,7 +191,7 @@ class Scene:
         # Store the current take to restore it later
         take_data = doc.GetTakeData()
         original_take = take_data.GetCurrentTake() if take_data else None
-        
+
         # Temporarily set the document's current take to the one we're processing
         if take and take_data:
             take_data.SetCurrentTake(take)
@@ -206,11 +206,11 @@ class Scene:
             render_path_data["_take"] = take
 
         result = c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
-        
+
         # Restore the original take
         if original_take and take_data:
             take_data.SetCurrentTake(original_take)
-        
+
         return result
 
     @staticmethod

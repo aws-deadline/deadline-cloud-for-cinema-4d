@@ -54,11 +54,11 @@ class TestTakeOutputPathResolution:
         mock_take_v = mock.MagicMock()
         mock_take_v.GetName.return_value = "V"
         mock_take_v.GetChildren.return_value = []
-        
+
         mock_take_e = mock.MagicMock()
         mock_take_e.GetName.return_value = "E"
         mock_take_e.GetChildren.return_value = []
-        
+
         mock_take_r = mock.MagicMock()
         mock_take_r.GetName.return_value = "R"
         mock_take_r.GetChildren.return_value = []
@@ -73,14 +73,34 @@ class TestTakeOutputPathResolution:
             return path.replace("$take", "E")
 
         with (
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name", return_value=str(scene_file)),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.get_output_paths", return_value=("", "")),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.replace_render_path_tokens", side_effect=replace_tokens_side_effect),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.GetActiveDocument", return_value=mock_doc),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.KillDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.LoadDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.InsertBaseDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.SetActiveDocument"),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+                return_value=str(scene_file),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.get_output_paths",
+                return_value=("", ""),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.replace_render_path_tokens",
+                side_effect=replace_tokens_side_effect,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.GetActiveDocument",
+                return_value=mock_doc,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.KillDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.LoadDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.InsertBaseDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.SetActiveDocument"
+            ),
         ):
             create_job_bundle(
                 settings,
@@ -138,7 +158,7 @@ class TestTakeOutputPathResolution:
         mock_take_v = mock.MagicMock()
         mock_take_v.GetName.return_value = "V"
         mock_take_v.GetChildren.return_value = []
-        
+
         mock_take_e = mock.MagicMock()
         mock_take_e.GetName.return_value = "E"
         mock_take_e.GetChildren.return_value = []
@@ -153,14 +173,34 @@ class TestTakeOutputPathResolution:
             return path.replace("$take", "E").replace("$prj", "Test")
 
         with (
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name", return_value=str(scene_file)),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.get_output_paths", return_value=("", "")),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.replace_render_path_tokens", side_effect=replace_tokens_side_effect),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.GetActiveDocument", return_value=mock_doc),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.KillDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.LoadDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.InsertBaseDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.SetActiveDocument"),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+                return_value=str(scene_file),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.get_output_paths",
+                return_value=("", ""),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.replace_render_path_tokens",
+                side_effect=replace_tokens_side_effect,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.GetActiveDocument",
+                return_value=mock_doc,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.KillDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.LoadDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.InsertBaseDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.SetActiveDocument"
+            ),
         ):
             create_job_bundle(
                 settings,
@@ -215,7 +255,7 @@ class TestTakeOutputPathResolution:
         mock_take1 = mock.MagicMock()
         mock_take1.GetName.return_value = "Take1"
         mock_take1.GetChildren.return_value = []
-        
+
         mock_take2 = mock.MagicMock()
         mock_take2.GetName.return_value = "Take2"
         mock_take2.GetChildren.return_value = []
@@ -229,14 +269,34 @@ class TestTakeOutputPathResolution:
             return path
 
         with (
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name", return_value=str(scene_file)),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.get_output_paths", return_value=("", "")),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.replace_render_path_tokens", side_effect=replace_tokens_side_effect),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.GetActiveDocument", return_value=mock_doc),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.KillDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.LoadDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.InsertBaseDocument"),
-            mock.patch("deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.SetActiveDocument"),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+                return_value=str(scene_file),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.get_output_paths",
+                return_value=("", ""),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.replace_render_path_tokens",
+                side_effect=replace_tokens_side_effect,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.GetActiveDocument",
+                return_value=mock_doc,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.KillDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.LoadDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.InsertBaseDocument"
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.c4d.documents.SetActiveDocument"
+            ),
         ):
             create_job_bundle(
                 settings,

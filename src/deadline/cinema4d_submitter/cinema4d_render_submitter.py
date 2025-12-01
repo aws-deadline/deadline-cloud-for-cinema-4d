@@ -481,11 +481,11 @@ def create_job_bundle(
     # Resolve output paths per-take to properly handle $take tokens
     doc = c4d.documents.GetActiveDocument()
     take_data_obj = doc.GetTakeData()
-    
+
     def find_take_by_name(take_data_obj, name):
         """Find a take by name in the take hierarchy."""
         main_take = take_data_obj.GetMainTake()
-        
+
         def search_take(take, target_name):
             if take.GetName() == target_name:
                 return take
@@ -494,30 +494,38 @@ def create_job_bundle(
                 if result:
                     return result
             return None
-        
+
         return search_take(main_take, name)
-    
+
     for take_data in submit_takes:
         take_obj = find_take_by_name(take_data_obj, take_data.name)
-        
+
         if settings.override_output_path:
             if settings.output_path:
-                resolved_path = Scene.replace_render_path_tokens(settings.output_path, doc=doc, take=take_obj)
+                resolved_path = Scene.replace_render_path_tokens(
+                    settings.output_path, doc=doc, take=take_obj
+                )
                 asset_references.output_directories.add(os.path.dirname(resolved_path))
         else:
             if scene_output_path:
-                resolved_path = Scene.replace_render_path_tokens(scene_output_path, doc=doc, take=take_obj)
+                resolved_path = Scene.replace_render_path_tokens(
+                    scene_output_path, doc=doc, take=take_obj
+                )
                 asset_references.output_directories.add(os.path.dirname(resolved_path))
-        
+
         if settings.override_multi_pass_path:
             if settings.multi_pass_path:
-                resolved_path = Scene.replace_render_path_tokens(settings.multi_pass_path, doc=doc, take=take_obj)
+                resolved_path = Scene.replace_render_path_tokens(
+                    settings.multi_pass_path, doc=doc, take=take_obj
+                )
                 asset_references.output_directories.add(os.path.dirname(resolved_path))
         else:
             if scene_multi_pass_path:
-                resolved_path = Scene.replace_render_path_tokens(scene_multi_pass_path, doc=doc, take=take_obj)
+                resolved_path = Scene.replace_render_path_tokens(
+                    scene_multi_pass_path, doc=doc, take=take_obj
+                )
                 asset_references.output_directories.add(os.path.dirname(resolved_path))
-    
+
     # Set the global output paths (these will be used as fallback in parameter values)
     if settings.override_output_path:
         if settings.output_path:
@@ -525,7 +533,7 @@ def create_job_bundle(
     else:
         if scene_output_path:
             settings.output_path = Scene.replace_render_path_tokens(scene_output_path)
-    
+
     if settings.override_multi_pass_path:
         if settings.multi_pass_path:
             settings.multi_pass_path = Scene.replace_render_path_tokens(settings.multi_pass_path)

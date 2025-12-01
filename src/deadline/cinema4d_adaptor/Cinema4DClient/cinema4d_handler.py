@@ -314,7 +314,7 @@ class Cinema4DHandler:
         """Resolve Cinema 4D render tokens like $take, $prj, etc."""
         take_data = doc.GetTakeData()
         current_take = take_data.GetCurrentTake() if take_data else None
-        
+
         render_path_data = {
             "_doc": doc,
             "_rData": render_data,
@@ -323,9 +323,11 @@ class Cinema4DHandler:
         }
         if current_take:
             render_path_data["_take"] = current_take
-        
+
         resolved = c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
-        print(f"Token resolution: '{path}' -> '{resolved}' (take: {current_take.GetName() if current_take else 'None'})")
+        print(
+            f"Token resolution: '{path}' -> '{resolved}' (take: {current_take.GetName() if current_take else 'None'})"
+        )
         return resolved
 
     def set_take(self, data: dict) -> None:
