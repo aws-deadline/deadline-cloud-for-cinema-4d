@@ -85,7 +85,7 @@ def internal_create_job_bundle(
 
     takes = get_takes_from_doc(doc)
 
-    auto_detected_attachments = setup_auto_detected_attachments(takes["take_data_list"])
+    auto_detected_attachments = setup_auto_detected_attachments()
     attachments = setup_attachments(render_settings)
 
     # auto_detected_attachments is equal to asset references in create job bundle callback.

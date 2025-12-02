@@ -216,6 +216,12 @@ def _get_job_template(
     doc = c4d.documents.GetActiveDocument()
     take_data_obj = doc.GetTakeData()
 
+    # Build take lookup once for efficient access
+    main_take = take_data_obj.GetMainTake()
+    take_lookup = {main_take.GetName(): main_take}
+    for t in _get_all_child_takes(main_take):
+        take_lookup[t.GetName()] = t
+
     for take_data in takes:
         step = deepcopy(default_step)
         job_template["steps"].append(step)
@@ -233,14 +239,8 @@ def _get_job_template(
             variables = step["stepEnvironments"][0]["variables"]
             variables["TAKE"] = take_data.name
         else:
-            # Find the actual take object for this take_data
-            take_obj = None
-            for t in [take_data_obj.GetMainTake()] + _get_all_child_takes(
-                take_data_obj.GetMainTake()
-            ):
-                if t.GetName() == take_data.name:
-                    take_obj = t
-                    break
+            # Get the take object from lookup
+            take_obj = take_lookup.get(take_data.name)
 
             # Get the output paths for this specific take
             output_path, multi_pass_path = Scene.get_output_paths(take=take_obj)
@@ -488,7 +488,6 @@ def create_job_bundle(
     """
 
     original_cinema4d_file = Scene.name()
-    scene_output_path, scene_multi_pass_path = Scene.get_output_paths()
 
     if settings.export_job_bundle_to_temp and temp_dir:
         export_to_temp_folder(temp_dir, asset_references)
@@ -618,9 +617,9 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
         take_data.frames_parameter_name = f"{parameter_name}Frames"
 
 
-def setup_auto_detected_attachments(take_data_list: list[TakeData]) -> AssetReferences:
+def setup_auto_detected_attachments() -> AssetReferences:
     """
-    Set up automatically detected attachments from the scene and takes.
+    Set up automatically detected attachments from the scene.
     """
     auto_detected_attachments = AssetReferences()
     introspector = AssetIntrospector()
@@ -743,7 +742,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
     takes = get_takes_from_doc(doc)
 
-    auto_detected_attachments = setup_auto_detected_attachments(takes["take_data_list"])
+    auto_detected_attachments = setup_auto_detected_attachments()
     attachments = setup_attachments(render_settings)
 
     conda_packages = get_conda_packages(doc)

@@ -129,6 +129,16 @@ class Scene:
         return RendererNames(render_id).name
 
     @staticmethod
+    def _process_output_path(path: str, doc_path: str, doc, take, render_data) -> Optional[str]:
+        """Process a render output path and return the directory if valid."""
+        xpath = Scene.replace_render_path_tokens(path, doc=doc, take=take, render_data=render_data)
+        if not os.path.isabs(xpath):
+            xpath = xpath[2:] if xpath.startswith("./") else xpath
+            xpath = os.path.join(doc_path, xpath)
+        output_dir = os.path.dirname(os.path.normpath(xpath))
+        return output_dir if doc_path and output_dir.startswith(doc_path) else None
+
+    @staticmethod
     def get_output_directories(render_data=None, take=None) -> set[str]:
         """
         Returns a list of directories files will be output to.
@@ -139,30 +149,16 @@ class Scene:
 
         image_paths = set()
         if render_data[c4d.RDATA_SAVEIMAGE]:
-            path = render_data[c4d.RDATA_PATH]
-            xpath = Scene.replace_render_path_tokens(
-                path, doc=doc, take=take, render_data=render_data
+            output_dir = Scene._process_output_path(
+                render_data[c4d.RDATA_PATH], doc_path, doc, take, render_data
             )
-            if not os.path.isabs(xpath):
-                if xpath.startswith("./"):
-                    xpath = xpath[2:]
-                xpath = os.path.join(doc_path, xpath)
-            output_dir = os.path.dirname(os.path.normpath(xpath))
-            # Only add if it's under the document path to avoid overly broad directories
-            if doc_path and output_dir.startswith(doc_path):
+            if output_dir:
                 image_paths.add(output_dir)
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
-            path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
-            xpath = Scene.replace_render_path_tokens(
-                path, doc=doc, take=take, render_data=render_data
+            output_dir = Scene._process_output_path(
+                render_data[c4d.RDATA_MULTIPASS_FILENAME], doc_path, doc, take, render_data
             )
-            if not os.path.isabs(xpath):
-                if xpath.startswith("./"):
-                    xpath = xpath[2:]
-                xpath = os.path.join(doc_path, xpath)
-            output_dir = os.path.dirname(os.path.normpath(xpath))
-            # Only add if it's under the document path to avoid overly broad directories
-            if doc_path and output_dir.startswith(doc_path):
+            if output_dir:
                 image_paths.add(output_dir)
         return image_paths
 
