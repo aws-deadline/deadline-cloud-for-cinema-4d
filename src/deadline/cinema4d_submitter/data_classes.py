@@ -135,9 +135,9 @@ class RenderSubmitterUISettings:
                     and field.name not in ["timeouts", "output_path", "multi_pass_path"]
                 }
                 obj["timeouts"] = self.timeouts.to_sticky_settings_dict()
-                if self.override_output_path:
+                if self.override_output_path and "$take" not in self.output_path.lower():
                     obj["output_path"] = self.output_path
-                if self.override_multi_pass_path:
+                if self.override_multi_pass_path and "$take" not in self.multi_pass_path.lower():
                     obj["multi_pass_path"] = self.multi_pass_path
                 json.dump(obj, fh, indent=1)
         except OSError as e:

@@ -135,9 +135,6 @@ class Scene:
         """
         doc = c4d.documents.GetActiveDocument()
         doc_path = doc.GetDocumentPath()
-        if not take:
-            take_data = doc.GetTakeData()
-            take = take_data.GetCurrentTake()
         render_data = Scene.get_render_data(doc=doc, take=take)
 
         image_paths = set()
@@ -150,7 +147,10 @@ class Scene:
                 if xpath.startswith("./"):
                     xpath = xpath[2:]
                 xpath = os.path.join(doc_path, xpath)
-            image_paths.add(os.path.dirname(os.path.normpath(xpath)))
+            output_dir = os.path.dirname(os.path.normpath(xpath))
+            # Only add if it's under the document path to avoid overly broad directories
+            if output_dir.startswith(doc_path):
+                image_paths.add(output_dir)
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
             path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
             xpath = Scene.replace_render_path_tokens(
@@ -160,7 +160,10 @@ class Scene:
                 if xpath.startswith("./"):
                     xpath = xpath[2:]
                 xpath = os.path.join(doc_path, xpath)
-            image_paths.add(os.path.dirname(os.path.normpath(xpath)))
+            output_dir = os.path.dirname(os.path.normpath(xpath))
+            # Only add if it's under the document path to avoid overly broad directories
+            if output_dir.startswith(doc_path):
+                image_paths.add(output_dir)
         return image_paths
 
     @staticmethod
@@ -170,9 +173,14 @@ class Scene:
         render_data = None
         if take is not None:
             take_data = doc.GetTakeData()
+            # Temporarily set the current take to ensure GetEffectiveRenderData uses the correct take
+            original_take = take_data.GetCurrentTake()
+            take_data.SetCurrentTake(take)
             take_erd = take.GetEffectiveRenderData(take_data)
             if take_erd is not None:
                 render_data = take_erd[0]
+            # Restore the original take
+            take_data.SetCurrentTake(original_take)
         if render_data is None:
             render_data = doc.GetActiveRenderData()
         return render_data
