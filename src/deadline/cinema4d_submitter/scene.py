@@ -134,7 +134,7 @@ class Scene:
         Returns a list of directories files will be output to.
         """
         doc = c4d.documents.GetActiveDocument()
-        doc_path = doc.GetDocumentPath()
+        doc_path = str(doc.GetDocumentPath()) if doc.GetDocumentPath() else ""
         render_data = Scene.get_render_data(doc=doc, take=take)
 
         image_paths = set()
@@ -149,7 +149,7 @@ class Scene:
                 xpath = os.path.join(doc_path, xpath)
             output_dir = os.path.dirname(os.path.normpath(xpath))
             # Only add if it's under the document path to avoid overly broad directories
-            if output_dir.startswith(doc_path):
+            if doc_path and output_dir.startswith(doc_path):
                 image_paths.add(output_dir)
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
             path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
@@ -162,7 +162,7 @@ class Scene:
                 xpath = os.path.join(doc_path, xpath)
             output_dir = os.path.dirname(os.path.normpath(xpath))
             # Only add if it's under the document path to avoid overly broad directories
-            if output_dir.startswith(doc_path):
+            if doc_path and output_dir.startswith(doc_path):
                 image_paths.add(output_dir)
         return image_paths
 

@@ -211,11 +211,11 @@ def _get_job_template(
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
     job_template["steps"] = []
-    
+
     # Get take-specific output paths
     doc = c4d.documents.GetActiveDocument()
     take_data_obj = doc.GetTakeData()
-    
+
     for take_data in takes:
         step = deepcopy(default_step)
         job_template["steps"].append(step)
@@ -235,14 +235,16 @@ def _get_job_template(
         else:
             # Find the actual take object for this take_data
             take_obj = None
-            for t in [take_data_obj.GetMainTake()] + _get_all_child_takes(take_data_obj.GetMainTake()):
+            for t in [take_data_obj.GetMainTake()] + _get_all_child_takes(
+                take_data_obj.GetMainTake()
+            ):
                 if t.GetName() == take_data.name:
                     take_obj = t
                     break
-            
+
             # Get the output paths for this specific take
             output_path, multi_pass_path = Scene.get_output_paths(take=take_obj)
-            
+
             # Update the init data of the step with take-specific paths
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
             init_data["data"] = (
@@ -505,7 +507,7 @@ def create_job_bundle(
     # Don't pass output paths - let Cinema 4D use each take's configured paths
     settings.output_path = ""
     settings.multi_pass_path = ""
-    
+
     # Add output directories from all takes to asset references
     for take_data in submit_takes:
         asset_references.output_directories.update(take_data.output_directories)
