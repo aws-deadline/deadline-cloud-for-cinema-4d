@@ -24,9 +24,8 @@ def test_scene():
 
 
 def test_get_output_directores():
-    render_data = {0: 0}
-    doc = Scene.get_output_directories(render_data=render_data)
-    assert doc is not None
+    result = Scene.get_output_directories()
+    assert result is not None
 
 
 @mock.patch("c4d.RDATA_RENDERENGINE", 0)

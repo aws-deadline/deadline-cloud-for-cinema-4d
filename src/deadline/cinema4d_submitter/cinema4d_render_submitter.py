@@ -87,15 +87,6 @@ def show_submitter():
         traceback.print_exc()
 
 
-def _get_all_child_takes(take):
-    """Recursively get all child takes."""
-    child_takes = take.GetChildren()
-    all_takes = list(child_takes)
-    for child_take in child_takes:
-        all_takes.extend(_get_all_child_takes(child_take))
-    return all_takes
-
-
 def _get_parameter_values(
     settings: RenderSubmitterUISettings,
     queue_parameters: list[JobParameter],
@@ -167,6 +158,15 @@ def _get_parameter_values(
     return parameter_values
 
 
+def get_child_takes(take):
+    child_takes = take.GetChildren()
+    all_takes = child_takes
+    if child_takes:
+        for child_take in child_takes:
+            all_takes.extend(get_child_takes(child_take))
+    return all_takes
+
+
 def _get_job_template(
     settings: RenderSubmitterUISettings,
     renderers: set[str],
@@ -208,20 +208,16 @@ def _get_job_template(
             take_frame_param["userInterface"]["groupLabel"] = take_data.ui_group_label
             job_template["parameterDefinitions"].append(take_frame_param)
 
+    # Get take objects for path resolution
+    doc = c4d.documents.GetActiveDocument()
+    take_data_obj = doc.GetTakeData()
+    main_take = take_data_obj.GetMainTake()
+
+    all_takes = [main_take] + get_child_takes(main_take)
+
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
     job_template["steps"] = []
-
-    # Get take-specific output paths
-    doc = c4d.documents.GetActiveDocument()
-    take_data_obj = doc.GetTakeData()
-
-    # Build take lookup once for efficient access
-    main_take = take_data_obj.GetMainTake()
-    take_lookup = {main_take.GetName(): main_take}
-    for t in _get_all_child_takes(main_take):
-        take_lookup[t.GetName()] = t
-
     for take_data in takes:
         step = deepcopy(default_step)
         job_template["steps"].append(step)
@@ -239,13 +235,17 @@ def _get_job_template(
             variables = step["stepEnvironments"][0]["variables"]
             variables["TAKE"] = take_data.name
         else:
-            # Get the take object from lookup
-            take_obj = take_lookup.get(take_data.name)
+            # Find the take object for this take_data
+            take_obj = None
+            for t in all_takes:
+                if t.GetName() == take_data.name:
+                    take_obj = t
+                    break
 
             # Get the output paths for this specific take
             output_path, multi_pass_path = Scene.get_output_paths(take=take_obj)
 
-            # Update the init data of the step with take-specific paths
+            # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
             init_data["data"] = (
                 "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
@@ -403,14 +403,6 @@ def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:
     main_take = take_data.GetMainTake()
     current_take = take_data.GetCurrentTake()
 
-    def get_child_takes(take):
-        child_takes = take.GetChildren()
-        all_takes = child_takes
-        if child_takes:
-            for child_take in child_takes:
-                all_takes.extend(get_child_takes(child_take))
-        return all_takes
-
     all_takes = [main_take] + get_child_takes(main_take)
     take_data_list = []
     current_data_list = []
@@ -488,6 +480,7 @@ def create_job_bundle(
     """
 
     original_cinema4d_file = Scene.name()
+    scene_output_path, scene_multi_pass_path = Scene.get_output_paths()
 
     if settings.export_job_bundle_to_temp and temp_dir:
         export_to_temp_folder(temp_dir, asset_references)
@@ -503,13 +496,24 @@ def create_job_bundle(
     elif settings.take_selection == TakeSelection.CURRENT:
         submit_takes = takes["current_data_list"]
 
-    # Don't pass output paths - let Cinema 4D use each take's configured paths
-    settings.output_path = ""
-    settings.multi_pass_path = ""
+    # Add overrides to asset references and update the paths with C4D render path tokens.
+    if settings.override_output_path:
+        if settings.output_path:
+            settings.output_path = Scene.replace_render_path_tokens(settings.output_path)
+            asset_references.output_directories.add(os.path.dirname(settings.output_path))
+    else:
+        if scene_output_path:
+            settings.output_path = Scene.replace_render_path_tokens(scene_output_path)
+            asset_references.output_directories.add(os.path.dirname(scene_output_path))
 
-    # Add output directories from all takes to asset references
-    for take_data in submit_takes:
-        asset_references.output_directories.update(take_data.output_directories)
+    if settings.override_multi_pass_path:
+        if settings.multi_pass_path:
+            settings.multi_pass_path = Scene.replace_render_path_tokens(settings.multi_pass_path)
+            asset_references.output_directories.add(os.path.dirname(settings.multi_pass_path))
+    else:
+        if scene_multi_pass_path:
+            settings.multi_pass_path = Scene.replace_render_path_tokens(scene_multi_pass_path)
+            asset_references.output_directories.add(os.path.dirname(scene_multi_pass_path))
 
     # # Check if there are multiple frame ranges across the takes
     first_frame_range = submit_takes[0].frame_range
@@ -617,9 +621,9 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
         take_data.frames_parameter_name = f"{parameter_name}Frames"
 
 
-def setup_auto_detected_attachments() -> AssetReferences:
+def setup_auto_detected_attachments(take_data_list: list[TakeData]) -> AssetReferences:
     """
-    Set up automatically detected attachments from the scene.
+    Set up automatically detected attachments from the scene and takes.
     """
     auto_detected_attachments = AssetReferences()
     introspector = AssetIntrospector()
@@ -629,8 +633,9 @@ def setup_auto_detected_attachments() -> AssetReferences:
         os.path.normpath(path) for path in introspector.parse_scene_assets()
     )
 
-    # Don't add output directories here - they will be added in create_job_bundle
-    # based on the actual takes selected for submission
+    # Add output directories from takes
+    for take_data in take_data_list:
+        auto_detected_attachments.output_directories.update(take_data.output_directories)
 
     return auto_detected_attachments
 
@@ -711,12 +716,10 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
     # Get all files within the temp directory
     temp_assets = set()
 
-    for root, _, files in os.walk(temp_dir, followlinks=False):
+    for root, _, files in os.walk(temp_dir):
         for file in files:
             file_path = os.path.join(root, file)
-            # Skip symlinks to avoid nested path issues
-            if not os.path.islink(file_path):
-                temp_assets.add(os.path.normpath(file_path))
+            temp_assets.add(os.path.normpath(file_path))
 
     # Add all assets to the asset references
     asset_references.input_filenames = temp_assets
@@ -742,7 +745,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
     takes = get_takes_from_doc(doc)
 
-    auto_detected_attachments = setup_auto_detected_attachments()
+    auto_detected_attachments = setup_auto_detected_attachments(takes["take_data_list"])
     attachments = setup_attachments(render_settings)
 
     conda_packages = get_conda_packages(doc)

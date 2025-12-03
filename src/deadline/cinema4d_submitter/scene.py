@@ -129,37 +129,41 @@ class Scene:
         return RendererNames(render_id).name
 
     @staticmethod
-    def _process_output_path(path: str, doc_path: str, doc, take, render_data) -> Optional[str]:
-        """Process a render output path and return the directory if valid."""
-        xpath = Scene.replace_render_path_tokens(path, doc=doc, take=take, render_data=render_data)
-        if not os.path.isabs(xpath):
-            xpath = xpath[2:] if xpath.startswith("./") else xpath
-            xpath = os.path.join(doc_path, xpath)
-        output_dir = os.path.dirname(os.path.normpath(xpath))
-        return output_dir if doc_path and output_dir.startswith(doc_path) else None
-
-    @staticmethod
-    def get_output_directories(render_data=None, take=None) -> set[str]:
+    def get_output_directories(doc=None, take=None) -> set[str]:
         """
         Returns a list of directories files will be output to.
         """
-        doc = c4d.documents.GetActiveDocument()
-        doc_path = str(doc.GetDocumentPath()) if doc.GetDocumentPath() else ""
+        if doc is None:
+            doc = c4d.documents.GetActiveDocument()
+
+        # Only return output directories for marked takes or when no specific take is provided
+        if take is not None and not take.IsChecked():
+            return set()
+
+        doc_path = doc.GetDocumentPath()
         render_data = Scene.get_render_data(doc=doc, take=take)
 
         image_paths = set()
         if render_data[c4d.RDATA_SAVEIMAGE]:
-            output_dir = Scene._process_output_path(
-                render_data[c4d.RDATA_PATH], doc_path, doc, take, render_data
+            path = render_data[c4d.RDATA_PATH]
+            xpath = Scene.replace_render_path_tokens(
+                path, doc=doc, take=take, render_data=render_data
             )
-            if output_dir:
-                image_paths.add(output_dir)
+            if not os.path.isabs(xpath):
+                if xpath.startswith("./"):
+                    xpath = xpath[2:]
+                xpath = os.path.join(doc_path, xpath)
+            image_paths.add(os.path.dirname(os.path.normpath(xpath)))
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
-            output_dir = Scene._process_output_path(
-                render_data[c4d.RDATA_MULTIPASS_FILENAME], doc_path, doc, take, render_data
+            path = render_data[c4d.RDATA_MULTIPASS_FILENAME]
+            xpath = Scene.replace_render_path_tokens(
+                path, doc=doc, take=take, render_data=render_data
             )
-            if output_dir:
-                image_paths.add(output_dir)
+            if not os.path.isabs(xpath):
+                if xpath.startswith("./"):
+                    xpath = xpath[2:]
+                xpath = os.path.join(doc_path, xpath)
+            image_paths.add(os.path.dirname(os.path.normpath(xpath)))
         return image_paths
 
     @staticmethod
@@ -169,14 +173,9 @@ class Scene:
         render_data = None
         if take is not None:
             take_data = doc.GetTakeData()
-            # Temporarily set the current take to ensure GetEffectiveRenderData uses the correct take
-            original_take = take_data.GetCurrentTake()
-            take_data.SetCurrentTake(take)
             take_erd = take.GetEffectiveRenderData(take_data)
             if take_erd is not None:
                 render_data = take_erd[0]
-            # Restore the original take
-            take_data.SetCurrentTake(original_take)
         if render_data is None:
             render_data = doc.GetActiveRenderData()
         return render_data
@@ -198,7 +197,7 @@ class Scene:
             "_rBc": render_data.GetDataInstance(),
             "_frame": doc.GetTime().GetFrame(doc.GetFps()),
         }
-        if take:
+        if take is not None:
             render_path_data["_take"] = take
 
         return c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
@@ -209,6 +208,11 @@ class Scene:
         Returns the default and multi-pass output paths.
         """
         doc = c4d.documents.GetActiveDocument()
+
+        # Only return output paths for marked takes or when no specific take is provided
+        if take is not None and not take.IsChecked():
+            return "", ""
+
         doc_path = doc.GetDocumentPath()
         render_data = Scene.get_render_data(doc=doc, take=take)
 
