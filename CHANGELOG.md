@@ -1,3 +1,16 @@
+## 0.9.0 (2025-12-04)
+
+
+### Features
+* Print the submitter version in the logs. (#358) ([`3df12a0`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/3df12a08f74206b7b8f2bab6b1da18893e8a397d))
+* Add Cinema 4D detailed debug logs. (#349) ([`8561129`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8561129c5a399c782c69f800f04daa6916bcd7e3))
+* Add cross-platform font support (#345) ([`2f65b2e`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/2f65b2e18938d0164de1ab95ed9f98b59f7d1802))
+
+### Bug Fixes
+* Exclude Maxon DB assets from job bundle references (#353) ([`626ecbf`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/626ecbf2e9919214c574c16dab1747c35fe30a4a))
+* Add validation to detect pipe characters in asset paths (#348) ([`abe0c0c`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/abe0c0cc7d0ffd61bfeec79ae3d6aada864c7722))
+
+
 ## 0.8.5 (2025-11-19)
 
 
