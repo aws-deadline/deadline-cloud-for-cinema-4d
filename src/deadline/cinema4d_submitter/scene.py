@@ -136,10 +136,6 @@ class Scene:
         if doc is None:
             doc = c4d.documents.GetActiveDocument()
 
-        # Only return output directories for marked takes or when no specific take is provided
-        if take is not None and not take.IsChecked():
-            return set()
-
         doc_path = doc.GetDocumentPath()
         render_data = Scene.get_render_data(doc=doc, take=take)
 
@@ -208,10 +204,6 @@ class Scene:
         Returns the default and multi-pass output paths.
         """
         doc = c4d.documents.GetActiveDocument()
-
-        # Only return output paths for marked takes or when no specific take is provided
-        if take is not None and not take.IsChecked():
-            return "", ""
 
         doc_path = doc.GetDocumentPath()
         render_data = Scene.get_render_data(doc=doc, take=take)
