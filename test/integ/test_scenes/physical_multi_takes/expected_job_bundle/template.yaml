@@ -303,6 +303,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -312,6 +313,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -331,6 +333,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeh
   parameterSpace:
     taskParameterDefinitions:
@@ -369,6 +372,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -378,6 +382,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -397,6 +402,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg
   parameterSpace:
     taskParameterDefinitions:
@@ -435,6 +441,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -444,6 +451,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -463,6 +471,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
   parameterSpace:
     taskParameterDefinitions:
@@ -501,6 +510,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -510,6 +520,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -529,6 +540,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: 0123456789abcdef0123456789abcdef0123456789abcdef789abcdeg
   parameterSpace:
     taskParameterDefinitions:
@@ -567,6 +579,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -576,6 +589,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -595,6 +609,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: 0123456789abcdef0123456789abcdef0123456789abcdef789abcdef
   parameterSpace:
     taskParameterDefinitions:
@@ -633,6 +648,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -642,6 +658,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -661,6 +678,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: abcdef124
   parameterSpace:
     taskParameterDefinitions:
@@ -699,6 +717,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -708,6 +727,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -727,6 +747,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: abcdef123
   parameterSpace:
     taskParameterDefinitions:
@@ -765,6 +786,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -774,6 +796,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -793,6 +816,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: '{}|:test!@#$%^&*()_'
   parameterSpace:
     taskParameterDefinitions:
@@ -831,6 +855,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -840,6 +865,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -859,6 +885,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: he llo
   parameterSpace:
     taskParameterDefinitions:
@@ -897,6 +924,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -906,6 +934,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -925,6 +954,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: hello
   parameterSpace:
     taskParameterDefinitions:
@@ -963,6 +993,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -972,6 +1003,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -991,6 +1023,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: '0'
   parameterSpace:
     taskParameterDefinitions:
@@ -1029,6 +1062,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -1038,6 +1072,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -1057,6 +1092,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: B
   parameterSpace:
     taskParameterDefinitions:
@@ -1095,6 +1131,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -1104,6 +1141,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -1123,6 +1161,7 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
 - name: A
   parameterSpace:
     taskParameterDefinitions:
@@ -1161,6 +1200,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -1170,6 +1210,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -1189,3 +1230,4 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
