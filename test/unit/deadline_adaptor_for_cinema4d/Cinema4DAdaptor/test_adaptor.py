@@ -217,6 +217,22 @@ def test_adaptor_prints_version_on_init(init_data, capfd):
 
 
 @pytest.mark.xdist_group(name="adaptor_tests")
+def test_adaptor_prints_submitter_version_on_init(init_data, capfd, monkeypatch):
+    """
+    Test that the adaptor prints the submitter version during initialization
+    when the SUBMITTER_INTEGRATION_VERSION environment variable is set
+    """
+    test_version = "1.2.3"
+    monkeypatch.setenv("SUBMITTER_INTEGRATION_VERSION", test_version)
+    Cinema4DAdaptor(init_data)
+    captured = capfd.readouterr()
+    expected_output = f"This job was submitted from submitter integration version: {test_version}"
+    assert (
+        expected_output in captured.out
+    ), f"Expected output to contain {expected_output}, but got {captured.out}"
+
+
+@pytest.mark.xdist_group(name="adaptor_tests")
 @pytest.mark.parametrize("activate_error_checking", [0, 1])
 def test_activate_error_checking(init_data: dict, activate_error_checking: int) -> None:
     """

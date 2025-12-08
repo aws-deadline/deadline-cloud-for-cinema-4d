@@ -1,6 +1,8 @@
 parameterValues:
 - name: Cinema4DFile
   value: PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_textured\generated_bundle\physical_textured.c4d
+- name: SubmitterIntegrationVersion
+  value: 0.8.0
 - name: OutputPath
   value: PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_textured\generated_bundle\renders\physical_textured
 - name: MultiPassPath

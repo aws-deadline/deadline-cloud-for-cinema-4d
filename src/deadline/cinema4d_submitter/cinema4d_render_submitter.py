@@ -97,6 +97,12 @@ def _get_parameter_values(
 
     # Set the c4d scene file value
     parameter_values.append({"name": "Cinema4DFile", "value": Scene.name()})
+    parameter_values.append(
+        {
+            "name": "SubmitterIntegrationVersion",
+            "value": ".".join(str(v) for v in adaptor_version_tuple),
+        }
+    )
     parameter_values.append({"name": "OutputPath", "value": settings.output_path})
     parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
     parameter_values.append(

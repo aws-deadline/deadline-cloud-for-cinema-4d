@@ -182,6 +182,8 @@ def assert_expected_job_bundle_and_generated_job_bundle_are_equal(
             if file == "parameter_values.yaml":
                 content1 = _normalize_conda_packages_version(content1)
                 content2 = _normalize_conda_packages_version(content2)
+                content1 = _normalize_submitter_integration_version(content1)
+                content2 = _normalize_submitter_integration_version(content2)
 
             # Special handling for template.yaml to strip job environments.
             # Job environments can contain code that changes frequently
@@ -218,6 +220,20 @@ def _normalize_conda_packages_version(content: str) -> str:
     content = re.sub(
         r"cinema4d=202[4-9].\* cinema4d-openjd=0.\d.\*",
         "cinema4d=2026.* cinema4d-openjd=0.8.*",
+        content,
+    )
+    return content
+
+
+def _normalize_submitter_integration_version(content: str) -> str:
+    """
+    Normalize the SubmitterIntegrationVersion parameter to match the expected test format.
+    This allows tests to pass regardless of the actual version numbers by
+    normalizing the generated content to match the expected format.
+    """
+    content = re.sub(
+        r"(name: SubmitterIntegrationVersion\n\s+value: )\d+\.\d+\.\d+[^\n]*",
+        r"\g<1>0.8.0",
         content,
     )
     return content

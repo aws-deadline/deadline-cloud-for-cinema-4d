@@ -17,6 +17,13 @@ parameterDefinitions:
       patterns:
       - '*'
   description: The Cinema4D document file to render.
+- name: SubmitterIntegrationVersion
+  type: STRING
+  userInterface:
+    control: HIDDEN
+    label: Submitter Integration Version
+    groupLabel: Cinema4D Settings
+  description: The Cinema 4D submitter integration version.
 - name: Frames
   type: STRING
   userInterface:
@@ -88,6 +95,7 @@ steps:
     description: Runs Cinema4D in the background.
     variables:
       PYTHONUNBUFFERED: '1'
+      SUBMITTER_INTEGRATION_VERSION: '{{Param.SubmitterIntegrationVersion}}'
     script:
       embeddedFiles:
       - name: initData

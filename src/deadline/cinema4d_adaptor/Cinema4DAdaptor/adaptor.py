@@ -83,9 +83,12 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         1  # 0=deactivate, 1=activate - controls whether error regex callbacks are added
     )
 
-    def _print_adaptor_version(self) -> None:
-        """Prints the adaptor version information."""
+    def _print_adaptor_and_submitter_versions(self) -> None:
+        """Prints the adaptor and submitter version information."""
         print(f"Deadline Cloud for Cinema 4D adaptor version: {adaptor_version}")
+        submitter_version = os.environ.get("SUBMITTER_INTEGRATION_VERSION", "")
+        if submitter_version:
+            print(f"This job was submitted from submitter integration version: {submitter_version}")
 
     def __init__(self, *args, **kwargs):
         if sys.platform == "linux" and "path_mapping_data" in kwargs:
@@ -112,7 +115,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                         prefixed_rule["destination_os"] = rule["destination_os"]
                     path_mapping_rules.append(prefixed_rule)
         super().__init__(*args, **kwargs)
-        self._print_adaptor_version()
+        self._print_adaptor_and_submitter_versions()
 
     @property
     def integration_data_interface_version(self) -> SemanticVersion:
