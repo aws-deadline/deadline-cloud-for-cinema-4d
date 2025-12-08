@@ -248,15 +248,23 @@ def _get_job_template(
                     take_obj = t
                     break
 
-            # Get the output paths for this specific take
-            output_path, multi_pass_path = Scene.get_output_paths(take=take_obj)
-
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
-            init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
-                % (take_data.name, output_path, multi_pass_path)
-            )
+
+            # Check if paths contain $take token
+            if "$take" in settings.output_path or "$take" in settings.multi_pass_path:
+                # Get the output paths for this specific take
+                output_path, multi_pass_path = Scene.get_output_paths(take=take_obj)
+                init_data["data"] = (
+                    "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
+                    % (take_data.name, output_path, multi_pass_path)
+                )
+            else:
+                # Use parameter values for main take
+                init_data["data"] = (
+                    "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
+                    % take_data.name
+                )
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:

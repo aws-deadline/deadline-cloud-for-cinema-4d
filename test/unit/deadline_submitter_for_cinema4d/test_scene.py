@@ -2,6 +2,7 @@
 
 from typing import Optional
 from unittest import mock
+import os
 
 import pytest
 
@@ -50,7 +51,7 @@ class TestGetOutputDirectories:
 
         result = Scene.get_output_directories(doc=mock_doc, take=None)
 
-        assert result == {"/project/path/output"}
+        assert result == {os.path.normpath("/project/path/output")}
         mock_get_render.assert_called_once_with(doc=mock_doc, take=None)
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
@@ -63,7 +64,7 @@ class TestGetOutputDirectories:
 
         result = Scene.get_output_directories(doc=mock_doc, take=current_take)
 
-        assert result == {"/project/path/renders"}
+        assert result == {os.path.normpath("/project/path/renders")}
         mock_get_render.assert_called_once_with(doc=mock_doc, take=current_take)
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
@@ -76,7 +77,7 @@ class TestGetOutputDirectories:
 
         result = Scene.get_output_directories(doc=mock_doc, take=marked_take)
 
-        assert result == {"/project/path/marked"}
+        assert result == {os.path.normpath("/project/path/marked")}
         mock_get_render.assert_called_once_with(doc=mock_doc, take=marked_take)
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
@@ -89,7 +90,7 @@ class TestGetOutputDirectories:
 
         result = Scene.get_output_directories(doc=mock_doc, take=main_take)
 
-        assert result == {"/project/path/main"}
+        assert result == {os.path.normpath("/project/path/main")}
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
@@ -100,7 +101,10 @@ class TestGetOutputDirectories:
 
         result = Scene.get_output_directories(doc=mock_doc)
 
-        assert result == {"/project/path/output", "/project/path/multipass"}
+        assert result == {
+            os.path.normpath("/project/path/output"),
+            os.path.normpath("/project/path/multipass"),
+        }
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
@@ -111,7 +115,7 @@ class TestGetOutputDirectories:
 
         result = Scene.get_output_directories(doc=mock_doc)
 
-        assert result == {"/abs/path"}
+        assert result == {os.path.normpath("/abs/path")}
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
