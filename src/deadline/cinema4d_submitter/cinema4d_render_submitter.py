@@ -103,8 +103,10 @@ def _get_parameter_values(
             "value": ".".join(str(v) for v in adaptor_version_tuple),
         }
     )
-    parameter_values.append({"name": "OutputPath", "value": settings.output_path})
-    parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
+    # Only add OutputPath and MultiPassPath if they don't contain $take token
+    if "$take" not in settings.output_path and "$take" not in settings.multi_pass_path:
+        parameter_values.append({"name": "OutputPath", "value": settings.output_path})
+        parameter_values.append({"name": "MultiPassPath", "value": settings.multi_pass_path})
     parameter_values.append(
         {"name": "ActivateErrorChecking", "value": settings.activate_error_checking}
     )
@@ -214,13 +216,6 @@ def _get_job_template(
             take_frame_param["userInterface"]["groupLabel"] = take_data.ui_group_label
             job_template["parameterDefinitions"].append(take_frame_param)
 
-    # Get take objects for path resolution
-    doc = c4d.documents.GetActiveDocument()
-    take_data_obj = doc.GetTakeData()
-    main_take = take_data_obj.GetMainTake()
-
-    all_takes = [main_take] + get_child_takes(main_take)
-
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
     job_template["steps"] = []
@@ -241,26 +236,25 @@ def _get_job_template(
             variables = step["stepEnvironments"][0]["variables"]
             variables["TAKE"] = take_data.name
         else:
-            # Find the take object for this take_data
-            take_obj = None
-            for t in all_takes:
-                if t.GetName() == take_data.name:
-                    take_obj = t
-                    break
-
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
 
-            # Check if paths contain $take token
             if "$take" in settings.output_path or "$take" in settings.multi_pass_path:
-                # Get the output paths for this specific take
-                output_path, multi_pass_path = Scene.get_output_paths(take=take_obj)
                 init_data["data"] = (
                     "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
-                    % (take_data.name, output_path, multi_pass_path)
+                    % (
+                        take_data.name,
+                        settings.output_path.replace("$take", take_data.name),
+                        settings.multi_pass_path.replace("$take", take_data.name),
+                    )
                 )
+                # Remove unused OutputPath and MultiPassPath parameters
+                job_template["parameterDefinitions"] = [
+                    param
+                    for param in job_template["parameterDefinitions"]
+                    if param["name"] not in ("OutputPath", "MultiPassPath")
+                ]
             else:
-                # Use parameter values for main take
                 init_data["data"] = (
                     "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
                     % take_data.name

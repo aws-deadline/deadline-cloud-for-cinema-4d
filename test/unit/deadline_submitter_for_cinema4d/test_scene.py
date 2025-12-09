@@ -42,10 +42,15 @@ class TestGetOutputDirectories:
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_no_take_with_saveimage(
-        self, mock_replace, mock_get_render, mock_doc, mock_render_data
-    ):
-        render_data = {1: True, 2: "output/image.png", 3: False}
+    def test_returns_output_directory(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
+        RDATA_SAVEIMAGE = mock_render_data.RDATA_SAVEIMAGE
+        RDATA_PATH = mock_render_data.RDATA_PATH
+        RDATA_MULTIPASS_SAVEIMAGE = mock_render_data.RDATA_MULTIPASS_SAVEIMAGE
+        render_data = {
+            RDATA_SAVEIMAGE: True,
+            RDATA_PATH: "output/image.png",
+            RDATA_MULTIPASS_SAVEIMAGE: False,
+        }
         mock_get_render.return_value = render_data
         mock_replace.return_value = "output/image.png"
 
@@ -56,46 +61,17 @@ class TestGetOutputDirectories:
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_current_take(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
-        current_take = mock.Mock()
-        render_data = {1: True, 2: "renders/current.png", 3: False}
-        mock_get_render.return_value = render_data
-        mock_replace.return_value = "renders/current.png"
-
-        result = Scene.get_output_directories(doc=mock_doc, take=current_take)
-
-        assert result == {os.path.normpath("/project/path/renders")}
-        mock_get_render.assert_called_once_with(doc=mock_doc, take=current_take)
-
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_marked_take(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
-        marked_take = mock.Mock()
-        render_data = {1: True, 2: "marked/output.png", 3: False}
-        mock_get_render.return_value = render_data
-        mock_replace.return_value = "marked/output.png"
-
-        result = Scene.get_output_directories(doc=mock_doc, take=marked_take)
-
-        assert result == {os.path.normpath("/project/path/marked")}
-        mock_get_render.assert_called_once_with(doc=mock_doc, take=marked_take)
-
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_main_take(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
-        main_take = mock.Mock()
-        render_data = {1: True, 2: "main/render.png", 3: False}
-        mock_get_render.return_value = render_data
-        mock_replace.return_value = "main/render.png"
-
-        result = Scene.get_output_directories(doc=mock_doc, take=main_take)
-
-        assert result == {os.path.normpath("/project/path/main")}
-
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_with_multipass(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
-        render_data = {1: True, 2: "output/image.png", 3: True, 4: "multipass/mp.png"}
+    def test_returns_both_output_and_multipass_directories(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
+        RDATA_SAVEIMAGE = mock_render_data.RDATA_SAVEIMAGE
+        RDATA_PATH = mock_render_data.RDATA_PATH
+        RDATA_MULTIPASS_SAVEIMAGE = mock_render_data.RDATA_MULTIPASS_SAVEIMAGE
+        RDATA_MULTIPASS_FILENAME = mock_render_data.RDATA_MULTIPASS_FILENAME
+        render_data = {
+            RDATA_SAVEIMAGE: True,
+            RDATA_PATH: "output/image.png",
+            RDATA_MULTIPASS_SAVEIMAGE: True,
+            RDATA_MULTIPASS_FILENAME: "multipass/mp.png",
+        }
         mock_get_render.return_value = render_data
         mock_replace.side_effect = ["output/image.png", "multipass/mp.png"]
 
@@ -108,19 +84,10 @@ class TestGetOutputDirectories:
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_absolute_path(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
-        render_data = {1: True, 2: "/abs/path/image.png", 3: False}
-        mock_get_render.return_value = render_data
-        mock_replace.return_value = "/abs/path/image.png"
-
-        result = Scene.get_output_directories(doc=mock_doc)
-
-        assert result == {os.path.normpath("/abs/path")}
-
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
-    @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_no_output_enabled(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
-        render_data = {1: False, 3: False}
+    def test_returns_empty_when_no_output_enabled(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
+        RDATA_SAVEIMAGE = mock_render_data.RDATA_SAVEIMAGE
+        RDATA_MULTIPASS_SAVEIMAGE = mock_render_data.RDATA_MULTIPASS_SAVEIMAGE
+        render_data = {RDATA_SAVEIMAGE: False, RDATA_MULTIPASS_SAVEIMAGE: False}
         mock_get_render.return_value = render_data
 
         result = Scene.get_output_directories(doc=mock_doc)

@@ -80,6 +80,90 @@ class TestCinema4dRenderSubmitterDetailedLogging:
             assert "onExit" in detailed_logging_env["script"]["actions"]
 
 
+class TestCinema4dRenderSubmitterTakeToken:
+    """Test cases for $take token handling in cinema4d_render_submitter.py."""
+
+    def test_get_job_template_removes_params_with_take_token(self, tmp_path):
+        """Test OutputPath and MultiPassPath parameters are removed when $take token is present."""
+        settings = RenderSubmitterUISettings()
+        settings.name = "Test Job"
+        settings.output_path = "output/$take/image.png"
+        settings.multi_pass_path = "multipass/$take/mp.png"
+        settings.include_adaptor_wheels = False
+        settings.timeouts = default_timeout_entries()
+
+        takes = [TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)]
+
+        scene_file = tmp_path / "test_scene.c4d"
+        scene_file.write_text("dummy scene content")
+
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+                return_value=str(scene_file),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.is_windows",
+                return_value=False,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.scene_has_fonts",
+                return_value=False,
+            ),
+        ):
+            result = _get_job_template(settings, set(), takes)
+
+            # Verify OutputPath and MultiPassPath parameters were removed
+            param_names = [p["name"] for p in result["parameterDefinitions"]]
+            assert "OutputPath" not in param_names
+            assert "MultiPassPath" not in param_names
+
+            # Verify the init data contains hardcoded paths with take name substituted
+            init_data = result["steps"][0]["stepEnvironments"][0]["script"]["embeddedFiles"][0]
+            assert "output/Main/image.png" in init_data["data"]
+            assert "multipass/Main/mp.png" in init_data["data"]
+
+    def test_get_job_template_keeps_params_without_take_token(self, tmp_path):
+        """Test OutputPath and MultiPassPath parameters are kept when $take token is not present."""
+        settings = RenderSubmitterUISettings()
+        settings.name = "Test Job"
+        settings.output_path = "output/image.png"
+        settings.multi_pass_path = "multipass/mp.png"
+        settings.include_adaptor_wheels = False
+        settings.timeouts = default_timeout_entries()
+
+        takes = [TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)]
+
+        scene_file = tmp_path / "test_scene.c4d"
+        scene_file.write_text("dummy scene content")
+
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+                return_value=str(scene_file),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.is_windows",
+                return_value=False,
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.scene_has_fonts",
+                return_value=False,
+            ),
+        ):
+            result = _get_job_template(settings, set(), takes)
+
+            # Verify OutputPath and MultiPassPath parameters are present
+            param_names = [p["name"] for p in result["parameterDefinitions"]]
+            assert "OutputPath" in param_names
+            assert "MultiPassPath" in param_names
+
+            # Verify the init data uses parameter references
+            init_data = result["steps"][0]["stepEnvironments"][0]["script"]["embeddedFiles"][0]
+            assert "{{Param.OutputPath}}" in init_data["data"]
+            assert "{{Param.MultiPassPath}}" in init_data["data"]
+
+
 class TestCinema4dRenderSubmitterFonts:
     """Test cases for font-related functionality in cinema4d_render_submitter.py."""
 
