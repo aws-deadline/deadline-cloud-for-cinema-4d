@@ -42,7 +42,9 @@ class TestGetOutputDirectories:
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_returns_output_directory(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
+    def test_returns_output_directory(
+        self, mock_replace, mock_get_render, mock_doc, mock_render_data
+    ):
         RDATA_SAVEIMAGE = mock_render_data.RDATA_SAVEIMAGE
         RDATA_PATH = mock_render_data.RDATA_PATH
         RDATA_MULTIPASS_SAVEIMAGE = mock_render_data.RDATA_MULTIPASS_SAVEIMAGE
@@ -61,7 +63,9 @@ class TestGetOutputDirectories:
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_returns_both_output_and_multipass_directories(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
+    def test_returns_both_output_and_multipass_directories(
+        self, mock_replace, mock_get_render, mock_doc, mock_render_data
+    ):
         RDATA_SAVEIMAGE = mock_render_data.RDATA_SAVEIMAGE
         RDATA_PATH = mock_render_data.RDATA_PATH
         RDATA_MULTIPASS_SAVEIMAGE = mock_render_data.RDATA_MULTIPASS_SAVEIMAGE
@@ -84,7 +88,9 @@ class TestGetOutputDirectories:
 
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.get_render_data")
     @mock.patch("deadline.cinema4d_submitter.scene.Scene.replace_render_path_tokens")
-    def test_returns_empty_when_no_output_enabled(self, mock_replace, mock_get_render, mock_doc, mock_render_data):
+    def test_returns_empty_when_no_output_enabled(
+        self, mock_replace, mock_get_render, mock_doc, mock_render_data
+    ):
         RDATA_SAVEIMAGE = mock_render_data.RDATA_SAVEIMAGE
         RDATA_MULTIPASS_SAVEIMAGE = mock_render_data.RDATA_MULTIPASS_SAVEIMAGE
         render_data = {RDATA_SAVEIMAGE: False, RDATA_MULTIPASS_SAVEIMAGE: False}
