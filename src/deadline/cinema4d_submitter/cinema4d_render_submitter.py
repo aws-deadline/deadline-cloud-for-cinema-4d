@@ -415,6 +415,14 @@ def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:
     main_take = take_data.GetMainTake()
     current_take = take_data.GetCurrentTake()
 
+    def get_child_takes(take):
+        child_takes = take.GetChildren()
+        all_takes = child_takes
+        if child_takes:
+            for child_take in child_takes:
+                all_takes.extend(get_child_takes(child_take))
+        return all_takes
+
     all_takes = [main_take] + get_child_takes(main_take)
     take_data_list = []
     current_data_list = []
