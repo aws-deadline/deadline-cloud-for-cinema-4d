@@ -166,15 +166,6 @@ def _get_parameter_values(
     return parameter_values
 
 
-def get_child_takes(take):
-    child_takes = take.GetChildren()
-    all_takes = child_takes
-    if child_takes:
-        for child_take in child_takes:
-            all_takes.extend(get_child_takes(child_take))
-    return all_takes
-
-
 def _get_job_template(
     settings: RenderSubmitterUISettings,
     renderers: set[str],
