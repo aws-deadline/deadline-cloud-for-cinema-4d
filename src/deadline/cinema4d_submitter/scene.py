@@ -135,7 +135,6 @@ class Scene:
         """
         if doc is None:
             doc = c4d.documents.GetActiveDocument()
-
         doc_path = doc.GetDocumentPath()
         if not take:
             take_data = doc.GetTakeData()
@@ -207,7 +206,6 @@ class Scene:
         Returns the default and multi-pass output paths.
         """
         doc = c4d.documents.GetActiveDocument()
-
         doc_path = doc.GetDocumentPath()
         render_data = Scene.get_render_data(doc=doc, take=take)
 
