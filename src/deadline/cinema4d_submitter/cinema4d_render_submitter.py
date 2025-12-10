@@ -216,6 +216,9 @@ def _get_job_template(
             take_frame_param["userInterface"]["groupLabel"] = take_data.ui_group_label
             job_template["parameterDefinitions"].append(take_frame_param)
 
+    # Check if paths contain $take token
+    has_take_token = "$take" in settings.output_path or "$take" in settings.multi_pass_path
+
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
     job_template["steps"] = []
@@ -239,26 +242,27 @@ def _get_job_template(
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
 
-            if "$take" in settings.output_path or "$take" in settings.multi_pass_path:
+            if has_take_token:
+                # Replace $take token with actual take name
+                output_path = settings.output_path.replace("$take", take_data.name)
+                multi_pass_path = settings.multi_pass_path.replace("$take", take_data.name)
                 init_data["data"] = (
                     "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
-                    % (
-                        take_data.name,
-                        settings.output_path.replace("$take", take_data.name),
-                        settings.multi_pass_path.replace("$take", take_data.name),
-                    )
+                    % (take_data.name, output_path, multi_pass_path)
                 )
-                # Remove unused OutputPath and MultiPassPath parameters
-                job_template["parameterDefinitions"] = [
-                    param
-                    for param in job_template["parameterDefinitions"]
-                    if param["name"] not in ("OutputPath", "MultiPassPath")
-                ]
             else:
                 init_data["data"] = (
                     "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
                     % take_data.name
                 )
+
+    # Remove OutputPath and MultiPassPath parameters if $take token is present
+    if has_take_token:
+        job_template["parameterDefinitions"] = [
+            param
+            for param in job_template["parameterDefinitions"]
+            if param["name"] not in ("OutputPath", "MultiPassPath")
+        ]
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
@@ -523,6 +527,10 @@ def create_job_bundle(
             settings.multi_pass_path = Scene.replace_render_path_tokens(scene_multi_pass_path)
             asset_references.output_directories.add(os.path.dirname(scene_multi_pass_path))
 
+    # Add output directories from all submitted takes
+    for take in submit_takes:
+        asset_references.output_directories.update(take.output_directories)
+
     # # Check if there are multiple frame ranges across the takes
     first_frame_range = submit_takes[0].frame_range
     per_take_frames_parameters = not settings.override_frame_range and any(
@@ -533,6 +541,17 @@ def create_job_bundle(
     # then we create per-take Frames parameters.
     if per_take_frames_parameters:
         generate_take_parameter_names(submit_takes)
+
+    # Check for multiple takes without $take token
+    if (
+        len(submit_takes) > 1
+        and "$take" not in settings.output_path
+        and "$take" not in settings.multi_pass_path
+    ):
+        warning_collector.add_warning(
+            "Multiple takes are selected but output paths do not contain the $take token. "
+            "Output files from different takes will overwrite each other in the same destination folder."
+        )
 
     renderers: set[str] = {take_data.renderer_name for take_data in submit_takes}
     job_template = _get_job_template(settings, renderers, submit_takes)
@@ -770,17 +789,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        # Check for warnings and show warning dialog if needed
-        if warning_collector.has_warnings():
-            continue_submission = SubmissionWarningDialog.show_warnings(
-                warning_collector.get_warnings(), "Issues Detected", widget
-            )
-
-            if not continue_submission:
-                # User chose to cancel submission
-                raise RuntimeError("Submission cancelled")
-
-        return create_job_bundle(
+        result = create_job_bundle(
             settings,
             takes,
             job_bundle_dir,
@@ -790,6 +799,17 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
             temp_dir,
             host_requirements,
         )
+
+        # Check for warnings after job bundle creation
+        if warning_collector.has_warnings():
+            continue_submission = SubmissionWarningDialog.show_warnings(
+                warning_collector.get_warnings(), "Issues Detected", widget
+            )
+
+            if not continue_submission:
+                raise RuntimeError("Submission cancelled")
+
+        return result
 
     submitter_dialog = SubmitJobToDeadlineDialog(
         job_setup_widget_type=SceneSettingsWidget,

@@ -137,6 +137,9 @@ class Scene:
             doc = c4d.documents.GetActiveDocument()
 
         doc_path = doc.GetDocumentPath()
+        if not take:
+            take_data = doc.GetTakeData()
+            take = take_data.GetCurrentTake()
         render_data = Scene.get_render_data(doc=doc, take=take)
 
         image_paths = set()
@@ -193,7 +196,7 @@ class Scene:
             "_rBc": render_data.GetDataInstance(),
             "_frame": doc.GetTime().GetFrame(doc.GetFps()),
         }
-        if take is not None:
+        if take:
             render_path_data["_take"] = take
 
         return c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)

@@ -282,3 +282,119 @@ class TestCinema4dRenderSubmitterFonts:
             assert "jobEnvironments" in result
             assert len(result["jobEnvironments"]) == 1  # Only DetailedLogging
             assert result["jobEnvironments"][0]["name"] == "DetailedLogging"
+
+
+class TestCinema4dRenderSubmitterParameterValues:
+    """Test cases for parameter value handling."""
+
+    def test_get_parameter_values_excludes_paths_with_take_token(self):
+        """Test OutputPath and MultiPassPath are excluded when $take token is present."""
+        from deadline.cinema4d_submitter.cinema4d_render_submitter import _get_parameter_values
+        from deadline.cinema4d_submitter.enums import ErrorChecking, TextCaching
+
+        settings = RenderSubmitterUISettings()
+        settings.output_path = "output/$take/image.png"
+        settings.multi_pass_path = "multipass/$take/mp.png"
+        settings.activate_error_checking = ErrorChecking.ACTIVATE.value
+        settings.activate_detailed_logging = False
+        settings.use_cached_text = TextCaching.ACTIVATE.value
+
+        takes = [TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)]
+
+        with mock.patch(
+            "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+            return_value="/path/to/scene.c4d",
+        ):
+            result = _get_parameter_values(settings, [], False, takes)
+
+        param_names = [p["name"] for p in result]
+        assert "OutputPath" not in param_names
+        assert "MultiPassPath" not in param_names
+        assert "Cinema4DFile" in param_names
+
+    def test_get_parameter_values_includes_paths_without_take_token(self):
+        """Test OutputPath and MultiPassPath are included when $take token is not present."""
+        from deadline.cinema4d_submitter.cinema4d_render_submitter import _get_parameter_values
+        from deadline.cinema4d_submitter.enums import ErrorChecking, TextCaching
+
+        settings = RenderSubmitterUISettings()
+        settings.output_path = "output/image.png"
+        settings.multi_pass_path = "multipass/mp.png"
+        settings.activate_error_checking = ErrorChecking.ACTIVATE.value
+        settings.activate_detailed_logging = False
+        settings.use_cached_text = TextCaching.ACTIVATE.value
+
+        takes = [TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)]
+
+        with mock.patch(
+            "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+            return_value="/path/to/scene.c4d",
+        ):
+            result = _get_parameter_values(settings, [], False, takes)
+
+        param_names = [p["name"] for p in result]
+        assert "OutputPath" in param_names
+        assert "MultiPassPath" in param_names
+
+
+class TestCinema4dRenderSubmitterWarnings:
+    """Test cases for warning generation."""
+
+    def test_create_job_bundle_warns_multiple_takes_without_token(self, tmp_path):
+        """Test warning is added when multiple takes selected without $take token."""
+        from deadline.cinema4d_submitter.cinema4d_render_submitter import create_job_bundle
+        from deadline.cinema4d_submitter.warning_collector import warning_collector
+        from deadline.cinema4d_submitter.takes import TakeSelection
+        from deadline.client.job_bundle.submission import AssetReferences
+
+        warning_collector.clear_warnings()
+
+        settings = RenderSubmitterUISettings()
+        settings.name = "Test"
+        settings.output_path = "output/image.png"
+        settings.multi_pass_path = ""
+        settings.override_output_path = True
+        settings.override_multi_pass_path = False
+        settings.override_frame_range = False
+        settings.take_selection = TakeSelection.ALL
+        settings.export_job_bundle_to_temp = False
+
+        takes = {
+            "main_data_list": [
+                TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)
+            ],
+            "take_data_list": [
+                TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+                TakeData("Take2", "Take2", "standard", "", None, "1-10", set(), False),
+            ],
+            "current_data_list": [],
+            "marked_data_list": [],
+        }
+
+        with (
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.name",
+                return_value=str(tmp_path / "scene.c4d"),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.get_output_paths",
+                return_value=("", ""),
+            ),
+            mock.patch(
+                "deadline.cinema4d_submitter.cinema4d_render_submitter.Scene.replace_render_path_tokens",
+                side_effect=lambda x: x,
+            ),
+        ):
+            create_job_bundle(
+                settings,
+                takes,
+                str(tmp_path),
+                AssetReferences(),
+                [],
+                AssetReferences(),
+            )
+
+        assert warning_collector.has_warnings()
+        warnings = warning_collector.get_warnings()
+        assert any("$take" in w for w in warnings)
+        warning_collector.clear_warnings()
