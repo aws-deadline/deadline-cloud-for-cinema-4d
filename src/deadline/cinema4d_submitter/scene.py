@@ -133,8 +133,7 @@ class Scene:
         """
         Returns a list of directories files will be output to.
         """
-        if doc is None:
-            doc = c4d.documents.GetActiveDocument()
+        doc = c4d.documents.GetActiveDocument()
         doc_path = doc.GetDocumentPath()
         if not take:
             take_data = doc.GetTakeData()
