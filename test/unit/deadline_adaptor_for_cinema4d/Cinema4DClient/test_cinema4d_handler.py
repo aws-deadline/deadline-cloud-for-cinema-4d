@@ -784,20 +784,28 @@ class TestPathmapBaseObject:
 
         return mock_c4d
 
-    def _run_pathmap_test(self, mock_owner, mock_c4d, mapped_path="/new/path/texture.jpg"):
+    def _run_pathmap_test(
+        self, mock_owner, mock_c4d, mapped_path="/new/path/texture.jpg", expect_unmapped_pyro=False
+    ):
         """Helper to run the pathmap test with given mocks"""
         handler = Cinema4DHandler(mock_map_path)
 
         with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
-            return handler._pathmap_base_object(mock_owner, mapped_path)
+            result = handler._pathmap_base_object(mock_owner, mapped_path)
+
+        assert handler.has_unmapped_pyro == expect_unmapped_pyro
+        return result
 
     def _assert_setitem_calls_for_all_textures(self, mock_owner, mock_c4d, mapped_path):
         """Helper to assert __setitem__ is called correctly for all three texture types"""
         expected_calls: list[tuple[tuple[object, str], dict[str, object]]] = []
         desc_id = mock_c4d.DescID.return_value
 
+        # Three texture types: PHYSICAL_TEXTURE, DOME_TEX0, DOME_TEX1
+        assert mock_owner.__setitem__.call_count == 3
+
         # Create expected calls for all three texture types
-        for _ in range(3):  # Three texture types: PHYSICAL_TEXTURE, DOME_TEX0, DOME_TEX1
+        for _ in range(3):
             expected_calls.append(((desc_id, mapped_path), {}))
 
         assert mock_owner.__setitem__.call_args_list == expected_calls
@@ -808,10 +816,11 @@ class TestPathmapBaseObject:
         mock_c4d = self._create_mock_c4d(has_opyro=False)
         mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
+        result = self._run_pathmap_test(
+            mock_owner, mock_c4d, mapped_path, expect_unmapped_pyro=False
+        )
 
         assert result is True
-        assert mock_owner.__setitem__.call_count == 3
 
         # Verify that __setitem__ is called with the correct desc_id and mapped_path for each texture type
         self._assert_setitem_calls_for_all_textures(mock_owner, mock_c4d, mapped_path)
@@ -821,7 +830,7 @@ class TestPathmapBaseObject:
         mock_owner = self._create_mock_owner(getitem_return=None)
         mock_c4d = self._create_mock_c4d(has_opyro=False)
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d)
+        result = self._run_pathmap_test(mock_owner, mock_c4d, expect_unmapped_pyro=False)
 
         assert result is False
         mock_owner.__setitem__.assert_not_called()
@@ -832,7 +841,9 @@ class TestPathmapBaseObject:
         mock_owner = self._create_mock_owner(owner_type=mock_opyro_type, getitem_return=None)
         mock_c4d = self._create_mock_c4d(has_opyro=True, opyro_type=mock_opyro_type)
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d, "/new/path/pyro_output.exr")
+        result = self._run_pathmap_test(
+            mock_owner, mock_c4d, "/new/path/pyro_output.exr", expect_unmapped_pyro=True
+        )
 
         assert result is True
         mock_owner.__setitem__.assert_not_called()
@@ -844,10 +855,11 @@ class TestPathmapBaseObject:
         mock_c4d = self._create_mock_c4d(has_opyro=False)
         mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
+        result = self._run_pathmap_test(
+            mock_owner, mock_c4d, mapped_path, expect_unmapped_pyro=False
+        )
 
         assert result is True
-        assert mock_owner.__setitem__.call_count == 3
 
         # Verify that __setitem__ is called with the correct desc_id and mapped_path for each texture type
         self._assert_setitem_calls_for_all_textures(mock_owner, mock_c4d, mapped_path)
@@ -862,10 +874,11 @@ class TestPathmapBaseObject:
         mock_c4d = self._create_mock_c4d(has_opyro=True, opyro_type=mock_opyro_type)
         mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
+        result = self._run_pathmap_test(
+            mock_owner, mock_c4d, mapped_path, expect_unmapped_pyro=False
+        )
 
         assert result is True
-        assert mock_owner.__setitem__.call_count == 3
 
         # Verify that __setitem__ is called with the correct desc_id and mapped_path for each texture type
         self._assert_setitem_calls_for_all_textures(mock_owner, mock_c4d, mapped_path)
@@ -876,7 +889,9 @@ class TestPathmapBaseObject:
         mock_owner = self._create_mock_owner(owner_type=mock_opyro_type, getitem_return=None)
         mock_c4d = self._create_mock_c4d(has_opyro=True, opyro_type=mock_opyro_type)
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d, "/new/path/pyro_output.exr")
+        result = self._run_pathmap_test(
+            mock_owner, mock_c4d, "/new/path/pyro_output.exr", expect_unmapped_pyro=True
+        )
 
         assert result is True
         mock_owner.__setitem__.assert_not_called()
@@ -895,7 +910,9 @@ class TestPathmapBaseObject:
         mock_c4d = self._create_mock_c4d(has_opyro=False)
         mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
+        result = self._run_pathmap_test(
+            mock_owner, mock_c4d, mapped_path, expect_unmapped_pyro=False
+        )
 
         assert result is True
         assert mock_owner.__setitem__.call_count == 1
