@@ -198,10 +198,14 @@ class Cinema4DHandler:
         if hasattr(c4d, "Opyro") and owner.GetType() == c4d.Opyro:
             # Opyro (i.e. Pyro output starting in C4D 2026) actually breaks if you try
             # to pathmap it, so we will simply return True to indicate that all applicable
-            # pathmapping operations (i.e. none) are complete. Users should either use
-            # localized paths, use the "Save Project with Assets" button in C4D, or use
-            # the "Save Cinema 4D project with assets before submission" job setting in the
-            # Deadline Cloud submitter instead.
+            # pathmapping operations (i.e. none) are complete.
+            print(
+                "Pyro elements were detected in the scene. If the pyro is not appearing in the "
+                "output, the you can use one of the following approaches to resolve the issue:\n"
+                " * Update the scene assets to use localized paths (Project Asset Inspector => [select all assets] => Asset => Localize Filenames)\n"
+                " * Saved the scene using 'Save Project with Assets'\n"
+                " * Submit the scene with the 'Save Cinema 4D project with assets before submission' option"
+            )
             return True
 
         return mapped

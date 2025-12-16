@@ -791,15 +791,30 @@ class TestPathmapBaseObject:
         with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
             return handler._pathmap_base_object(mock_owner, mapped_path)
 
+    def _assert_setitem_calls_for_all_textures(self, mock_owner, mock_c4d, mapped_path):
+        """Helper to assert __setitem__ is called correctly for all three texture types"""
+        expected_calls: list[tuple[tuple[object, str], dict[str, object]]] = []
+        desc_id = mock_c4d.DescID.return_value
+
+        # Create expected calls for all three texture types
+        for _ in range(3):  # Three texture types: PHYSICAL_TEXTURE, DOME_TEX0, DOME_TEX1
+            expected_calls.append(((desc_id, mapped_path), {}))
+
+        assert mock_owner.__setitem__.call_args_list == expected_calls
+
     def test_pathmap_base_object_maps_redshift_light_textures(self):
         """Tests that _pathmap_base_object correctly maps Redshift light texture paths"""
         mock_owner = self._create_mock_owner(getitem_return="/old/path/texture.jpg")
         mock_c4d = self._create_mock_c4d(has_opyro=False)
+        mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d)
+        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
 
         assert result is True
         assert mock_owner.__setitem__.call_count == 3
+
+        # Verify that __setitem__ is called with the correct desc_id and mapped_path for each texture type
+        self._assert_setitem_calls_for_all_textures(mock_owner, mock_c4d, mapped_path)
 
     def test_pathmap_base_object_returns_false_when_no_textures(self):
         """Tests that _pathmap_base_object returns False when no textures are found"""
@@ -827,11 +842,15 @@ class TestPathmapBaseObject:
         """Tests that _pathmap_base_object handles cases where c4d module doesn't have Opyro attribute (older versions)"""
         mock_owner = self._create_mock_owner(getitem_return="/old/path/texture.jpg")
         mock_c4d = self._create_mock_c4d(has_opyro=False)
+        mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d)
+        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
 
         assert result is True
         assert mock_owner.__setitem__.call_count == 3
+
+        # Verify that __setitem__ is called with the correct desc_id and mapped_path for each texture type
+        self._assert_setitem_calls_for_all_textures(mock_owner, mock_c4d, mapped_path)
 
     def test_pathmap_base_object_handles_non_opyro_objects_when_opyro_exists(self):
         """Tests that _pathmap_base_object correctly handles non-Opyro objects when Opyro class exists"""
@@ -841,11 +860,15 @@ class TestPathmapBaseObject:
             owner_type=mock_other_type, getitem_return="/old/path/texture.jpg"
         )
         mock_c4d = self._create_mock_c4d(has_opyro=True, opyro_type=mock_opyro_type)
+        mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d)
+        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
 
         assert result is True
         assert mock_owner.__setitem__.call_count == 3
+
+        # Verify that __setitem__ is called with the correct desc_id and mapped_path for each texture type
+        self._assert_setitem_calls_for_all_textures(mock_owner, mock_c4d, mapped_path)
 
     def test_pathmap_base_object_opyro_returns_true_regardless_of_redshift_result(self):
         """Tests that Opyro objects return True even if no Redshift textures were found"""
@@ -870,8 +893,14 @@ class TestPathmapBaseObject:
 
         mock_owner = self._create_mock_owner(getitem_side_effect=mock_getitem_side_effect)
         mock_c4d = self._create_mock_c4d(has_opyro=False)
+        mapped_path = "/new/path/texture.jpg"
 
-        result = self._run_pathmap_test(mock_owner, mock_c4d)
+        result = self._run_pathmap_test(mock_owner, mock_c4d, mapped_path)
 
         assert result is True
         assert mock_owner.__setitem__.call_count == 1
+
+        # Verify that __setitem__ is called only once with the correct desc_id and mapped_path
+        # (only for the first texture type that has a path)
+        desc_id = mock_c4d.DescID.return_value
+        mock_owner.__setitem__.assert_called_once_with(desc_id, mapped_path)
