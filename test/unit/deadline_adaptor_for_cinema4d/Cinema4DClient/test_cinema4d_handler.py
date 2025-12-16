@@ -745,3 +745,133 @@ class TestStartRenderWithTextCaching:
             handler.start_render({"frame": 1})
 
         assert handler.cached_text_was_used_in_previous_frame is False
+
+
+class TestPathmapBaseObject:
+    """Tests for the _pathmap_base_object method"""
+
+    @staticmethod
+    def _create_mock_owner(owner_type=None, getitem_return=None, getitem_side_effect=None):
+        """Helper to create a mock owner object with consistent setup"""
+        mock_owner = Mock()
+        mock_owner.GetType.return_value = owner_type or Mock()
+
+        if getitem_side_effect:
+            mock_owner.__getitem__ = Mock(side_effect=getitem_side_effect)
+        else:
+            mock_owner.__getitem__ = Mock(return_value=getitem_return)
+
+        mock_owner.__setitem__ = Mock()
+        return mock_owner
+
+    @staticmethod
+    def _create_mock_c4d(has_opyro=True, opyro_type=None):
+        """Helper to create a mock c4d module with consistent constants"""
+        mock_c4d = Mock()
+        mock_c4d.REDSHIFT_LIGHT_PHYSICAL_TEXTURE = 1001
+        mock_c4d.REDSHIFT_LIGHT_DOME_TEX0 = 1002
+        mock_c4d.REDSHIFT_LIGHT_DOME_TEX1 = 1003
+        mock_c4d.REDSHIFT_FILE_PATH = 2001
+        mock_c4d.DTYPE_STRING = 3001
+        mock_c4d.DescID = Mock(return_value=Mock())
+        mock_c4d.DescLevel = Mock(return_value=Mock())
+
+        if has_opyro:
+            mock_c4d.Opyro = opyro_type or Mock()
+        else:
+            # Simulate older C4D versions without Opyro
+            del mock_c4d.Opyro
+
+        return mock_c4d
+
+    def _run_pathmap_test(self, mock_owner, mock_c4d, mapped_path="/new/path/texture.jpg"):
+        """Helper to run the pathmap test with given mocks"""
+        handler = Cinema4DHandler(mock_map_path)
+
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            return handler._pathmap_base_object(mock_owner, mapped_path)
+
+    def test_pathmap_base_object_maps_redshift_light_textures(self):
+        """Tests that _pathmap_base_object correctly maps Redshift light texture paths"""
+        mock_owner = self._create_mock_owner(getitem_return="/old/path/texture.jpg")
+        mock_c4d = self._create_mock_c4d(has_opyro=False)
+
+        result = self._run_pathmap_test(mock_owner, mock_c4d)
+
+        assert result is True
+        assert mock_owner.__setitem__.call_count == 3
+
+    def test_pathmap_base_object_returns_false_when_no_textures(self):
+        """Tests that _pathmap_base_object returns False when no textures are found"""
+        mock_owner = self._create_mock_owner(getitem_return=None)
+        mock_c4d = self._create_mock_c4d(has_opyro=False)
+
+        result = self._run_pathmap_test(mock_owner, mock_c4d)
+
+        assert result is False
+        mock_owner.__setitem__.assert_not_called()
+
+    def test_pathmap_base_object_handles_opyro_objects_in_c4d_2026_and_up(self):
+        """Tests that _pathmap_base_object returns True for Opyro objects after processing Redshift textures"""
+        mock_opyro_type = Mock()
+        mock_owner = self._create_mock_owner(owner_type=mock_opyro_type, getitem_return=None)
+        mock_c4d = self._create_mock_c4d(has_opyro=True, opyro_type=mock_opyro_type)
+
+        result = self._run_pathmap_test(mock_owner, mock_c4d, "/new/path/pyro_output.exr")
+
+        assert result is True
+        mock_owner.__setitem__.assert_not_called()
+        assert mock_owner.__getitem__.call_count == 3
+
+    def test_pathmap_base_object_handles_opyro_objects_when_c4d_has_no_opyro_attribute(self):
+        """Tests that _pathmap_base_object handles cases where c4d module doesn't have Opyro attribute (older versions)"""
+        mock_owner = self._create_mock_owner(getitem_return="/old/path/texture.jpg")
+        mock_c4d = self._create_mock_c4d(has_opyro=False)
+
+        result = self._run_pathmap_test(mock_owner, mock_c4d)
+
+        assert result is True
+        assert mock_owner.__setitem__.call_count == 3
+
+    def test_pathmap_base_object_handles_non_opyro_objects_when_opyro_exists(self):
+        """Tests that _pathmap_base_object correctly handles non-Opyro objects when Opyro class exists"""
+        mock_opyro_type = Mock()
+        mock_other_type = Mock()
+        mock_owner = self._create_mock_owner(
+            owner_type=mock_other_type, getitem_return="/old/path/texture.jpg"
+        )
+        mock_c4d = self._create_mock_c4d(has_opyro=True, opyro_type=mock_opyro_type)
+
+        result = self._run_pathmap_test(mock_owner, mock_c4d)
+
+        assert result is True
+        assert mock_owner.__setitem__.call_count == 3
+
+    def test_pathmap_base_object_opyro_returns_true_regardless_of_redshift_result(self):
+        """Tests that Opyro objects return True even if no Redshift textures were found"""
+        mock_opyro_type = Mock()
+        mock_owner = self._create_mock_owner(owner_type=mock_opyro_type, getitem_return=None)
+        mock_c4d = self._create_mock_c4d(has_opyro=True, opyro_type=mock_opyro_type)
+
+        result = self._run_pathmap_test(mock_owner, mock_c4d, "/new/path/pyro_output.exr")
+
+        assert result is True
+        mock_owner.__setitem__.assert_not_called()
+        assert mock_owner.__getitem__.call_count == 3
+
+    def test_pathmap_base_object_mixed_texture_presence(self):
+        """Tests that _pathmap_base_object correctly handles when only some Redshift textures are present"""
+        call_count = 0
+
+        def mock_getitem_side_effect(desc_id):
+            nonlocal call_count
+            call_count += 1
+            return "/old/path/physical_texture.jpg" if call_count == 1 else None
+
+        mock_owner = self._create_mock_owner(getitem_side_effect=mock_getitem_side_effect)
+        mock_c4d = self._create_mock_c4d(has_opyro=False)
+
+        result = self._run_pathmap_test(mock_owner, mock_c4d)
+
+        assert result is True
+        assert mock_owner.__setitem__.call_count == 1

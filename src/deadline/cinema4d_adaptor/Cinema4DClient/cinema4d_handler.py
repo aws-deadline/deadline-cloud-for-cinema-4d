@@ -195,6 +195,15 @@ class Cinema4DHandler:
                 owner[desc_id] = mapped_path
                 mapped = True
 
+        if hasattr(c4d, "Opyro") and owner.GetType() == c4d.Opyro:
+            # Opyro (i.e. Pyro output starting in C4D 2026) actually breaks if you try
+            # to pathmap it, so we will simply return True to indicate that all applicable
+            # pathmapping operations (i.e. none) are complete. Users should either use
+            # localized paths, use the "Save Project with Assets" button in C4D, or use
+            # the "Save Cinema 4D project with assets before submission" job setting in the
+            # Deadline Cloud submitter instead.
+            return True
+
         return mapped
 
     def _pathmap_base_video_post(self, owner, mapped_path) -> bool:
