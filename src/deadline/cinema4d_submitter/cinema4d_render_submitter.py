@@ -753,7 +753,9 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
     # Create SubmitterInfo with all available metadata
     release_date = _get_release_date()
-    additional_info = {"release_date": release_date} if release_date else None
+    additional_info: Optional[dict[str, Any]] = (
+        {"release_date": release_date} if release_date else None
+    )
 
     submitter_info = SubmitterInfo(
         submitter_name="Cinema4D",
