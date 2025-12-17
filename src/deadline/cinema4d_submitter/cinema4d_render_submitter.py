@@ -206,6 +206,9 @@ def _get_job_template(
             take_frame_param["userInterface"]["groupLabel"] = take_data.ui_group_label
             job_template["parameterDefinitions"].append(take_frame_param)
 
+    # Check if paths contain $take token
+    has_take_token = "$take" in settings.output_path or "$take" in settings.multi_pass_path
+
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
     job_template["steps"] = []
@@ -228,9 +231,17 @@ def _get_job_template(
         else:
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
+            output_path = settings.output_path
+            multi_pass_path = settings.multi_pass_path
+
+            if has_take_token:
+                # Replace $take token with actual take name, replacing spaces with underscores
+                take_name_for_path = take_data.name.replace(" ", "_")
+                output_path = settings.output_path.replace("$take", take_name_for_path)
+                multi_pass_path = settings.multi_pass_path.replace("$take", take_name_for_path)
             init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
-                % take_data.name
+                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
+                % (take_data.name, output_path, multi_pass_path)
             )
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
@@ -474,16 +485,8 @@ def create_job_bundle(
     if settings.export_job_bundle_to_temp and temp_dir:
         export_to_temp_folder(temp_dir, asset_references)
 
-    submit_takes = takes["main_data_list"]
     job_bundle_path = Path(job_bundle_dir)
-    if settings.take_selection == TakeSelection.MAIN:
-        submit_takes = takes["main_data_list"]
-    elif settings.take_selection == TakeSelection.ALL:
-        submit_takes = takes["take_data_list"]
-    elif settings.take_selection == TakeSelection.MARKED:
-        submit_takes = takes["marked_data_list"]
-    elif settings.take_selection == TakeSelection.CURRENT:
-        submit_takes = takes["current_data_list"]
+    submit_takes = get_submit_takes(settings, takes)
 
     # Add overrides to asset references and update the paths with C4D render path tokens.
     if settings.override_output_path:
@@ -655,6 +658,41 @@ def get_conda_packages(doc: Any) -> str:
     return packages
 
 
+def get_submit_takes(
+    settings: RenderSubmitterUISettings, takes: dict[str, list[TakeData]]
+) -> list[TakeData]:
+    """
+    Determine which takes will be submitted based on take selection setting.
+    """
+    if settings.take_selection == TakeSelection.MAIN:
+        return takes["main_data_list"]
+    elif settings.take_selection == TakeSelection.ALL:
+        return takes["take_data_list"]
+    elif settings.take_selection == TakeSelection.MARKED:
+        return takes["marked_data_list"]
+    elif settings.take_selection == TakeSelection.CURRENT:
+        return takes["current_data_list"]
+    return takes["main_data_list"]
+
+
+def check_take_token_warnings(
+    settings: RenderSubmitterUISettings, submit_takes: list[TakeData]
+) -> None:
+    """
+    Check if multiple takes are selected without $take token in output paths.
+    Adds a warning if output files will overwrite each other.
+    """
+    if (
+        len(submit_takes) > 1
+        and "$take" not in settings.output_path
+        and "$take" not in settings.multi_pass_path
+    ):
+        warning_collector.add_warning(
+            "Multiple takes are selected but output paths do not contain the $take token. "
+            "Output files from different takes will overwrite each other in the same destination folder."
+        )
+
+
 def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> None:
     """
     Exports the current Cinema 4D project to a temporary folder and updates the asset references.
@@ -759,7 +797,10 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        # Check for warnings and show warning dialog if needed
+        # Determine which takes will be submitted and check for warnings
+        submit_takes = get_submit_takes(settings, takes)
+        check_take_token_warnings(settings, submit_takes)
+
         if warning_collector.has_warnings():
             continue_submission = SubmissionWarningDialog.show_warnings(
                 warning_collector.get_warnings(), "Issues Detected", widget

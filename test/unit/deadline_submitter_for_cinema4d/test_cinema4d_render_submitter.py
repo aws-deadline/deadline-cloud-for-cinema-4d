@@ -6,11 +6,13 @@ from unittest import mock
 from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     _get_job_template,
     TakeData,
+    check_take_token_warnings,
 )
 from deadline.cinema4d_submitter.data_classes import (
     RenderSubmitterUISettings,
     default_timeout_entries,
 )
+from deadline.cinema4d_submitter.warning_collector import warning_collector
 
 
 class TestCinema4dRenderSubmitterDetailedLogging:
@@ -198,3 +200,58 @@ class TestCinema4dRenderSubmitterFonts:
             assert "jobEnvironments" in result
             assert len(result["jobEnvironments"]) == 1  # Only DetailedLogging
             assert result["jobEnvironments"][0]["name"] == "DetailedLogging"
+
+
+class TestCheckTakeTokenWarnings:
+    """Test cases for check_take_token_warnings function."""
+
+    def setup_method(self):
+        warning_collector.clear_warnings()
+
+    def test_no_warning_single_take(self):
+        settings = RenderSubmitterUISettings()
+        settings.output_path = "/path/output"
+        settings.multi_pass_path = "/path/multipass"
+        takes = [TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)]
+        check_take_token_warnings(settings, takes)
+
+        assert not warning_collector.has_warnings()
+
+    def test_no_warning_with_take_token_in_output_path(self):
+        settings = RenderSubmitterUISettings()
+        settings.output_path = "/path/$take/output"
+        settings.multi_pass_path = "/path/multipass"
+        takes = [
+            TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
+            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+        ]
+        check_take_token_warnings(settings, takes)
+
+        assert not warning_collector.has_warnings()
+
+    def test_no_warning_with_take_token_in_multipass_path(self):
+        settings = RenderSubmitterUISettings()
+        settings.output_path = "/path/output"
+        settings.multi_pass_path = "/path/$take/multipass"
+        takes = [
+            TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
+            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+        ]
+        check_take_token_warnings(settings, takes)
+        from deadline.cinema4d_submitter.warning_collector import warning_collector
+
+        assert not warning_collector.has_warnings()
+
+    def test_warning_multiple_takes_no_token(self):
+        settings = RenderSubmitterUISettings()
+        settings.output_path = "/path/output"
+        settings.multi_pass_path = "/path/multipass"
+        takes = [
+            TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
+            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+        ]
+        check_take_token_warnings(settings, takes)
+        from deadline.cinema4d_submitter.warning_collector import warning_collector
+
+        assert warning_collector.has_warnings()
+        assert "$take token" in warning_collector.get_warnings()[0]
