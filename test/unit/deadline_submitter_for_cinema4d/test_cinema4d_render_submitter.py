@@ -212,7 +212,9 @@ class TestCheckTakeTokenWarnings:
         settings = RenderSubmitterUISettings()
         settings.output_path = "/path/output"
         settings.multi_pass_path = "/path/multipass"
-        takes = [TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)]
+        takes = {
+            "main_data_list": [TakeData("Main", "Main", "standard", "", None, "1-10", set(), False)]
+        }
         check_take_token_warnings(settings, takes)
 
         assert not warning_collector.has_warnings()
@@ -221,10 +223,12 @@ class TestCheckTakeTokenWarnings:
         settings = RenderSubmitterUISettings()
         settings.output_path = "/path/$take/output"
         settings.multi_pass_path = "/path/multipass"
-        takes = [
-            TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
-            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
-        ]
+        takes = {
+            "main_data_list": [
+                TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
+                TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+            ]
+        }
         check_take_token_warnings(settings, takes)
 
         assert not warning_collector.has_warnings()
@@ -233,10 +237,12 @@ class TestCheckTakeTokenWarnings:
         settings = RenderSubmitterUISettings()
         settings.output_path = "/path/output"
         settings.multi_pass_path = "/path/$take/multipass"
-        takes = [
-            TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
-            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
-        ]
+        takes = {
+            "main_data_list": [
+                TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
+                TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+            ]
+        }
         check_take_token_warnings(settings, takes)
         from deadline.cinema4d_submitter.warning_collector import warning_collector
 
@@ -246,10 +252,12 @@ class TestCheckTakeTokenWarnings:
         settings = RenderSubmitterUISettings()
         settings.output_path = "/path/output"
         settings.multi_pass_path = "/path/multipass"
-        takes = [
-            TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
-            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
-        ]
+        takes = {
+            "main_data_list": [
+                TakeData("Main", "Main", "standard", "", None, "1-10", set(), False),
+                TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+            ]
+        }
         check_take_token_warnings(settings, takes)
         from deadline.cinema4d_submitter.warning_collector import warning_collector
 
