@@ -682,10 +682,8 @@ def check_take_token_warnings(
     Check if multiple takes are selected without $take token in output paths.
     Adds a warning if output files will overwrite each other.
     """
-    if (
-        len(submit_takes) > 1
-        and "$take" not in settings.output_path
-        and "$take" not in settings.multi_pass_path
+    if len(submit_takes) > 1 and (
+        "$take" not in settings.output_path or "$take" not in settings.multi_pass_path
     ):
         warning_collector.add_warning(
             "Multiple takes are selected but output paths do not contain the $take token. "
