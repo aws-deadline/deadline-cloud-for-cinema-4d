@@ -14,6 +14,7 @@ import yaml  # type: ignore[import]
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 
+from deadline.client.dataclasses import SubmitterInfo
 from deadline.client.exceptions import DeadlineOperationError
 from deadline.client.job_bundle._yaml import deadline_yaml_dump
 from deadline.client.job_bundle.parameters import JobParameter
@@ -738,6 +739,14 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
     conda_packages = get_conda_packages(doc)
 
+    submitter_info = SubmitterInfo(
+        submitter_name="Cinema4D",
+        submitter_package_name="deadline-cloud-for-cinema4d",
+        submitter_package_version=".".join(str(v) for v in adaptor_version_tuple),
+        host_application_name="Cinema 4D",
+        host_application_version=str(c4d.GetC4DVersion()),
+    )
+
     def on_create_job_bundle_callback(
         widget: SubmitJobToDeadlineDialog,
         job_bundle_dir: str,
@@ -783,6 +792,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         parent=parent,
         f=f,
         show_host_requirements_tab=True,
+        submitter_info=submitter_info,
     )
 
     return submitter_dialog

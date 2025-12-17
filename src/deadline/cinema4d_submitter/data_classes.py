@@ -46,8 +46,6 @@ class RenderSubmitterUISettings:
     Settings that the submitter UI will use
     """
 
-    submitter_name: str = field(default="Cinema4D")
-
     name: str = field(default="", metadata={"sticky": True})
     description: str = field(default="", metadata={"sticky": True})
 
