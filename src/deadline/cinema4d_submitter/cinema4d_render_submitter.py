@@ -752,10 +752,8 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
     conda_packages = get_conda_packages(doc)
 
     # Create SubmitterInfo with all available metadata
-    additional_info: Optional[dict[str, Any]] = None
     release_date = _get_release_date()
-    if release_date:
-        additional_info = {"release_date": release_date}
+    additional_info = {"release_date": release_date} if release_date else None
 
     submitter_info = SubmitterInfo(
         submitter_name="Cinema4D",

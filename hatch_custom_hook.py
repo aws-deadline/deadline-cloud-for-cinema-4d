@@ -28,7 +28,7 @@ class HatchCustomBuildHook(BuildHookInterface):
 
         # Append release_date to _version.py after hatch-vcs generates it
         version_file = os.path.join(self.root, "_version.py")
-        with open(version_file, "a") as f:
+        with open(version_file, "a", encoding="utf-8") as f:
             release_date = datetime.today().strftime("%B %d, %Y")
             f.write(f"\n__release_date__ = release_date = '{release_date}'\n")
 
