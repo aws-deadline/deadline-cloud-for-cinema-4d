@@ -666,28 +666,29 @@ def get_submit_takes(
     """
     if settings.take_selection == TakeSelection.MAIN:
         return takes["main_data_list"]
-    elif settings.take_selection == TakeSelection.ALL:
+    if settings.take_selection == TakeSelection.ALL:
         return takes["take_data_list"]
-    elif settings.take_selection == TakeSelection.MARKED:
+    if settings.take_selection == TakeSelection.MARKED:
         return takes["marked_data_list"]
-    elif settings.take_selection == TakeSelection.CURRENT:
+    if settings.take_selection == TakeSelection.CURRENT:
         return takes["current_data_list"]
     return takes["main_data_list"]
 
 
 def check_take_token_warnings(
-    settings: RenderSubmitterUISettings, submit_takes: list[TakeData]
+    settings: RenderSubmitterUISettings, takes: dict[str, list[TakeData]]
 ) -> None:
     """
     Check if multiple takes are selected without $take token in output paths.
     Adds a warning if output files will overwrite each other.
     """
-    if len(submit_takes) > 1 and (
-        "$take" not in settings.output_path or "$take" not in settings.multi_pass_path
-    ):
+    submit_takes = get_submit_takes(settings, takes)
+    if len(submit_takes) == 1:
+        return
+    if "$take" not in settings.output_path or "$take" not in settings.multi_pass_path:
         warning_collector.add_warning(
             "Multiple takes are selected but output paths do not contain the $take token. "
-            "Output files from different takes will overwrite each other in the same destination folder."
+            "Output paths missing $take token. This will cause different takes will overwrite each other. Use $take in your path to avoid this."
         )
 
 
@@ -795,9 +796,8 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        # Determine which takes will be submitted and check for warnings
-        submit_takes = get_submit_takes(settings, takes)
-        check_take_token_warnings(settings, submit_takes)
+        # check for warnings
+        check_take_token_warnings(settings, takes)
 
         if warning_collector.has_warnings():
             continue_submission = SubmissionWarningDialog.show_warnings(
