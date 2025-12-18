@@ -1,3 +1,11 @@
+## 0.9.2 (2025-12-18)
+
+
+### Bug Fixes
+* Display warning message for $take token missing in both output and multipass paths (#369) ([`d106477`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/d10647777ff39736b072ba1a955a1e2c37a2cba1))
+
+
+
 ## 0.9.1 (2025-12-18)
 
 
