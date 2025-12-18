@@ -688,7 +688,7 @@ def check_take_token_warnings(
     if "$take" not in settings.output_path or "$take" not in settings.multi_pass_path:
         warning_collector.add_warning(
             "Multiple takes are selected but output paths do not contain the $take token. "
-            "Output paths missing $take token. This will cause different takes will overwrite each other. Use $take in your path to avoid this."
+            "This will cause different takes will overwrite each other. Use $take in your path to avoid this."
         )
 
 
@@ -796,7 +796,6 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        # check for warnings
         check_take_token_warnings(settings, takes)
 
         if warning_collector.has_warnings():
