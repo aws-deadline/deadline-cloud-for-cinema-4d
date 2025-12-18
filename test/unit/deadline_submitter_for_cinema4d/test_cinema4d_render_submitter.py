@@ -231,7 +231,7 @@ class TestCheckTakeTokenWarnings:
         }
         check_take_token_warnings(settings, takes)
 
-        assert warning_collector.has_warnings()
+        assert not warning_collector.has_warnings()
 
     def test_warning_with_take_token_only_in_multipass_path(self):
         settings = RenderSubmitterUISettings()
@@ -245,7 +245,7 @@ class TestCheckTakeTokenWarnings:
         }
         check_take_token_warnings(settings, takes)
 
-        assert warning_collector.has_warnings()
+        assert not warning_collector.has_warnings()
 
     def test_warning_multiple_takes_no_token(self):
         settings = RenderSubmitterUISettings()

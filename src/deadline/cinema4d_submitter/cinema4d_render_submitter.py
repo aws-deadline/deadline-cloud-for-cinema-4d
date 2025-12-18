@@ -697,11 +697,14 @@ def check_take_token_warnings(
     submit_takes = get_submit_takes(settings, takes)
     if len(submit_takes) == 1:
         return
-    if "$take" not in settings.output_path or "$take" not in settings.multi_pass_path:
-        warning_collector.add_warning(
-            "Multiple takes are selected but output paths do not contain the $take token. "
-            "This will cause different takes will overwrite each other. Use $take in your path to avoid this."
-        )
+    if "$take" in settings.output_path:
+        return
+    if "$take" in settings.multi_pass_path:
+        return
+    warning_collector.add_warning(
+        "Multiple takes are selected but output paths do not contain the $take token. "
+        "This will cause different takes will overwrite each other. Use $take in your path to avoid this."
+    )
 
 
 def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> None:
