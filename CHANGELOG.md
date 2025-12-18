@@ -1,3 +1,16 @@
+## 0.9.1 (2025-12-18)
+
+
+### Features
+* add release date to submitter "about" panel (#366) ([`152ee96`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/152ee9686bdfff5e701e63a130c7951db43c5eb8))
+* Add the 'About' panel for the submitter. (#364) ([`5999dde`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/5999dde8c06c703fc48abf52f9bc742520ae0d1b))
+
+### Bug Fixes
+* replace value in path and add warning for missing for multiple… (#365) ([`a303664`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/a3036647b1a4f48e689409a47ef20663960a7af6))
+* do not pathmap Pyro output in C4D 2026 and up (#362) ([`8c79b53`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/8c79b533ff1a9905083bc8c04f8806ad64a7681d))
+* Add timeouts for all the steps and not just the first take. (#360) ([`2b55041`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/2b55041797d13fcdc6e35445fbaf875148a6d314))
+
+
 ## 0.9.0 (2025-12-04)
 
 
