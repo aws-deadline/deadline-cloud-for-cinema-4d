@@ -42,6 +42,20 @@ from .ui.components import SceneSettingsWidget, SubmissionWarningDialog
 LOADED = False
 
 
+def _get_release_date() -> Optional[str]:
+    """Safely retrieve release date from _version.py.
+
+    Returns:
+        The release date string if available, None otherwise.
+    """
+    try:
+        from ._version import release_date
+
+        return release_date
+    except (ImportError, AttributeError):
+        return None
+
+
 @dataclass
 class TakeData:
     name: str
@@ -55,7 +69,6 @@ class TakeData:
 
 
 def show_submitter():
-
     if _prompt_save_current_document() is False:
         return
 
@@ -576,7 +589,6 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
     parameter_names = set()
 
     for take_number in range(len(submit_takes)):
-
         take_data = submit_takes[take_number]
 
         # First, check for duplicate take names since this will result in overwriting files in the output
@@ -602,7 +614,7 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
         # ensure all parameter names are unique
         if parameter_name in parameter_names:
             # example: NewTake_00001
-            parameter_name = f"{parameter_name[:64 - len('Frames') - 6]}_{take_number:05}"
+            parameter_name = f"{parameter_name[: 64 - len('Frames') - 6]}_{take_number:05}"
             if parameter_name in parameter_names:
                 raise RuntimeError(
                     f"Unable to generate unique parameter name for take '{take_name}', please change the take name."
@@ -776,12 +788,19 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
 
     conda_packages = get_conda_packages(doc)
 
+    # Create SubmitterInfo with all available metadata
+    release_date = _get_release_date()
+    additional_info: Optional[dict[str, Any]] = (
+        {"release_date": release_date} if release_date else None
+    )
+
     submitter_info = SubmitterInfo(
         submitter_name="Cinema4D",
         submitter_package_name="deadline-cloud-for-cinema4d",
         submitter_package_version=".".join(str(v) for v in adaptor_version_tuple),
         host_application_name="Cinema 4D",
         host_application_version=str(c4d.GetC4DVersion()),
+        additional_info=additional_info,
     )
 
     def on_create_job_bundle_callback(

@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import os
 import shutil
+from datetime import datetime
 from typing import Any
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
@@ -24,6 +25,12 @@ class HatchCustomBuildHook(BuildHookInterface):
 
     def initialize(self, version: str, build_data: dict[str, Any]) -> None:
         self._validate_config()
+
+        # Append release_date to _version.py after hatch-vcs generates it
+        version_file = os.path.join(self.root, "_version.py")
+        with open(version_file, "a", encoding="utf-8") as f:
+            release_date = datetime.today().strftime("%B %d, %Y")
+            f.write(f"\n__release_date__ = release_date = '{release_date}'\n")
 
         for destination in self.config["copy_version_py"]["destinations"]:
             print(f"Copying _version.py to {destination}")
