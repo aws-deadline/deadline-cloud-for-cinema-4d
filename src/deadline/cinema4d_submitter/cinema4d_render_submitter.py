@@ -703,7 +703,7 @@ def check_take_token_warnings(
         return
     warning_collector.add_warning(
         "Multiple takes are selected but output paths do not contain the $take token. "
-        "This will cause different takes will overwrite each other. Use $take in your path to avoid this."
+        "This will cause different takes to overwrite each other. Use $take in your path to avoid this."
     )
 
 
