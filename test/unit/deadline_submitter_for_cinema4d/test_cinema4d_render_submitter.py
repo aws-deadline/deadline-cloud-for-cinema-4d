@@ -219,7 +219,7 @@ class TestCheckTakeTokenWarnings:
 
         assert not warning_collector.has_warnings()
 
-    def test_no_warning_with_take_token_in_output_path(self):
+    def test_warning_with_take_token_only_in_output_path(self):
         settings = RenderSubmitterUISettings()
         settings.output_path = "/path/$take/output"
         settings.multi_pass_path = "/path/multipass"
@@ -231,9 +231,9 @@ class TestCheckTakeTokenWarnings:
         }
         check_take_token_warnings(settings, takes)
 
-        assert not warning_collector.has_warnings()
+        assert warning_collector.has_warnings()
 
-    def test_no_warning_with_take_token_in_multipass_path(self):
+    def test_warning_with_take_token_only_in_multipass_path(self):
         settings = RenderSubmitterUISettings()
         settings.output_path = "/path/output"
         settings.multi_pass_path = "/path/$take/multipass"
@@ -244,9 +244,8 @@ class TestCheckTakeTokenWarnings:
             ]
         }
         check_take_token_warnings(settings, takes)
-        from deadline.cinema4d_submitter.warning_collector import warning_collector
 
-        assert not warning_collector.has_warnings()
+        assert warning_collector.has_warnings()
 
     def test_warning_multiple_takes_no_token(self):
         settings = RenderSubmitterUISettings()
