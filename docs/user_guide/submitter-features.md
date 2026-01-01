@@ -46,6 +46,7 @@ Settings specific to your Cinema 4D render:
 - **Cinema 4D Launch Timeout** - Maximum time allowed for Cinema 4D to start up
 - **Cinema 4D Shutdown Timeout** - Maximum time allowed for Cinema 4D to shut down cleanly
 - **Save Cinema 4D Project with Assets** - Prevents missing file errors during rendering by creating a temporary copy of your project with all assets and fixing file paths before submission. Uses more disk space and submission time
+- **Use cached text during render** - Prevents incorrect or missing text by re-animating the text on the worker using the cached fonts for each frame. Will increase rendering time.
 
 ![Job-Specific Settings](images/job-specific-settings.png)
 
@@ -80,11 +81,11 @@ When you enable the "Activate detailed logging" checkbox in the Job-Specific Set
 
 To view the detailed logs:
 
-1. Open Deadline Cloud Monitor
+1. Open Deadline Cloud monitor
 2. Navigate to your completed job
 3. Right-click on a task and select "View logs"
-4. Enable the "View logs for all tasks" button.
-5. Scroll through the task run logs to find the "Shut down DetailedLogging" for detailed logs.
+4. Enable the "View logs for all tasks" button
+5. Scroll through the task run logs to find the "Shut down DetailedLogging" section for detailed logs.
 
 The Redshift logs are output in HTML format and include timestamps at the start of each line. If you want to save and view the logs in a web browser without timestamps, you can use the provided cleanup utility:
 

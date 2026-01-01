@@ -5,7 +5,7 @@ Set up Cinema 4D and AWS Deadline Cloud in just a few steps.
 ## What You'll Need
 
 - **Cinema 4D 2024 - 2026** installed on your workstation
-- **AWS Account** with Deadline Cloud access
+   - Redshift, Arnold, and Cargo are supported natively
 - **Windows or macOS** workstation for job submission
 - **Deadline Cloud monitor** ([download here](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/monitor-onboarding.html))
 - **Access to an AWS Deadline Cloud farm** with either:
@@ -69,9 +69,9 @@ For troubleshooting permission issues, see the [FAQ and Glossary →](faq-and-gl
 
 ## Step 3: Monitor Your Renders
 
-If you haven't already, install the Deadline Cloud Monitor from the requirements above.
+If you haven't already, install the Deadline Cloud monitor from the requirements above.
 
-After submitting a job, open Deadline Cloud Monitor (DCM) to view the job's progress. The submitter will create a job with a single step and with one task per frame.
+After submitting a job, open Deadline Cloud monitor (DCM) to view the job's progress. The submitter will create a job with a single step and one task per frame.
 ![DCM](images/DCM.png)
 
 To view rendering logs, right-click on a task and choose "View logs".

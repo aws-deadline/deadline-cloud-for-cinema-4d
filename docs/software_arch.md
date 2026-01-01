@@ -11,8 +11,7 @@ The Cinema 4D extension is contructed in two parts:
 
 ### `deadline.cinema4d_submitter`
 
-Fundamentally, what this submitter is doing is creating a [Job Bundle](https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/build-job-bundle.html)
-and using the GUI creation code in the [`deadline` Python package](https://pypi.org/project/deadline/) to generate the UI that is displayed to the user. The important parts to know about in a job bundle are:
+Fundamentally, what this submitter is doing is creating a [job bundle](https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/build-job-bundle.html) and using the GUI creation code in the [`deadline` Python package](https://pypi.org/project/deadline/) to generate the UI that is displayed to the user. The important parts to know about in a job bundle are:
 
 1. The job template file. The submitter code dynamically generates the template based on properties of the specific scene file that is loaded. For example, it may contain a Step for each layer of the scene to render.
 

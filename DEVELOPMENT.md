@@ -196,11 +196,11 @@ hatch run test
 We run integration tests by running it in Cinema 4D's python i.e. c4dpy for submitter and using Commandline.exe for adaptor tests. 
 
 #### Test Flow
-1. Scene Generation:
+1. Scene generation:
    - Each test case uses scene generation scripts to create test scenes (and assets if necessary)
    - Scenes are created with specific configurations for testing different scenarios
 
-2. Job Bundle generation:
+2. Job bundle generation:
    - Generated scenes are processed through the submitter code
    - Job bundles are exported to a temporary location within the /integ folder.
 
