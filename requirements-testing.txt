@@ -9,6 +9,6 @@ twine == 6.*
 types-pyyaml == 6.*
 # for integ tests
 numpy == 2.*
-pillow == 11.*
+pillow == 12.*
 openjd-cli == 0.7.*
 fonttools >= 4.0.0
