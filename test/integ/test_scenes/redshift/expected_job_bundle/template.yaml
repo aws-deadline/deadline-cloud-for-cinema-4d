@@ -78,7 +78,9 @@ parameterDefinitions:
     control: CHECK_BOX
     label: Use cached text during render
     groupLabel: Cinema4D Settings
-  description: Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is ignored. If there are fonts in the scene, this will increase rendering time.
+  description: Prevents incorrect or missing text by using cached fonts. If there
+    are no fonts in the scene, this is ignored. If there are fonts in the scene, this
+    will increase rendering time.
   default: '0'
   allowedValues:
   - '1'
