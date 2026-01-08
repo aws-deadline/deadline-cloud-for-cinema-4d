@@ -217,6 +217,158 @@ class TestAssetIntrospectorFonts:
             )
 
 
+class TestRedshiftProxyScanning:
+    """Test Redshift proxy nested reference scanning"""
+
+    def test_scan_proxy_with_nested_reference(self, tmp_path):
+        """Test scanning proxy file that references another proxy"""
+        # Create ProxyB.rs
+        proxy_b = tmp_path / "ProxyB.rs"
+        proxy_b.write_bytes(b"fake proxy data")
+
+        # Create ProxyA.rs with reference to ProxyB.rs
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(b"./ProxyB.rs\x00fake data")
+
+        introspector = AssetIntrospector()
+        visited: set[Path] = set()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, visited)
+
+        assert proxy_b in result
+        assert proxy_a in visited
+        assert proxy_b in visited
+
+    def test_scan_proxy_with_absolute_path(self, tmp_path):
+        """Test scanning proxy with absolute path reference"""
+        proxy_b = tmp_path / "ProxyB.rs"
+        proxy_b.write_bytes(b"fake proxy data")
+
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(f"{proxy_b}\x00fake data".encode())
+
+        introspector = AssetIntrospector()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, set())
+
+        assert proxy_b in result
+
+    def test_scan_proxy_three_level_nesting(self, tmp_path):
+        """Test three-level proxy nesting: A -> B -> C"""
+        proxy_c = tmp_path / "ProxyC.rs"
+        proxy_c.write_bytes(b"fake proxy data")
+
+        proxy_b = tmp_path / "ProxyB.rs"
+        proxy_b.write_bytes(b"./ProxyC.rs\x00fake data")
+
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(b"./ProxyB.rs\x00fake data")
+
+        introspector = AssetIntrospector()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, set())
+
+        assert proxy_b in result
+        assert proxy_c in result
+
+    def test_scan_proxy_circular_reference(self, tmp_path):
+        """Test circular reference doesn't cause infinite loop"""
+        proxy_b = tmp_path / "ProxyB.rs"
+        proxy_a = tmp_path / "ProxyA.rs"
+
+        # ProxyA references ProxyB
+        proxy_a.write_bytes(b"./ProxyB.rs\x00fake data")
+        # ProxyB references ProxyA (circular)
+        proxy_b.write_bytes(b"./ProxyA.rs\x00fake data")
+
+        introspector = AssetIntrospector()
+        visited: set[Path] = set()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, visited)
+
+        # Should find ProxyB but not loop infinitely
+        assert proxy_b in result
+        assert len(visited) == 2  # Both proxies visited once
+
+    def test_scan_proxy_missing_nested_file(self, tmp_path, caplog):
+        """Test handling of missing nested proxy file"""
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(b"./NonExistent.rs\x00fake data")
+
+        introspector = AssetIntrospector()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, set())
+
+        # Should return empty set, not crash
+        assert len(result) == 0
+
+    def test_scan_proxy_already_visited(self, tmp_path):
+        """Test that already-visited proxies are skipped"""
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(b"fake proxy data")
+
+        introspector = AssetIntrospector()
+        visited = {proxy_a}  # Already visited
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, visited)
+
+        assert len(result) == 0
+
+    def test_scan_proxy_nonexistent_file(self, tmp_path):
+        """Test scanning non-existent proxy file"""
+        proxy_a = tmp_path / "NonExistent.rs"
+
+        introspector = AssetIntrospector()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, set())
+
+        assert len(result) == 0
+
+    def test_scan_proxy_self_reference(self, tmp_path):
+        """Test that self-references are ignored"""
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(f"ProxyA.rs\x00{proxy_a}\x00fake data".encode())
+
+        introspector = AssetIntrospector()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, set())
+
+        assert len(result) == 0
+
+    def test_scan_proxy_multiple_references(self, tmp_path):
+        """Test proxy with multiple nested references"""
+        proxy_b = tmp_path / "ProxyB.rs"
+        proxy_b.write_bytes(b"fake data")
+        proxy_c = tmp_path / "ProxyC.rs"
+        proxy_c.write_bytes(b"fake data")
+
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(b"./ProxyB.rs\x00./ProxyC.rs\x00fake data")
+
+        introspector = AssetIntrospector()
+        result = introspector._scan_redshift_proxy_for_references(proxy_a, set())
+
+        assert proxy_b in result
+        assert proxy_c in result
+
+    def test_parse_scene_assets_includes_nested_proxies(self, tmp_path):
+        """Test that parse_scene_assets includes nested proxy references"""
+        scene_file = tmp_path / "test.c4d"
+        scene_file.write_text("fake scene")
+
+        proxy_b = tmp_path / "ProxyB.rs"
+        proxy_b.write_bytes(b"fake proxy data")
+
+        proxy_a = tmp_path / "ProxyA.rs"
+        proxy_a.write_bytes(b"./ProxyB.rs\x00fake data")
+
+        with (
+            mock.patch.object(Scene, "name", return_value=str(scene_file)),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [{"filename": str(proxy_a), "exists": True}], kwargs["assetList"]
+            )
+
+            assets = AssetIntrospector().parse_scene_assets()
+
+            assert scene_file in assets
+            assert proxy_a in assets
+            assert proxy_b in assets  # Nested proxy should be included
+
+
 class TestMaxonDBAssets:
     """Test Maxon DB asset filtering and warning messages"""
 

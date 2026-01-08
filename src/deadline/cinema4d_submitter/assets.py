@@ -23,6 +23,60 @@ _FRAME_RE = re.compile("#+")
 
 class AssetIntrospector:
 
+    def _scan_redshift_proxy_for_references(
+        self, proxy_path: Path, visited: set[Path]
+    ) -> set[Path]:
+        """
+        Recursively scans a Redshift proxy file for nested proxy references.
+
+        Args:
+            proxy_path: Path to the .rs proxy file
+            visited: Set of already-visited proxy files to avoid infinite loops
+
+        Returns:
+            set[Path]: Set of all nested proxy file paths found
+        """
+        nested_proxies: set[Path] = set()
+
+        if proxy_path in visited or not proxy_path.exists():
+            return nested_proxies
+
+        visited.add(proxy_path)
+        logger.info(f"Scanning Redshift proxy for nested references: {proxy_path}")
+
+        try:
+            with open(proxy_path, "rb") as f:
+                content = f.read()
+                # Search for .rs file references in the binary content
+                text = content.decode("utf-8", errors="ignore")
+
+                # Find all .rs file paths (both relative and absolute)
+                rs_pattern = re.compile(r"([^\x00]*\.rs)")
+                matches = rs_pattern.findall(text)
+
+                for referenced_path in matches:
+                    # Skip if it's the same file
+                    if referenced_path == proxy_path.name or referenced_path == str(proxy_path):
+                        continue
+
+                    # Try to resolve the path
+                    nested_proxy = Path(referenced_path)
+                    if not nested_proxy.is_absolute():
+                        # Handle relative paths like "./ProxyB.rs"
+                        nested_proxy = (proxy_path.parent / referenced_path).resolve()
+
+                    if nested_proxy.exists() and nested_proxy != proxy_path:
+                        logger.info(f"Found nested proxy reference: {nested_proxy}")
+                        nested_proxies.add(nested_proxy)
+                        # Recursively scan this nested proxy
+                        nested_proxies.update(
+                            self._scan_redshift_proxy_for_references(nested_proxy, visited)
+                        )
+        except Exception as e:
+            logger.warning(f"Failed to scan Redshift proxy {proxy_path}: {e}")
+
+        return nested_proxies
+
     def parse_scene_assets(self) -> set[Path]:
         """
         Searches the scene for assets, and filters out assets that are not needed for Rendering.
@@ -78,6 +132,21 @@ class AssetIntrospector:
                 for font_file in fonts_dir.iterdir():
                     if font_file.is_file():
                         assets.add(font_file)
+
+        # Scan Redshift proxy files for nested references
+        rs_files = {asset for asset in assets if asset.suffix == ".rs"}
+        logger.info(
+            f"Found {len(rs_files)} Redshift proxy file(s) to scan: {[f.name for f in rs_files]}"
+        )
+        visited_proxies: set[Path] = set()
+
+        for rs_file in rs_files:
+            nested_proxies = self._scan_redshift_proxy_for_references(rs_file, visited_proxies)
+            if nested_proxies:
+                logger.info(
+                    f"Found {len(nested_proxies)} nested proxy reference(s) in {rs_file.name}"
+                )
+                assets.update(nested_proxies)
 
         # Validate asset paths for Windows-incompatible characters
         validate_asset_paths(assets)
