@@ -249,9 +249,6 @@ def _get_job_template(
                 take_name_for_path = _STRIPPED_DISPLAY_CHARS.sub("_", take_data.name).replace(
                     " ", "_"
                 )
-                take_name_for_path = re.sub(
-                    r"_+", "_", take_name_for_path
-                )  # Collapse consecutive underscores
                 output_path = settings.output_path.replace("$take", take_name_for_path)
                 multi_pass_path = settings.multi_pass_path.replace("$take", take_name_for_path)
                 init_data["data"] = (
