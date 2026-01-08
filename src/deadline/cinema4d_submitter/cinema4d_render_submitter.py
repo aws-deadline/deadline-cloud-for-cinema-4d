@@ -246,8 +246,12 @@ def _get_job_template(
             if has_take_token:
                 # Replace $take token with sanitized take name for file path safety
                 # Use original name (not truncated display_name) but sanitize it
-                take_name_for_path = _STRIPPED_DISPLAY_CHARS.sub("_", take_data.name).replace(" ", "_")
-                take_name_for_path = re.sub(r"_+", "_", take_name_for_path)  # Collapse consecutive underscores
+                take_name_for_path = _STRIPPED_DISPLAY_CHARS.sub("_", take_data.name).replace(
+                    " ", "_"
+                )
+                take_name_for_path = re.sub(
+                    r"_+", "_", take_name_for_path
+                )  # Collapse consecutive underscores
                 output_path = settings.output_path.replace("$take", take_name_for_path)
                 multi_pass_path = settings.multi_pass_path.replace("$take", take_name_for_path)
                 init_data["data"] = (
@@ -510,8 +514,12 @@ def create_job_bundle(
     submit_takes = get_submit_takes(settings, takes)
 
     # Check for $take token BEFORE replacing tokens
-    output_path_before = settings.output_path if settings.override_output_path else scene_output_path
-    multi_pass_before = settings.multi_pass_path if settings.override_multi_pass_path else scene_multi_pass_path
+    output_path_before = (
+        settings.output_path if settings.override_output_path else scene_output_path
+    )
+    multi_pass_before = (
+        settings.multi_pass_path if settings.override_multi_pass_path else scene_multi_pass_path
+    )
     has_take_token = "$take" in (output_path_before or "") or "$take" in (multi_pass_before or "")
 
     # Add overrides to asset references and update the paths with C4D render path tokens.

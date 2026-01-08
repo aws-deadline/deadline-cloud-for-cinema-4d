@@ -277,4 +277,6 @@ def assert_all_images_close(expected_image_directory: Path, actual_image_directo
         expected = np.asarray(PIL.Image.open(image))
 
         # Check that images have the same shape (dimensions match)
-        assert actual.shape == expected.shape, f"Image dimensions differ: {actual.shape} vs {expected.shape}"
+        assert (
+            actual.shape == expected.shape
+        ), f"Image dimensions differ: {actual.shape} vs {expected.shape}"
