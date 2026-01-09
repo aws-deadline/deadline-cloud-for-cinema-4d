@@ -246,9 +246,7 @@ def _get_job_template(
             if has_take_token:
                 # Replace $take token with sanitized take name for file path safety
                 # Use original name (not truncated display_name) but sanitize it
-                take_name_for_path = _STRIPPED_DISPLAY_CHARS.sub("_", take_data.name).replace(
-                    " ", "_"
-                )
+                take_name_for_path = _STRIPPED_PATH_CHARS.sub("_", take_data.name)
                 output_path = settings.output_path.replace("$take", take_name_for_path)
                 multi_pass_path = settings.multi_pass_path.replace("$take", take_name_for_path)
                 init_data["data"] = (
@@ -403,7 +401,7 @@ def initialize_render_settings() -> RenderSubmitterUISettings:
 
 
 # Characters to strip from display names (replaced with underscore)
-_STRIPPED_DISPLAY_CHARS = re.compile(r"[|:()\*]")
+_STRIPPED_PATH_CHARS = re.compile(r"[|:()\* ]")
 
 
 def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:
