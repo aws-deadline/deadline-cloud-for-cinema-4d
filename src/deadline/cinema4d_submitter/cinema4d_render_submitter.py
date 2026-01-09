@@ -432,7 +432,7 @@ def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:
 
     for take in all_takes:
         take_name = take.GetName()
-        display_name = _STRIPPED_DISPLAY_CHARS.sub("_", take_name)[:64]
+        display_name = take_name[:64]
         take_render_data = Scene.get_render_data(doc=doc, take=take)
         renderer_name = Scene.renderer(take_render_data)
         output_directories = Scene.get_output_directories(take=take)

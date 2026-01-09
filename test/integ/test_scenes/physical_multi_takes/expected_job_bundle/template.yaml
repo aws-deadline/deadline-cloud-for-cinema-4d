@@ -149,12 +149,12 @@ parameterDefinitions:
     groupLabel: Take abcdef123 Settings (physical renderer)
   description: The frames to render. E.g. 1-3,8,11-15
   minLength: 1
-- name: __test____Frames
+- name: test_Frames
   type: STRING
   userInterface:
     control: LINE_EDIT
     label: Frames
-    groupLabel: Take {}__test!@#$%^&____ Settings (physical renderer)
+    groupLabel: Take {}|:test!@#$%^&*()_ Settings (physical renderer)
   description: The frames to render. E.g. 1-3,8,11-15
   minLength: 1
 - name: helloFrames
@@ -819,12 +819,12 @@ steps:
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
         timeout: 172800
-- name: '{}__test!@#$%^&____'
+- name: '{}|:test!@#$%^&*()_'
   parameterSpace:
     taskParameterDefinitions:
     - name: Frame
       type: INT
-      range: '{{Param.__test____Frames}}'
+      range: '{{Param.test_Frames}}'
   stepEnvironments:
   - name: Cinema4D
     description: Runs Cinema4D in the background.

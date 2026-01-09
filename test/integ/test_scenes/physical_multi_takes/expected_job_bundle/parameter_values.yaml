@@ -31,7 +31,7 @@ parameterValues:
   value: '1'
 - name: abcdef123Frames
   value: '1'
-- name: __test____Frames
+- name: test_Frames
   value: '1'
 - name: helloFrames
   value: '1'
