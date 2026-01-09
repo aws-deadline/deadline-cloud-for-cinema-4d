@@ -51,7 +51,8 @@ class AssetIntrospector:
                 text = content.decode("utf-8", errors="ignore")
 
                 # Find all .rs file paths (both relative and absolute)
-                rs_pattern = re.compile(r"([^\x00]*\.rs)")
+                # Use possessive quantifier to prevent catastrophic backtracking
+                rs_pattern = re.compile(r"([^\x00]*?\.rs)")
                 matches = rs_pattern.findall(text)
 
                 for referenced_path in matches:
