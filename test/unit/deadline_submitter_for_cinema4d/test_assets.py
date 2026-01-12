@@ -267,3 +267,119 @@ class TestMaxonDBAssets:
                 in caplog.text
             )
             assert "File > Save Project with Assets" in caplog.text
+
+
+class TestRedshiftProxyNesting:
+    """Test nested Redshift proxy file detection"""
+
+    def test_nested_redshift_proxies_are_collected(self, tmp_path):
+        """Test that nested Redshift proxy files are recursively collected"""
+        scene_dir = tmp_path / "scene"
+        scene_dir.mkdir()
+        scene_file = scene_dir / "test.c4d"
+
+        # Create mock Redshift proxy files
+        proxy_a = scene_dir / "ProxyA.rs"
+        proxy_b = scene_dir / "ProxyB.rs"
+        proxy_c = scene_dir / "ProxyC.rs"
+
+        # ProxyA references ProxyB
+        proxy_a.write_bytes(b"some binary data\x00ProxyB.rs\x00more data")
+        # ProxyB references ProxyC
+        proxy_b.write_bytes(b"some binary data\x00ProxyC.rs\x00more data")
+        # ProxyC has no nested references
+        proxy_c.write_bytes(b"some binary data\x00no nested proxies")
+
+        with (
+            mock.patch.object(Scene, "name", return_value=str(scene_file)),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            # GetAllAssetsNew only returns ProxyA (the top-level proxy)
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [{"filename": str(proxy_a), "exists": True}], kwargs["assetList"]
+            )
+
+            assets = AssetIntrospector().parse_scene_assets()
+
+            # All three proxies should be in the assets
+            assert proxy_a in assets
+            assert proxy_b in assets
+            assert proxy_c in assets
+
+    def test_circular_proxy_references_handled(self, tmp_path):
+        """Test that circular references in proxy files don't cause infinite loops"""
+        scene_dir = tmp_path / "scene"
+        scene_dir.mkdir()
+        scene_file = scene_dir / "test.c4d"
+
+        proxy_a = scene_dir / "ProxyA.rs"
+        proxy_b = scene_dir / "ProxyB.rs"
+
+        # Create circular reference: A -> B -> A
+        proxy_a.write_bytes(b"data\x00ProxyB.rs\x00data")
+        proxy_b.write_bytes(b"data\x00ProxyA.rs\x00data")
+
+        with (
+            mock.patch.object(Scene, "name", return_value=str(scene_file)),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [{"filename": str(proxy_a), "exists": True}], kwargs["assetList"]
+            )
+
+            # Should not hang or crash
+            assets = AssetIntrospector().parse_scene_assets()
+
+            assert proxy_a in assets
+            assert proxy_b in assets
+
+    def test_non_existent_nested_proxy_handled(self, tmp_path):
+        """Test that references to non-existent proxy files are handled gracefully"""
+        scene_dir = tmp_path / "scene"
+        scene_dir.mkdir()
+        scene_file = scene_dir / "test.c4d"
+
+        proxy_a = scene_dir / "ProxyA.rs"
+        # ProxyA references non-existent ProxyB
+        proxy_a.write_bytes(b"data\x00NonExistent.rs\x00data")
+
+        with (
+            mock.patch.object(Scene, "name", return_value=str(scene_file)),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [{"filename": str(proxy_a), "exists": True}], kwargs["assetList"]
+            )
+
+            # Should not crash
+            assets = AssetIntrospector().parse_scene_assets()
+
+            assert proxy_a in assets
+
+    def test_relative_path_proxy_references(self, tmp_path):
+        """Test that relative paths in proxy files are resolved correctly"""
+        scene_dir = tmp_path / "scene"
+        scene_dir.mkdir()
+        proxies_dir = scene_dir / "proxies"
+        proxies_dir.mkdir()
+        scene_file = scene_dir / "test.c4d"
+
+        proxy_a = scene_dir / "ProxyA.rs"
+        proxy_b = proxies_dir / "ProxyB.rs"
+
+        # ProxyA uses relative path to reference ProxyB
+        proxy_a.write_bytes(b"data\x00proxies/ProxyB.rs\x00data")
+        proxy_b.write_bytes(b"data\x00no nested")
+
+        with (
+            mock.patch.object(Scene, "name", return_value=str(scene_file)),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [{"filename": str(proxy_a), "exists": True}], kwargs["assetList"]
+            )
+
+            assets = AssetIntrospector().parse_scene_assets()
+
+            assert proxy_a in assets
+            assert proxy_b in assets

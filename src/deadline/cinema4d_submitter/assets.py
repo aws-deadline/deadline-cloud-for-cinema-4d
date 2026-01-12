@@ -21,6 +21,54 @@ if not any(isinstance(h, WarningCollectorHandler) for h in logger.handlers):
 _FRAME_RE = re.compile("#+")
 
 
+def _collect_nested_redshift_proxies(proxy_path: Path, collected: set[Path]) -> None:
+    """
+    Recursively collects Redshift proxy files referenced within a proxy file.
+    Redshift proxy files (.rs) can reference other proxy files, creating nested dependencies.
+
+    Args:
+        proxy_path: Path to the Redshift proxy file to scan
+        collected: Set to accumulate all discovered proxy files (prevents infinite loops)
+    """
+    if not proxy_path.exists() or proxy_path in collected:
+        return
+
+    collected.add(proxy_path)
+
+    try:
+        with open(proxy_path, "rb") as f:
+            content = f.read()
+
+        # Search for .rs file references in the binary content
+        # Redshift proxy files store paths as null-terminated strings
+        # Split by null bytes and search for .rs extensions
+        null_separated = content.split(b"\x00")
+
+        for segment in null_separated:
+            try:
+                text = segment.decode("latin-1", errors="ignore").strip()
+            except Exception:
+                continue
+
+            # Check if this segment ends with .rs (case-insensitive)
+            if not text or len(text) < 3:
+                continue
+
+            if text.lower().endswith(".rs"):
+                nested_path = Path(text)
+
+                # If relative, resolve relative to the proxy file's directory
+                if not nested_path.is_absolute():
+                    nested_path = (proxy_path.parent / nested_path).resolve()
+
+                # Recursively collect nested proxies
+                if nested_path.exists() and nested_path.suffix.lower() == ".rs":
+                    _collect_nested_redshift_proxies(nested_path, collected)
+
+    except Exception as e:
+        logger.warning(f"Failed to scan Redshift proxy file {proxy_path} for nested proxies: {e}")
+
+
 class AssetIntrospector:
 
     def parse_scene_assets(self) -> set[Path]:
@@ -51,6 +99,9 @@ class AssetIntrospector:
             flags=c4d.ASSETDATA_FLAG_WITHFONTS,
         )
 
+        # Track Redshift proxy files for nested dependency scanning
+        redshift_proxies: set[Path] = set()
+
         for asset in asset_list:
             # Only process fonts on Windows. Mac font functionality is not supported
             if is_windows() and is_asset_a_font(asset):
@@ -69,7 +120,20 @@ class AssetIntrospector:
                 continue
 
             if exists is True and filename is not None:
-                assets.add(Path(filename))
+                asset_path = Path(filename)
+                assets.add(asset_path)
+
+                # Track Redshift proxy files for nested scanning
+                if asset_path.suffix.lower() == ".rs":
+                    redshift_proxies.add(asset_path)
+
+        # Recursively collect nested Redshift proxy dependencies
+        all_redshift_proxies: set[Path] = set()
+        for proxy_path in redshift_proxies:
+            _collect_nested_redshift_proxies(proxy_path, all_redshift_proxies)
+
+        # Add all discovered nested proxies to assets
+        assets.update(all_redshift_proxies)
 
         # Add all font files from the fonts directory to assets (Windows only)
         if is_windows():
