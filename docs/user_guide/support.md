@@ -11,9 +11,9 @@ Before reaching out for help, try these troubleshooting steps. They often resolv
 - **✅ Render one frame locally** - Before submitting to the cloud, render at least one frame locally in Cinema 4D to verify your scene renders correctly. This helps identify scene-specific issues vs. cloud rendering issues.
 
 - **✅ Update to the latest submitter** - We release updates frequently with bug fixes and improvements. Your issue may already be fixed in a newer version. To check if you're running the latest version:
-  1. Find your current version: The version is displayed in the submitter window title
-  2. Compare with the latest release: Visit the [releases page](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/releases) to see the most recent version
-  3. If your version is older, update the submitter and test again before reporting the issue
+  - Find your current version: The version is displayed in the submitter window title
+  - Compare with the latest release: Visit the [releases page](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/releases) to see the most recent version
+  - If your version is older, update the submitter and test again before reporting the issue
 
 - **✅ Check your Job-Specific Settings** - Review the Job-Specific Settings tab in the submitter. In particular, enable the **"Save Cinema 4D Project with Assets"** checkbox. This creates a temporary copy of your project with all assets and fixes file paths, helping identify missing files and organizing assets for render farms. [Learn more about this feature](submitter-features.md#job-specific-settings).
 
