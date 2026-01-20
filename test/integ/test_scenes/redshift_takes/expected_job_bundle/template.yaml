@@ -104,8 +104,8 @@ steps:
         data: |-
           scene_file: '{{Param.Cinema4DFile}}'
           take: 'Main'
-          output_path: '{{Param.OutputPath}}'
-          multi_pass_path: '{{Param.MultiPassPath}}'
+          output_path: 'PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\redshift_takes\generated_bundle\renders\redshift_takes_Main'
+          multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
       actions:

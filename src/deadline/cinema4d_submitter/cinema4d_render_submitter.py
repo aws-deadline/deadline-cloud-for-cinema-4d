@@ -182,6 +182,7 @@ def _get_job_template(
     settings: RenderSubmitterUISettings,
     renderers: set[str],
     takes: list[TakeData],
+    has_take_token: bool = False,
 ) -> dict[str, Any]:
     if os.getenv("DEADLINE_COMMAND_TEMPLATE"):
         template = "default_cinema4d_job_template.yaml"
@@ -219,9 +220,6 @@ def _get_job_template(
             take_frame_param["userInterface"]["groupLabel"] = take_data.ui_group_label
             job_template["parameterDefinitions"].append(take_frame_param)
 
-    # Check if paths contain $take token
-    has_take_token = "$take" in settings.output_path or "$take" in settings.multi_pass_path
-
     # Replicate the default step, once per render take, and adjust its settings
     default_step = job_template["steps"][0]
     job_template["steps"] = []
@@ -244,18 +242,23 @@ def _get_job_template(
         else:
             # Update the init data of the step
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
-            output_path = settings.output_path
-            multi_pass_path = settings.multi_pass_path
 
             if has_take_token:
-                # Replace $take token with actual take name, replacing spaces with underscores
-                take_name_for_path = take_data.name.replace(" ", "_")
+                # Replace $take token with sanitized take name for file path safety
+                # Use original name (not truncated display_name) but sanitize it
+                take_name_for_path = _STRIPPED_PATH_CHARS.sub("_", take_data.name)
                 output_path = settings.output_path.replace("$take", take_name_for_path)
                 multi_pass_path = settings.multi_pass_path.replace("$take", take_name_for_path)
-            init_data["data"] = (
-                "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
-                % (take_data.name, output_path, multi_pass_path)
-            )
+                init_data["data"] = (
+                    "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
+                    % (take_data.name, output_path, multi_pass_path)
+                )
+            else:
+                # Use parameter references for paths without $take token
+                init_data["data"] = (
+                    "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
+                    % take_data.name
+                )
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
@@ -397,6 +400,10 @@ def initialize_render_settings() -> RenderSubmitterUISettings:
     return render_settings
 
 
+# Characters to strip from display names (replaced with underscore)
+_STRIPPED_PATH_CHARS = re.compile(r"[|:()\* ]")
+
+
 def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:
     """
     Extracts and organizes take data from the given Cinema 4D document.
@@ -501,6 +508,15 @@ def create_job_bundle(
     job_bundle_path = Path(job_bundle_dir)
     submit_takes = get_submit_takes(settings, takes)
 
+    # Check for $take token BEFORE replacing tokens
+    output_path_before = (
+        settings.output_path if settings.override_output_path else scene_output_path
+    )
+    multi_pass_before = (
+        settings.multi_pass_path if settings.override_multi_pass_path else scene_multi_pass_path
+    )
+    has_take_token = "$take" in (output_path_before or "") or "$take" in (multi_pass_before or "")
+
     # Add overrides to asset references and update the paths with C4D render path tokens.
     if settings.override_output_path:
         if settings.output_path:
@@ -532,7 +548,7 @@ def create_job_bundle(
         generate_take_parameter_names(submit_takes)
 
     renderers: set[str] = {take_data.renderer_name for take_data in submit_takes}
-    job_template = _get_job_template(settings, renderers, submit_takes)
+    job_template = _get_job_template(settings, renderers, submit_takes, has_take_token)
     parameter_values = _get_parameter_values(
         settings, queue_parameters, per_take_frames_parameters, submit_takes
     )
