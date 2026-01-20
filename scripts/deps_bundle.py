@@ -12,7 +12,7 @@ from typing import Any
 
 from _project import get_project_dict, get_dependencies, Dependency
 
-SUPPORTED_PYTHON_VERSIONS = ["3.9", "3.10", "3.11"]
+SUPPORTED_PYTHON_VERSIONS = ["3.10", "3.11", "3.12", "3.13", "3.14"]
 SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
 NATIVE_DEPENDENCIES = ["xxhash", "psutil"]
 
