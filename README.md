@@ -29,7 +29,7 @@ This library requires:
 1. Cinema 4D 2024 - 2026
    * Redshift, Arnold, and Cargo are supported natively
    * V-Ray, X-Particles, and Red Giant are supported but require additional setup
-2. Python 3.9 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
+2. Python 3.10 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
 3. Windows or macOS operating system for job submission
 4. Windows or Linux operating system for job rendering
     * Cinema 4D 2024 - 2026 is supported on Windows
