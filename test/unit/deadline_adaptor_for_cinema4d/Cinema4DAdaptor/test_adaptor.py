@@ -16,7 +16,6 @@ from jsonschema.exceptions import ValidationError
 from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
 from deadline.cinema4d_adaptor._version import version as adaptor_version
 
-
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

@@ -1,5 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 """Find and print Cinema 4D and Redshift log files after rendering."""
+
 import os
 import shutil
 import sys
