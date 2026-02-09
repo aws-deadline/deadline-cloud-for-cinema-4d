@@ -1,5 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 """Configure environment variables for Cinema 4D detailed logging."""
+
 import os
 import sys
 import tempfile
