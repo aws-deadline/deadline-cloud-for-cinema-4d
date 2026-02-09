@@ -72,6 +72,12 @@ A: Make sure you've installed the extension correctly and restarted Cinema 4D. C
 
 A: Common causes include missing assets, incorrect file paths, or insufficient memory. Check the job logs in the Deadline Cloud monitor.
 
+**Q: Why are some of my textures or assets missing in the rendered output?**
+
+A: This is typically a path mapping issue. Cinema 4D sometimes stores deep links (absolute paths) to assets in the scene file that cannot be edited. When the scene is submitted and rendered on the farm, it may still reference the original workstation paths even though the assets were uploaded.
+
+**Workaround:** Enable "Save Cinema 4D Project with Assets" in the Job-Specific Settings tab of the submitter. This consolidates all assets into the project folder and fixes the paths before submission, ensuring they render correctly on the farm.
+
 **Q: Can I cancel a job after submitting?**
 
 A: Yes, you can cancel jobs through the Deadline Cloud monitor at any time.
