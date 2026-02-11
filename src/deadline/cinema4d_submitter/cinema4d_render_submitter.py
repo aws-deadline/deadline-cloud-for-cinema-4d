@@ -249,16 +249,31 @@ def _get_job_template(
                 take_name_for_path = _STRIPPED_PATH_CHARS.sub("_", take_data.name)
                 output_path = settings.output_path.replace("$take", take_name_for_path)
                 multi_pass_path = settings.multi_pass_path.replace("$take", take_name_for_path)
-                init_data["data"] = (
-                    "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '%s'\nmulti_pass_path: '%s'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
-                    % (take_data.name, output_path, multi_pass_path)
-                )
+                # Use PyYAML to properly escape all special characters in paths
+                init_data_dict = {
+                    "scene_file": "{{Param.Cinema4DFile}}",
+                    "take": take_data.name,
+                    "output_path": output_path,
+                    "multi_pass_path": multi_pass_path,
+                    "activate_error_checking": "{{Param.ActivateErrorChecking}}",
+                    "use_cached_text": "{{Param.UseCachedText}}",
+                }
+                init_data["data"] = yaml.dump(
+                    init_data_dict, default_flow_style=False, sort_keys=False, default_style='"'
+                ).strip()
             else:
                 # Use parameter references for paths without $take token
-                init_data["data"] = (
-                    "scene_file: '{{Param.Cinema4DFile}}'\ntake: '%s'\noutput_path: '{{Param.OutputPath}}'\nmulti_pass_path: '{{Param.MultiPassPath}}'\nactivate_error_checking: '{{Param.ActivateErrorChecking}}'\nuse_cached_text: '{{Param.UseCachedText}}'"
-                    % take_data.name
-                )
+                init_data_dict = {
+                    "scene_file": "{{Param.Cinema4DFile}}",
+                    "take": take_data.name,
+                    "output_path": "{{Param.OutputPath}}",
+                    "multi_pass_path": "{{Param.MultiPassPath}}",
+                    "activate_error_checking": "{{Param.ActivateErrorChecking}}",
+                    "use_cached_text": "{{Param.UseCachedText}}",
+                }
+                init_data["data"] = yaml.dump(
+                    init_data_dict, default_flow_style=False, sort_keys=False, default_style='"'
+                ).strip()
 
     # If Arnold is one of the renderers, add Arnold-specific parameters
     if "arnold" in renderers:
