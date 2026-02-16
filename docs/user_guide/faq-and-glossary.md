@@ -90,6 +90,10 @@ A: Yes, you can set job priority levels in the submitter to control render queue
 
 A: The submitter includes built-in error detection to catch common issues like missing assets before submission. This can be deactivated in the submitter.
 
+**Q: Are nested Redshift proxy files detected when submitting Cinema 4D jobs to Deadline?**
+
+A: No, Redshift proxy files are not detected when submitting Cinema 4D jobs to Deadline. This is a limitation of the Redshift .rs file format. When you export a Cinema 4D scene containing RS Proxy objects to.rs, all referenced proxy data is flattened/inlined into a single file - no external references are preserved. The Cinema 4D SDK cannot read.rs files to discover nested dependencies, and the Redshift Core doesn't expose this functionality either.
+
 **Q: How do I enable detailed logging for debugging rendering issues?**
 
 A: The submitter includes an "Activate detailed logging" checkbox in the Job-Specific Settings that captures detailed logs for troubleshooting. When enabled:

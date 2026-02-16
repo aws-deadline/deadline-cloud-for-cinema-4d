@@ -71,6 +71,16 @@ class AssetIntrospector:
             if exists is True and filename is not None:
                 assets.add(Path(filename))
 
+        # Warn if any Redshift proxy files are present in assets
+        if any(str(asset).lower().endswith(".rs") for asset in assets):
+            logger.warning(
+                "Redshift proxy (.rs) file(s) detected in the scene assets.\n"
+                "Note that any nested .rs files referenced within these proxies "
+                "will NOT be automatically included in the job bundle. "
+                "Please manually verify and add any nested proxy dependencies "
+                "to ensure your render completes successfully."
+            )
+
         # Add all font files from the fonts directory to assets (Windows only)
         if is_windows():
             fonts_dir = path_to_scene_file_dir / FONTS_DIR

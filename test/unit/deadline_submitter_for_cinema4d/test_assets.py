@@ -267,3 +267,78 @@ class TestMaxonDBAssets:
                 in caplog.text
             )
             assert "File > Save Project with Assets" in caplog.text
+
+
+class TestRedshiftProxyWarning:
+    """Test warning message when .rs files are detected in scene assets"""
+
+    def test_warning_shown_when_rs_file_present(self, caplog):
+        """Test that a warning is logged when at least one .rs file is in assets"""
+        rs_asset = {"filename": "C:\\Users\\test-user\\proxy.rs", "exists": True}
+
+        with (
+            mock.patch.object(Scene, "name", return_value=TEST_SCENE_FILE_LOCATION),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [rs_asset], kwargs["assetList"]
+            )
+
+            assets = AssetIntrospector().parse_scene_assets()
+
+            assert Path("C:\\Users\\test-user\\proxy.rs") in assets
+            assert "Redshift proxy (.rs) file(s) detected" in caplog.text
+            assert "nested .rs files" in caplog.text
+            assert "will NOT be automatically included" in caplog.text
+
+    def test_no_warning_when_no_rs_files(self, caplog):
+        """Test that no .rs warning is logged when there are no .rs files"""
+        regular_asset = {"filename": "C:\\Users\\test-user\\texture.png", "exists": True}
+
+        with (
+            mock.patch.object(Scene, "name", return_value=TEST_SCENE_FILE_LOCATION),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [regular_asset], kwargs["assetList"]
+            )
+
+            AssetIntrospector().parse_scene_assets()
+
+            assert "Redshift proxy (.rs) file(s) detected" not in caplog.text
+
+    def test_warning_with_mixed_assets_including_rs(self, caplog):
+        """Test warning fires when .rs file is among other asset types"""
+        assets_list = [
+            {"filename": "C:\\Users\\test-user\\texture.png", "exists": True},
+            {"filename": "C:\\Users\\test-user\\model.rs", "exists": True},
+            {"filename": "C:\\Users\\test-user\\scene.obj", "exists": True},
+        ]
+
+        with (
+            mock.patch.object(Scene, "name", return_value=TEST_SCENE_FILE_LOCATION),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                assets_list, kwargs["assetList"]
+            )
+
+            AssetIntrospector().parse_scene_assets()
+
+            assert "Redshift proxy (.rs) file(s) detected" in caplog.text
+
+    def test_warning_with_uppercase_rs_extension(self, caplog):
+        """Test warning triggers for case-insensitive .RS extension"""
+        rs_asset = {"filename": "C:\\Users\\test-user\\proxy.RS", "exists": True}
+
+        with (
+            mock.patch.object(Scene, "name", return_value=TEST_SCENE_FILE_LOCATION),
+            mock.patch.object(c4d, "documents") as mock_docs,
+        ):
+            mock_docs.GetAllAssetsNew.side_effect = lambda *_, **kwargs: append_asset_list(
+                [rs_asset], kwargs["assetList"]
+            )
+
+            AssetIntrospector().parse_scene_assets()
+
+            assert "Redshift proxy (.rs) file(s) detected" in caplog.text
