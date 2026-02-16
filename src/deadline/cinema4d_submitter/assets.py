@@ -37,6 +37,7 @@ def _warn_if_redshift_proxies_detected(assets: set[Path]) -> None:
             "to ensure your render completes successfully."
         )
 
+
 class AssetIntrospector:
 
     def parse_scene_assets(self) -> set[Path]:
