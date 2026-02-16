@@ -93,6 +93,7 @@ A: The submitter includes built-in error detection to catch common issues like m
 **Q: Are nested Redshift proxy files detected when submitting Cinema 4D jobs to Deadline?**
 
 A: No, Redshift proxy files are not detected when submitting Cinema 4D jobs to Deadline. This is a limitation of the Redshift *.rs file format. When you export a Cinema 4D scene containing RS Proxy objects to *.rs, all referenced proxy data is flattened/inlined into a single file - no external references are preserved. The Cinema 4D SDK cannot read *.rs files to discover nested dependencies, and the Redshift Core doesn't expose this functionality either.
+Link to the forum post: https://developers.maxon.net/forum/topic/16370/cinema-4d-redshift-nested-redshift-proxy-files-not-detected-by-project-asset-inspector/2
 
 **Q: How do I enable detailed logging for debugging rendering issues?**
 
