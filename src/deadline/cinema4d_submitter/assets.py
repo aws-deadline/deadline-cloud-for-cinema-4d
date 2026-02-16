@@ -21,6 +21,22 @@ if not any(isinstance(h, WarningCollectorHandler) for h in logger.handlers):
 _FRAME_RE = re.compile("#+")
 
 
+def _warn_if_redshift_proxies_detected(assets: set[Path]) -> None:
+    """
+    Log a warning if any Redshift proxy (.rs) files are present in the assets.
+
+    Args:
+        assets: Set of asset file paths
+    """
+    if any(str(asset).lower().endswith(".rs") for asset in assets):
+        logger.warning(
+            "Redshift proxy (.rs) file(s) detected in the scene assets.\n"
+            "Note that any nested .rs files referenced within these proxies "
+            "will NOT be automatically included in the job bundle. "
+            "Please manually verify and add any nested proxy dependencies "
+            "to ensure your render completes successfully."
+        )
+
 class AssetIntrospector:
 
     def parse_scene_assets(self) -> set[Path]:
@@ -71,15 +87,7 @@ class AssetIntrospector:
             if exists is True and filename is not None:
                 assets.add(Path(filename))
 
-        # Warn if any Redshift proxy files are present in assets
-        if any(str(asset).lower().endswith(".rs") for asset in assets):
-            logger.warning(
-                "Redshift proxy (.rs) file(s) detected in the scene assets.\n"
-                "Note that any nested .rs files referenced within these proxies "
-                "will NOT be automatically included in the job bundle. "
-                "Please manually verify and add any nested proxy dependencies "
-                "to ensure your render completes successfully."
-            )
+        _warn_if_redshift_proxies_detected(assets)
 
         # Add all font files from the fonts directory to assets (Windows only)
         if is_windows():
