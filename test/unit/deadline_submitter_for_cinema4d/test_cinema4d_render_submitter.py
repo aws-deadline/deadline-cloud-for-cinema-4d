@@ -7,6 +7,7 @@ from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     _get_job_template,
     TakeData,
     check_take_token_warnings,
+    deduplicate_take_names,
     generate_take_parameter_names,
 )
 from deadline.cinema4d_submitter.data_classes import (
@@ -266,7 +267,7 @@ class TestCheckTakeTokenWarnings:
 
 
 class TestGenerateTakeParameterNamesDeduplication:
-    """Test cases for duplicate take name deduplication in generate_take_parameter_names."""
+    """Test cases for duplicate take name deduplication in deduplicate_take_names."""
 
     def setup_method(self):
         warning_collector.clear_warnings()
@@ -276,7 +277,7 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
             TakeData("Take2", "Take2", "standard", "", None, "1-20", set(), False),
         ]
-        generate_take_parameter_names(takes)
+        deduplicate_take_names(takes)
 
         assert not warning_collector.has_warnings()
         assert takes[0].name == "Take1"
@@ -287,7 +288,7 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
             TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
         ]
-        generate_take_parameter_names(takes)
+        deduplicate_take_names(takes)
 
         assert takes[0].name == "MyTake_1"
         assert takes[1].name == "MyTake_2"
@@ -297,7 +298,7 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
             TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
         ]
-        generate_take_parameter_names(takes)
+        deduplicate_take_names(takes)
 
         assert warning_collector.has_warnings()
         warnings = warning_collector.get_warnings()
@@ -311,7 +312,7 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("Dup", "Dup", "standard", "", None, "1-20", set(), False),
             TakeData("Dup", "Dup", "standard", "", None, "1-30", set(), False),
         ]
-        generate_take_parameter_names(takes)
+        deduplicate_take_names(takes)
 
         assert takes[0].name == "Dup_1"
         assert takes[1].name == "Dup_2"
@@ -324,7 +325,7 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("A", "A", "standard", "", None, "1-30", set(), False),
             TakeData("B", "B", "standard", "", None, "1-40", set(), False),
         ]
-        generate_take_parameter_names(takes)
+        deduplicate_take_names(takes)
 
         assert takes[0].name == "A_1"
         assert takes[1].name == "B_1"
@@ -337,7 +338,7 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("Dup", "Dup", "standard", "", None, "1-20", set(), False),
             TakeData("Dup", "Dup", "standard", "", None, "1-30", set(), False),
         ]
-        generate_take_parameter_names(takes)
+        deduplicate_take_names(takes)
 
         assert takes[0].name == "Unique"
         assert takes[1].name == "Dup_1"
@@ -348,21 +349,18 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
             TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
         ]
-        generate_take_parameter_names(takes)
+        deduplicate_take_names(takes)
 
         assert takes[0].display_name == "MyTake_1"
         assert takes[1].display_name == "MyTake_2"
 
-    def test_dedup_only_mode_skips_frames_parameters(self):
+    def test_dedup_does_not_set_frames_parameters(self):
         takes = [
             TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
             TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
         ]
-        generate_take_parameter_names(takes, set_frames_parameters=False)
+        deduplicate_take_names(takes)
 
-        assert takes[0].name == "MyTake_1"
-        assert takes[1].name == "MyTake_2"
-        # frames_parameter_name should remain None
         assert takes[0].frames_parameter_name is None
         assert takes[1].frames_parameter_name is None
 
@@ -371,7 +369,8 @@ class TestGenerateTakeParameterNamesDeduplication:
             TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
             TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
         ]
-        generate_take_parameter_names(takes, set_frames_parameters=True)
+        deduplicate_take_names(takes)
+        generate_take_parameter_names(takes)
 
         assert takes[0].frames_parameter_name is not None
         assert takes[1].frames_parameter_name is not None
