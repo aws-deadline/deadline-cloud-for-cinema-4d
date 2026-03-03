@@ -589,7 +589,6 @@ def create_job_bundle(
     }
 
 
-
 def deduplicate_take_names(submit_takes: list[TakeData]) -> None:
     """
     Checks for duplicate take names among the submitted takes and makes them
@@ -661,7 +660,6 @@ def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
         # Append "Frames"
         # example: NewTake_00001Frames
         take_data.frames_parameter_name = f"{parameter_name}Frames"
-
 
 
 def setup_auto_detected_attachments(take_data_list: list[TakeData]) -> AssetReferences:
