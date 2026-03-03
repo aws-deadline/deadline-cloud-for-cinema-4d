@@ -7,6 +7,7 @@ from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     _get_job_template,
     TakeData,
     check_take_token_warnings,
+    generate_take_parameter_names,
 )
 from deadline.cinema4d_submitter.data_classes import (
     RenderSubmitterUISettings,
@@ -262,3 +263,116 @@ class TestCheckTakeTokenWarnings:
 
         assert warning_collector.has_warnings()
         assert "$take token" in warning_collector.get_warnings()[0]
+
+
+class TestGenerateTakeParameterNamesDeduplication:
+    """Test cases for duplicate take name deduplication in generate_take_parameter_names."""
+
+    def setup_method(self):
+        warning_collector.clear_warnings()
+
+    def test_no_duplicates_no_warning(self):
+        takes = [
+            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+            TakeData("Take2", "Take2", "standard", "", None, "1-20", set(), False),
+        ]
+        generate_take_parameter_names(takes)
+
+        assert not warning_collector.has_warnings()
+        assert takes[0].name == "Take1"
+        assert takes[1].name == "Take2"
+
+    def test_duplicate_names_get_suffixed(self):
+        takes = [
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
+        ]
+        generate_take_parameter_names(takes)
+
+        assert takes[0].name == "MyTake_1"
+        assert takes[1].name == "MyTake_2"
+
+    def test_duplicate_names_warning_is_added(self):
+        takes = [
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
+        ]
+        generate_take_parameter_names(takes)
+
+        assert warning_collector.has_warnings()
+        warnings = warning_collector.get_warnings()
+        assert len(warnings) == 1
+        assert "MyTake" in warnings[0]
+        assert "_1, _2" in warnings[0]
+
+    def test_three_duplicates_get_suffixed(self):
+        takes = [
+            TakeData("Dup", "Dup", "standard", "", None, "1-10", set(), False),
+            TakeData("Dup", "Dup", "standard", "", None, "1-20", set(), False),
+            TakeData("Dup", "Dup", "standard", "", None, "1-30", set(), False),
+        ]
+        generate_take_parameter_names(takes)
+
+        assert takes[0].name == "Dup_1"
+        assert takes[1].name == "Dup_2"
+        assert takes[2].name == "Dup_3"
+
+    def test_multiple_duplicate_groups(self):
+        takes = [
+            TakeData("A", "A", "standard", "", None, "1-10", set(), False),
+            TakeData("B", "B", "standard", "", None, "1-20", set(), False),
+            TakeData("A", "A", "standard", "", None, "1-30", set(), False),
+            TakeData("B", "B", "standard", "", None, "1-40", set(), False),
+        ]
+        generate_take_parameter_names(takes)
+
+        assert takes[0].name == "A_1"
+        assert takes[1].name == "B_1"
+        assert takes[2].name == "A_2"
+        assert takes[3].name == "B_2"
+
+    def test_mixed_unique_and_duplicate(self):
+        takes = [
+            TakeData("Unique", "Unique", "standard", "", None, "1-10", set(), False),
+            TakeData("Dup", "Dup", "standard", "", None, "1-20", set(), False),
+            TakeData("Dup", "Dup", "standard", "", None, "1-30", set(), False),
+        ]
+        generate_take_parameter_names(takes)
+
+        assert takes[0].name == "Unique"
+        assert takes[1].name == "Dup_1"
+        assert takes[2].name == "Dup_2"
+
+    def test_display_name_updated_on_dedup(self):
+        takes = [
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
+        ]
+        generate_take_parameter_names(takes)
+
+        assert takes[0].display_name == "MyTake_1"
+        assert takes[1].display_name == "MyTake_2"
+
+    def test_dedup_only_mode_skips_frames_parameters(self):
+        takes = [
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
+        ]
+        generate_take_parameter_names(takes, set_frames_parameters=False)
+
+        assert takes[0].name == "MyTake_1"
+        assert takes[1].name == "MyTake_2"
+        # frames_parameter_name should remain None
+        assert takes[0].frames_parameter_name is None
+        assert takes[1].frames_parameter_name is None
+
+    def test_frames_parameters_set_after_dedup(self):
+        takes = [
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
+        ]
+        generate_take_parameter_names(takes, set_frames_parameters=True)
+
+        assert takes[0].frames_parameter_name is not None
+        assert takes[1].frames_parameter_name is not None
+        assert takes[0].frames_parameter_name != takes[1].frames_parameter_name

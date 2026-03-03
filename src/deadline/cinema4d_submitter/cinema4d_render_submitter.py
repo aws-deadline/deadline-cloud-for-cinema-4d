@@ -542,10 +542,9 @@ def create_job_bundle(
         take.frame_range != first_frame_range for take in submit_takes
     )
 
-    # If there are multiple frame ranges and we're not overriding the range,
-    # then we create per-take Frames parameters.
-    if per_take_frames_parameters:
-        generate_take_parameter_names(submit_takes)
+    # Always deduplicate take names; only generate per-take Frames parameters
+    # when there are multiple frame ranges and we're not overriding the range.
+    generate_take_parameter_names(submit_takes, set_frames_parameters=per_take_frames_parameters)
 
     renderers: set[str] = {take_data.renderer_name for take_data in submit_takes}
     job_template = _get_job_template(settings, renderers, submit_takes, has_take_token)
@@ -586,38 +585,56 @@ def create_job_bundle(
     }
 
 
-def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
+def generate_take_parameter_names(
+    submit_takes: list[TakeData], set_frames_parameters: bool = True
+) -> None:
     """
-    This function generates unique take frame range parameter names
-    by combining each takes name with a unique suffix (if required)
-    while still meeting the requirements (letters+numbers+underscores,
-    max 64 chars, etc.) of a parameter name.
+    This function deduplicates take names (appending _1, _2, etc. for duplicates)
+    and generates unique take frame range parameter names by combining each take's
+    name with a unique suffix (if required) while still meeting the requirements
+    (letters+numbers+underscores, max 64 chars, etc.) of a parameter name.
+
+    If set_frames_parameters is False, only deduplication is performed and
+    frames_parameter_name is not set on the takes.
 
     The frame parameter names are saved to the input submit_takes.
     """
+
+    # Deduplicate take names by appending _1, _2, etc. for duplicates
+    name_counts: dict[str, int] = {}
+    for take in submit_takes:
+        name_counts[take.name] = name_counts.get(take.name, 0) + 1
+
+    duplicated_names = {name for name, count in name_counts.items() if count > 1}
+    if duplicated_names:
+        next_suffix: dict[str, int] = {name: 1 for name in duplicated_names}
+        for take in submit_takes:
+            if take.name in next_suffix:
+                suffix = next_suffix[take.name]
+                new_name = f"{take.name}_{suffix}"
+                take.name = new_name
+                take.display_name = new_name[:64]
+                next_suffix[new_name.rsplit("_", 1)[0]] = suffix + 1
+
+        renamed_list = ", ".join(f"'{name}'" for name in sorted(duplicated_names))
+        warning_collector.add_warning(
+            f"Duplicate take names were found: {renamed_list}. "
+            "They have been automatically renamed with _1, _2, etc. suffixes to ensure uniqueness."
+        )
+
+    if not set_frames_parameters:
+        return
 
     # parameter names must start with a letter or underscore
     allowed_first_job_parameter_chars = re.compile("[a-zA-Z_]")
     # parameter names must only contain letters, numbers, or underscores
     removed_job_parameter_chars = re.compile("[^a-zA-Z0-9_]")
 
-    take_names = set()
     parameter_names = set()
 
     for take_number in range(len(submit_takes)):
         take_data = submit_takes[take_number]
-
-        # First, check for duplicate take names since this will result in overwriting files in the output
-        # or other unexpected behaviour
-        # We do this here rather than earlier in submission because we get an error popup
-        # (rather than a quieter console error) for errors here.
         take_name = take_data.name
-        if take_name in take_names:
-            raise RuntimeError(
-                f"You have multiple takes named '{take_name}' with different render settings among the takes. "
-                "Please use unique take names."
-            )
-        take_names.add(take_name)
 
         # Now, determine the frame parameter name
         # remove all disallowed characters
@@ -834,6 +851,10 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
+        # Deduplicate take names early so the warning shows in the dialog
+        submit_takes = get_submit_takes(settings, takes)
+        generate_take_parameter_names(submit_takes, set_frames_parameters=False)
+
         check_take_token_warnings(settings, takes)
 
         if warning_collector.has_warnings():
