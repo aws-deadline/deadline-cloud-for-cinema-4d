@@ -378,6 +378,51 @@ class TestDeduplicateTakeNames:
         assert takes[1].frames_parameter_name is not None
         assert takes[0].frames_parameter_name != takes[1].frames_parameter_name
 
+    def test_empty_list_no_error(self):
+        takes: list[TakeData] = []
+        deduplicate_take_names(takes)
+        assert takes == []
+
+    def test_single_take_no_changes(self):
+        takes = [
+            TakeData("OnlyTake", "OnlyTake", "standard", "", None, "1-10", set(), False),
+        ]
+        deduplicate_take_names(takes)
+        assert takes[0].name == "OnlyTake"
+
+    def test_duplicate_name_at_64_chars_raises_error(self):
+        long_name = "A" * 64
+        takes = [
+            TakeData(long_name, long_name, "standard", "", None, "1-10", set(), False),
+            TakeData(long_name, long_name, "standard", "", None, "1-20", set(), False),
+        ]
+        try:
+            deduplicate_take_names(takes)
+            assert False, "Expected RuntimeError was not raised"
+        except RuntimeError as e:
+            assert "shorten or rename the duplicate takes" in str(e)
+
+    def test_duplicate_name_at_63_chars_does_not_raise(self):
+        name_63 = "A" * 63
+        takes = [
+            TakeData(name_63, name_63, "standard", "", None, "1-10", set(), False),
+            TakeData(name_63, name_63, "standard", "", None, "1-20", set(), False),
+        ]
+        deduplicate_take_names(takes)
+        assert takes[0].name == f"{name_63}_1"
+        assert takes[1].name == f"{name_63}_2"
+
+    def test_display_name_truncated_to_64_chars(self):
+        name_63 = "A" * 63
+        takes = [
+            TakeData(name_63, name_63, "standard", "", None, "1-10", set(), False),
+            TakeData(name_63, name_63, "standard", "", None, "1-20", set(), False),
+        ]
+        deduplicate_take_names(takes)
+        # name_63 + "_1" = 65 chars, display_name should be truncated to 64
+        assert len(takes[0].display_name) == 64
+        assert len(takes[1].display_name) == 64
+
 
 class TestWarnDuplicateTakeNames:
     """Test cases for warn_duplicate_take_names warning behavior."""

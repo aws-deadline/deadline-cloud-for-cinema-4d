@@ -542,8 +542,9 @@ def create_job_bundle(
         take.frame_range != first_frame_range for take in submit_takes
     )
 
-    # If there are multiple frame ranges and we're not overriding the range,
-    # then we create per-take Frames parameters.
+    # Deduplicate take names, then generate per-take Frames parameters
+    # if there are multiple frame ranges and we're not overriding the range.
+    deduplicate_take_names(submit_takes)
     if per_take_frames_parameters:
         generate_take_parameter_names(submit_takes)
 
@@ -586,50 +587,76 @@ def create_job_bundle(
     }
 
 
-def deduplicate_take_names(submit_takes: list[TakeData]) -> set[str]:
+def _find_duplicate_take_names(submit_takes: list[TakeData]) -> set[str]:
+    """Returns the set of take names that appear more than once."""
+    name_counts: dict[str, int] = {}
+    for take in submit_takes:
+        name_counts[take.name] = name_counts.get(take.name, 0) + 1
+    return {name for name, count in name_counts.items() if count > 1}
+
+
+def deduplicate_take_names(submit_takes: list[TakeData]) -> None:
     """
     Checks for duplicate take names and makes them unique by appending
     _1, _2, etc. suffixes. Handles collisions with existing take names
     (e.g. 'take', 'take', 'take_1' won't produce two 'take_1' entries).
-
-    Returns the set of original names that were duplicated, or an empty set
-    if no duplicates were found.
     """
-    name_counts: dict[str, int] = {}
-    for take in submit_takes:
-        name_counts[take.name] = name_counts.get(take.name, 0) + 1
-
-    duplicated_names = {name for name, count in name_counts.items() if count > 1}
+    duplicated_names = _find_duplicate_take_names(submit_takes)
     if not duplicated_names:
-        return set()
+        return
 
-    # Collect all existing names so generated names don't collide with them
+    _validate_duplicate_name_lengths(duplicated_names)
+
     all_names = {take.name for take in submit_takes}
-
     next_suffix: dict[str, int] = {name: 1 for name in duplicated_names}
+
     for take in submit_takes:
         if take.name in next_suffix:
-            original_name = take.name
-            suffix = next_suffix[original_name]
-            new_name = f"{original_name}_{suffix}"
-            # Skip suffixes that collide with existing take names
-            while new_name in all_names:
-                suffix += 1
-                new_name = f"{original_name}_{suffix}"
-            take.name = new_name
-            take.display_name = new_name[:64]
+            new_name, next_start = _generate_unique_name(
+                take.name, next_suffix[take.name], all_names
+            )
+            _apply_take_name(take, new_name)
             all_names.add(new_name)
-            next_suffix[original_name] = suffix + 1
+            next_suffix[take.name] = next_start
 
-    return duplicated_names
+
+def _validate_duplicate_name_lengths(duplicated_names: set[str]) -> None:
+    """Raises RuntimeError if any duplicated take name is already at the 64-char limit."""
+    for name in duplicated_names:
+        if len(name) >= 64:
+            raise RuntimeError(
+                f"Multiple takes share the name '{name}', which is already 64 characters long. "
+                "Please shorten or rename the duplicate takes so they can be uniquely identified."
+            )
+
+
+def _generate_unique_name(
+    original_name: str, start_suffix: int, existing_names: set[str]
+) -> tuple[str, int]:
+    """Finds the next available suffixed name that doesn't collide with existing names.
+
+    Returns the unique name and the next suffix to try for this original name.
+    """
+    suffix = start_suffix
+    new_name = f"{original_name}_{suffix}"
+    while new_name in existing_names:
+        suffix += 1
+        new_name = f"{original_name}_{suffix}"
+    return new_name, suffix + 1
+
+
+def _apply_take_name(take: TakeData, new_name: str) -> None:
+    """Applies a new name to a take, truncating display_name to 64 characters."""
+    take.name = new_name
+    take.display_name = new_name[:64]
 
 
 def warn_duplicate_take_names(submit_takes: list[TakeData]) -> None:
     """
-    Deduplicates take names and adds a warning via warning_collector
-    if any duplicates were found.
+    Checks for duplicate take names and adds a warning via warning_collector
+    if any are found.
     """
-    duplicated_names = deduplicate_take_names(submit_takes)
+    duplicated_names = _find_duplicate_take_names(submit_takes)
     if duplicated_names:
         renamed_list = ", ".join(f"'{name}'" for name in sorted(duplicated_names))
         warning_collector.add_warning(
@@ -874,7 +901,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        # Deduplicate take names early so the warning shows in the dialog
+        # Check for warnings before submission
         submit_takes = get_submit_takes(settings, takes)
         warn_duplicate_take_names(submit_takes)
 
