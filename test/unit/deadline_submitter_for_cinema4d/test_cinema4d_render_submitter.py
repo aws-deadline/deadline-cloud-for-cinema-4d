@@ -8,6 +8,7 @@ from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     TakeData,
     check_take_token_warnings,
     deduplicate_take_names,
+    warn_duplicate_take_names,
     generate_take_parameter_names,
 )
 from deadline.cinema4d_submitter.data_classes import (
@@ -266,20 +267,19 @@ class TestCheckTakeTokenWarnings:
         assert "$take token" in warning_collector.get_warnings()[0]
 
 
-class TestGenerateTakeParameterNamesDeduplication:
-    """Test cases for duplicate take name deduplication in deduplicate_take_names."""
+class TestDeduplicateTakeNames:
+    """Test cases for duplicate take name deduplication."""
 
     def setup_method(self):
         warning_collector.clear_warnings()
 
-    def test_no_duplicates_no_warning(self):
+    def test_no_duplicates_no_changes(self):
         takes = [
             TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
             TakeData("Take2", "Take2", "standard", "", None, "1-20", set(), False),
         ]
         deduplicate_take_names(takes)
 
-        assert not warning_collector.has_warnings()
         assert takes[0].name == "Take1"
         assert takes[1].name == "Take2"
 
@@ -292,19 +292,6 @@ class TestGenerateTakeParameterNamesDeduplication:
 
         assert takes[0].name == "MyTake_1"
         assert takes[1].name == "MyTake_2"
-
-    def test_duplicate_names_warning_is_added(self):
-        takes = [
-            TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
-            TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
-        ]
-        deduplicate_take_names(takes)
-
-        assert warning_collector.has_warnings()
-        warnings = warning_collector.get_warnings()
-        assert len(warnings) == 1
-        assert "MyTake" in warnings[0]
-        assert "_1, _2" in warnings[0]
 
     def test_three_duplicates_get_suffixed(self):
         takes = [
@@ -364,6 +351,21 @@ class TestGenerateTakeParameterNamesDeduplication:
         assert takes[0].frames_parameter_name is None
         assert takes[1].frames_parameter_name is None
 
+    def test_suffix_collision_with_existing_name(self):
+        """e.g. my_take, my_take, my_take_1 should not produce two my_take_1 entries."""
+        takes = [
+            TakeData("my_take", "my_take", "standard", "", None, "1-10", set(), False),
+            TakeData("my_take", "my_take", "standard", "", None, "1-20", set(), False),
+            TakeData("my_take_1", "my_take_1", "standard", "", None, "1-30", set(), False),
+        ]
+        deduplicate_take_names(takes)
+
+        assert takes[0].name == "my_take_2"
+        assert takes[1].name == "my_take_3"
+        assert takes[2].name == "my_take_1"
+        names = [t.name for t in takes]
+        assert len(names) == len(set(names))
+
     def test_frames_parameters_set_after_dedup(self):
         takes = [
             TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
@@ -375,3 +377,32 @@ class TestGenerateTakeParameterNamesDeduplication:
         assert takes[0].frames_parameter_name is not None
         assert takes[1].frames_parameter_name is not None
         assert takes[0].frames_parameter_name != takes[1].frames_parameter_name
+
+
+class TestWarnDuplicateTakeNames:
+    """Test cases for warn_duplicate_take_names warning behavior."""
+
+    def setup_method(self):
+        warning_collector.clear_warnings()
+
+    def test_no_duplicates_no_warning(self):
+        takes = [
+            TakeData("Take1", "Take1", "standard", "", None, "1-10", set(), False),
+            TakeData("Take2", "Take2", "standard", "", None, "1-20", set(), False),
+        ]
+        warn_duplicate_take_names(takes)
+
+        assert not warning_collector.has_warnings()
+
+    def test_duplicate_names_warning_is_added(self):
+        takes = [
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-10", set(), False),
+            TakeData("MyTake", "MyTake", "standard", "", None, "1-20", set(), False),
+        ]
+        warn_duplicate_take_names(takes)
+
+        assert warning_collector.has_warnings()
+        warnings = warning_collector.get_warnings()
+        assert len(warnings) == 1
+        assert "MyTake" in warnings[0]
+        assert "_1, _2" in warnings[0]

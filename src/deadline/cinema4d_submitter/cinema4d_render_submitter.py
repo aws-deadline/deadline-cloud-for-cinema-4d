@@ -542,9 +542,6 @@ def create_job_bundle(
         take.frame_range != first_frame_range for take in submit_takes
     )
 
-    # Deduplicate take names (appends _1, _2, etc. for duplicates)
-    deduplicate_take_names(submit_takes)
-
     # If there are multiple frame ranges and we're not overriding the range,
     # then we create per-take Frames parameters.
     if per_take_frames_parameters:
@@ -589,11 +586,14 @@ def create_job_bundle(
     }
 
 
-def deduplicate_take_names(submit_takes: list[TakeData]) -> None:
+def deduplicate_take_names(submit_takes: list[TakeData]) -> set[str]:
     """
-    Checks for duplicate take names among the submitted takes and makes them
-    unique by appending _1, _2, etc. Adds a warning via warning_collector
-    so the user is informed of the renaming.
+    Checks for duplicate take names and makes them unique by appending
+    _1, _2, etc. suffixes. Handles collisions with existing take names
+    (e.g. 'take', 'take', 'take_1' won't produce two 'take_1' entries).
+
+    Returns the set of original names that were duplicated, or an empty set
+    if no duplicates were found.
     """
     name_counts: dict[str, int] = {}
     for take in submit_takes:
@@ -601,22 +601,41 @@ def deduplicate_take_names(submit_takes: list[TakeData]) -> None:
 
     duplicated_names = {name for name, count in name_counts.items() if count > 1}
     if not duplicated_names:
-        return
+        return set()
+
+    # Collect all existing names so generated names don't collide with them
+    all_names = {take.name for take in submit_takes}
 
     next_suffix: dict[str, int] = {name: 1 for name in duplicated_names}
     for take in submit_takes:
         if take.name in next_suffix:
-            suffix = next_suffix[take.name]
-            new_name = f"{take.name}_{suffix}"
+            original_name = take.name
+            suffix = next_suffix[original_name]
+            new_name = f"{original_name}_{suffix}"
+            # Skip suffixes that collide with existing take names
+            while new_name in all_names:
+                suffix += 1
+                new_name = f"{original_name}_{suffix}"
             take.name = new_name
             take.display_name = new_name[:64]
-            next_suffix[new_name.rsplit("_", 1)[0]] = suffix + 1
+            all_names.add(new_name)
+            next_suffix[original_name] = suffix + 1
 
-    renamed_list = ", ".join(f"'{name}'" for name in sorted(duplicated_names))
-    warning_collector.add_warning(
-        f"Duplicate take names were found: {renamed_list}. "
-        "They have been automatically renamed with _1, _2, etc. suffixes to ensure uniqueness."
-    )
+    return duplicated_names
+
+
+def warn_duplicate_take_names(submit_takes: list[TakeData]) -> None:
+    """
+    Deduplicates take names and adds a warning via warning_collector
+    if any duplicates were found.
+    """
+    duplicated_names = deduplicate_take_names(submit_takes)
+    if duplicated_names:
+        renamed_list = ", ".join(f"'{name}'" for name in sorted(duplicated_names))
+        warning_collector.add_warning(
+            f"Duplicate take names were found: {renamed_list}. "
+            "They have been automatically renamed with _1, _2, etc. suffixes to ensure uniqueness."
+        )
 
 
 def generate_take_parameter_names(submit_takes: list[TakeData]) -> None:
@@ -857,7 +876,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         # Deduplicate take names early so the warning shows in the dialog
         submit_takes = get_submit_takes(settings, takes)
-        deduplicate_take_names(submit_takes)
+        warn_duplicate_take_names(submit_takes)
 
         check_take_token_warnings(settings, takes)
 
