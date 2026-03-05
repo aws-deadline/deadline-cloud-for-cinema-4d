@@ -608,7 +608,7 @@ def deduplicate_take_names(submit_takes: list[TakeData]) -> None:
     _validate_duplicate_name_lengths(duplicated_names)
 
     all_names = {take.name for take in submit_takes}
-    next_suffix: dict[str, int] = {name: 1 for name in duplicated_names}
+    next_suffix: dict[str, int] = dict.fromkeys(duplicated_names, 1)
 
     for take in submit_takes:
         if take.name in next_suffix:
@@ -901,7 +901,6 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowFlags()):
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        # Check for warnings before submission
         submit_takes = get_submit_takes(settings, takes)
         warn_duplicate_take_names(submit_takes)
 
