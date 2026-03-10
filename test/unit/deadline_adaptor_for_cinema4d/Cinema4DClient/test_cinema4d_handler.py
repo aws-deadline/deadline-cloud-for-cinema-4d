@@ -44,6 +44,15 @@ class TestCinema4DHandler:
         with pytest.raises(FileNotFoundError):
             handler.set_scene_file({"scene_file": "file.c4d"})
 
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.LoadDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
+    def test_set_scene_file_load_document_fails(self, mock_isfile: Mock, mock_load: Mock):
+        mock_isfile.return_value = True
+        mock_load.return_value = None
+        handler = Cinema4DHandler(mock_map_path)
+        with pytest.raises(RuntimeError, match="Failed to load the scene file"):
+            handler.set_scene_file({"scene_file": "file.c4d"})
+
 
 class TestShouldCacheText:
     """Tests for the use_cached_text method"""
