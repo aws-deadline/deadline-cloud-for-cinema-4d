@@ -153,6 +153,44 @@ class TestCinema4DAdaptor_errors_on_cleanup:
             f"Error: {stdout}"
         )
 
+    @pytest.mark.parametrize(
+        "stdout,expected_message",
+        [
+            (
+                "Redshift Error: Please make sure you have NVIDIA driver 551.78 or later installed.",
+                "Redshift requires NVIDIA driver version 551.78 or later. "
+                "Please update the NVIDIA drivers on your worker fleet. "
+                "Error: Redshift Error: Please make sure you have NVIDIA driver 551.78 or later installed.",
+            ),
+            (
+                "Redshift Error: Tesla T4 requires driver 551.78 but has 539.64",
+                "The worker has driver 539.64 but Redshift requires 551.78 or later. "
+                "Please update the NVIDIA drivers on your worker fleet. "
+                "Error: Redshift Error: Tesla T4 requires driver 551.78 but has 539.64",
+            ),
+        ],
+    )
+    def test_handle_nvidia_driver_error_on_stdout(
+        self, init_data: dict, stdout: str, expected_message: str
+    ) -> None:
+        """Tests that the _handle_nvidia_driver_error method throws a runtime error correctly"""
+        # GIVEN
+        adaptor = Cinema4DAdaptor(init_data)
+        regex_callbacks = adaptor._get_regex_callbacks()
+        # Currently the callback for NVIDIA driver errors is at index 4
+        regexes = regex_callbacks[4].regex_list
+
+        # WHEN
+        for regex in regexes:
+            match = regex.search(stdout)
+            if match:
+                adaptor._handle_nvidia_driver_error(match)
+                break
+
+        # THEN
+        assert match is not None
+        assert str(adaptor._exc_info) == expected_message
+
 
 @pytest.mark.xdist_group(name="adaptor_tests")
 def test_adaptor_rejects_malformed_init_data():

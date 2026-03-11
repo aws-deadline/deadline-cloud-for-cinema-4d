@@ -303,6 +303,17 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 )
             )
 
+            nvidia_driver_regexes = re.compile(
+                r".*(?:Please make sure you have NVIDIA driver (\S+) or later installed|requires driver (\S+) but has (\S+)).*",
+                re.IGNORECASE,
+            )
+            callback_list.append(
+                RegexCallback(
+                    [nvidia_driver_regexes],
+                    self._handle_nvidia_driver_error,
+                )
+            )
+
             self._regex_callbacks = callback_list
         return self._regex_callbacks
 
@@ -365,6 +376,30 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             f"Error: {match.group(0)}"
         )
 
+        self._exc_info = RuntimeError(message)
+
+    def _handle_nvidia_driver_error(self, match: re.Match) -> None:
+        """
+        Handle NVIDIA driver incompatibility errors during Redshift rendering.
+
+        Args:
+            match (re.Match): The match object from the regex pattern that was matched
+
+        Raises:
+            RuntimeError: Raised when the NVIDIA driver is incompatible with Redshift
+        """
+        required_version = match.group(1) or match.group(2)
+        current_version = match.group(3) if match.lastindex and match.lastindex >= 3 else None
+
+        if current_version:
+            detail = f"The worker has driver {current_version} but Redshift requires {required_version} or later."
+        else:
+            detail = f"Redshift requires NVIDIA driver version {required_version} or later."
+        message = (
+            f"{detail} "
+            "Please update the NVIDIA drivers on your worker fleet. "
+            f"Error: {match.group(0)}"
+        )
         self._exc_info = RuntimeError(message)
 
     def _add_deadline_openjd_paths(self) -> None:
