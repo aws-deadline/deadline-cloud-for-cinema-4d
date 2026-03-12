@@ -61,7 +61,7 @@ The submitter handles the technical details so you can focus on your creative wo
 
 ## Tile Rendering
 
-Tile rendering splits each frame into a grid of smaller regions that render independently across multiple workers, then automatically assembles them into the final full-resolution image. This is useful for large or complex single-frame scenes where a single frame takes a long time to render.
+Tile rendering splits each frame into a grid of smaller tiles that render independently across multiple workers, then automatically assembles them into the final full-resolution image. This is useful for large or complex single-frame scenes where a single frame takes a long time to render.
 
 ### How to Enable
 
@@ -73,7 +73,7 @@ Tile rendering splits each frame into a grid of smaller regions that render inde
 
 When enabled, the submitter creates a two-step job for each take:
 
-1. **Render step** — Each tile is a separate task. A 3×3 grid produces 9 tile tasks per frame, each rendering only its assigned region.
+1. **Render step** — Each tile is a separate task. A 3×3 grid produces 9 tile tasks per frame, each rendering only its assigned tile.
 2. **Assembly step** — After all tiles for a frame finish, an assembly task automatically stitches them into the final full-resolution image. Both beauty and multi-pass outputs are assembled.
 
 No manual stitching or external tools required.

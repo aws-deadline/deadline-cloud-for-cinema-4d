@@ -54,9 +54,9 @@ A: Yes. The submitter has built-in tile rendering support. In the Job-Specific S
 
 **Q: My tile render outputs contain intermediary tile files that I don't want. How do I get just the final images?**
 
-A: Download the output from the "Assemble Tiles" step in the Deadline Cloud monitor instead of the Render step. 
+A: When you submit a tile rendering job, it creates two steps: a "Render" step and an "Assemble Tiles" step. You can see both steps by selecting your job in the Deadline Cloud monitor and looking at the steps list. Download the output from the "Assemble Tiles" step instead of the "Render" step.
 
-The Assemble Tiles step contains only the final full-resolution images. The Render step produces the individual tile images (e.g. `image_0_tile_0_0.png`, `image_0_tile_1_0.png`, …) which are intermediary artifacts used as input for assembly.
+The "Assemble Tiles" step contains only the final full-resolution images. The "Render" step produces the individual tile images (e.g. `image_0_tile_0_0.png`, `image_0_tile_1_0.png`, …) which are intermediary artifacts used as input for assembly.
 
 **Q: How many tiles should I use?**
 
