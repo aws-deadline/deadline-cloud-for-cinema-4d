@@ -408,20 +408,21 @@ class Cinema4DHandler:
             scene_file, c4d.SCENEFILTER_OBJECTS | c4d.SCENEFILTER_MATERIALS
         )
         if doc is None:
-            print("Error: LoadDocument failed: %s" % scene_file)
-        else:
-            # Build animations, caches and expressions for all frames in the document.
-            # This is essential for dynamic content like Pyro simulations (fluid/smoke effects)
-            # which would otherwise render as blank. The parameters ensure all necessary
-            # elements (animation, expressions, caches) are processed.
-            doc.ExecutePasses(
-                bt=None, animation=True, expressions=True, caches=True, flags=c4d.BUILDFLAGS_NONE
+            raise RuntimeError(
+                f"Failed to load the scene file '{scene_file}'. The file may be corrupt or not a valid Cinema 4D document."
             )
+        # Build animations, caches and expressions for all frames in the document.
+        # This is essential for dynamic content like Pyro simulations (fluid/smoke effects)
+        # which would otherwise render as blank. The parameters ensure all necessary
+        # elements (animation, expressions, caches) are processed.
+        doc.ExecutePasses(
+            bt=None, animation=True, expressions=True, caches=True, flags=c4d.BUILDFLAGS_NONE
+        )
 
-            c4d.documents.InsertBaseDocument(doc)
-            c4d.documents.SetActiveDocument(doc)
-            self.doc = doc
-            self._remap_assets()
+        c4d.documents.InsertBaseDocument(doc)
+        c4d.documents.SetActiveDocument(doc)
+        self.doc = doc
+        self._remap_assets()
 
     def _has_cached_text(self, objects: list[Any]) -> bool:
         for obj in objects:

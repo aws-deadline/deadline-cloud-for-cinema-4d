@@ -1,3 +1,13 @@
+## 0.10.0 (2026-03-09)
+
+
+### Features
+* Add tile rendering within submitter. (#401) ([`d0b5be1`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/d0b5be1f1585c3cc1d3c72f95716e0b5138295f7))
+
+### Bug Fixes
+* auto-deduplicate duplicate take names instead of raising an error (#399) ([`dc46680`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/dc46680a057d2a2af9fcd1141981e7b86e8d7643))
+* warn on .rs file detection and add FAQ for nested Redshift proxy files (#396) ([`a190402`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/a19040223eab76b32600d5594e2df91bd2e00251))
+
 ## 0.9.2 (2025-12-18)
 
 
