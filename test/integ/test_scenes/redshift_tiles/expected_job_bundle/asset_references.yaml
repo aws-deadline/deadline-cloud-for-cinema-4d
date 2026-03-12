@@ -1,0 +1,9 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\redshift_tiles\generated_bundle\redshift_tiles.c4d
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\redshift_tiles\generated_bundle\renders
+  referencedPaths: []

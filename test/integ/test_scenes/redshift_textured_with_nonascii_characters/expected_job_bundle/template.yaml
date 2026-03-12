@@ -103,9 +103,9 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'Main'
+          take: Main
           output_path: '{{Param.OutputPath}}'
           multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
@@ -141,7 +141,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
