@@ -4,8 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from deadline.client.job_bundle._yaml import deadline_yaml_dump
-
+from ._yaml_utils import _build_embedded_yaml
 from .data_classes import RenderSubmitterUISettings
 
 
@@ -55,7 +54,7 @@ def build_assembly_step(
                     "name": "runData",
                     "filename": "run-data.yaml",
                     "type": "TEXT",
-                    "data": deadline_yaml_dump(
+                    "data": _build_embedded_yaml(
                         {
                             "frame": "{{Task.Param.Frame}}",
                             "tile_action": "assemble",
@@ -63,7 +62,8 @@ def build_assembly_step(
                             "total_tiles_row": settings.tiles_rows,
                             "output_path": output_path,
                             "multi_pass_path": multi_pass_path,
-                        }
+                        },
+                        unquoted_keys={"output_path", "multi_pass_path"},
                     ),
                 }
             ],

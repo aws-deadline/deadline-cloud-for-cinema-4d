@@ -232,7 +232,7 @@ def _normalize_submitter_integration_version(content: str) -> str:
     normalizing the generated content to match the expected format.
     """
     content = re.sub(
-        r"(name: SubmitterIntegrationVersion\n\s+value: )\d+\.\d+\.\d+[^\n]*",
+        r"(name: SubmitterIntegrationVersion\n\s+value: )\S+",
         r"\g<1>0.8.0",
         content,
     )

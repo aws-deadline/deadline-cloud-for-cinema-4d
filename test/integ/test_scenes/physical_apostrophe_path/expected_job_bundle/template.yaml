@@ -1,5 +1,5 @@
 specificationVersion: jobtemplate-2023-09
-name: redshift_textured.c4d
+name: physical_apostrophe_path.c4d
 parameterDefinitions:
 - name: Cinema4DFile
   type: PATH

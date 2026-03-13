@@ -39,6 +39,7 @@ from .takes import TakeSelection
 from .template_timeout_patcher import add_timeouts_to_job_template
 from .tile_utils import build_assembly_step, build_tile_task_parameters
 from .ui.components import SceneSettingsWidget, SubmissionWarningDialog
+from ._yaml_utils import _build_embedded_yaml
 
 LOADED = False
 
@@ -257,7 +258,7 @@ def _get_job_template(
             )
 
             init_data = step["stepEnvironments"][0]["script"]["embeddedFiles"][0]
-            init_data["data"] = deadline_yaml_dump(
+            init_data["data"] = _build_embedded_yaml(
                 {
                     "scene_file": "{{Param.Cinema4DFile}}",
                     "take": take_data.name,
@@ -265,13 +266,14 @@ def _get_job_template(
                     "multi_pass_path": multi_pass_path,
                     "activate_error_checking": "{{Param.ActivateErrorChecking}}",
                     "use_cached_text": "{{Param.UseCachedText}}",
-                }
+                },
+                unquoted_keys={"scene_file", "output_path", "multi_pass_path"},
             )
 
             # Update run-data to include tile region references when tile rendering is enabled
             if settings.enable_tile_rendering:
                 run_data = step["script"]["embeddedFiles"][0]
-                run_data["data"] = deadline_yaml_dump(
+                run_data["data"] = _build_embedded_yaml(
                     {
                         "frame": "{{Task.Param.Frame}}",
                         "tile_action": "render",
@@ -440,14 +442,22 @@ def _resolve_take_paths(
     take_name: Optional[str],
     has_take_token: bool,
 ) -> tuple[str, str]:
-    """Resolve output_path and multi_pass_path, substituting $take if present."""
+    """Resolve output_path and multi_pass_path, substituting $take if present.
+
+    Returns literal empty strings ('') instead of {{Param}} references for
+    empty paths, because unquoted {{Param}} substituted with "" produces
+    bare YAML ``key:`` which parses as None instead of "".
+    """
     if has_take_token and take_name is not None:
         take_name_for_path = _STRIPPED_PATH_CHARS.sub("_", take_name)
         return (
             settings.output_path.replace(_TAKE_TOKEN, take_name_for_path),
             settings.multi_pass_path.replace(_TAKE_TOKEN, take_name_for_path),
         )
-    return "{{Param.OutputPath}}", "{{Param.MultiPassPath}}"
+    return (
+        "{{Param.OutputPath}}" if settings.output_path else "",
+        "{{Param.MultiPassPath}}" if settings.multi_pass_path else "",
+    )
 
 
 def get_takes_from_doc(doc: Any) -> dict[str, list[TakeData]]:

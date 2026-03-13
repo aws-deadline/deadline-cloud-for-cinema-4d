@@ -119,12 +119,12 @@ steps:
         filename: init-data.yaml
         type: TEXT
         data: |
-          scene_file: '{{Param.Cinema4DFile}}'
           take: Main
-          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_Main
-          multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_Main
+          multi_pass_path: ''
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -200,12 +200,12 @@ steps:
         filename: init-data.yaml
         type: TEXT
         data: |
-          scene_file: '{{Param.Cinema4DFile}}'
           take: A
-          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_A
-          multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_A
+          multi_pass_path: ''
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -276,12 +276,12 @@ steps:
         filename: init-data.yaml
         type: TEXT
         data: |
-          scene_file: '{{Param.Cinema4DFile}}'
           take: Main
-          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_Main
-          multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_Main
+          multi_pass_path: ''
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -352,12 +352,12 @@ steps:
         filename: init-data.yaml
         type: TEXT
         data: |
-          scene_file: '{{Param.Cinema4DFile}}'
           take: A
-          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_A
-          multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_tiles\generated_bundle\renders\physical_tiles_A
+          multi_pass_path: ''
       actions:
         onEnter:
           command: cinema4d-openjd

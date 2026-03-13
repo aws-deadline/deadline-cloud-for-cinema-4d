@@ -111,12 +111,12 @@ steps:
         filename: init-data.yaml
         type: TEXT
         data: |
-          scene_file: '{{Param.Cinema4DFile}}'
           take: Main
-          output_path: '{{Param.OutputPath}}'
-          multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: {{Param.OutputPath}}
+          multi_pass_path: ''
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -187,12 +187,12 @@ steps:
         filename: init-data.yaml
         type: TEXT
         data: |
-          scene_file: '{{Param.Cinema4DFile}}'
           take: Main
-          output_path: '{{Param.OutputPath}}'
-          multi_pass_path: '{{Param.MultiPassPath}}'
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: {{Param.OutputPath}}
+          multi_pass_path: ''
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -228,8 +228,8 @@ steps:
         tile_action: assemble
         total_tiles_column: 2
         total_tiles_row: 2
-        output_path: '{{Param.OutputPath}}'
-        multi_pass_path: '{{Param.MultiPassPath}}'
+        output_path: {{Param.OutputPath}}
+        multi_pass_path: ''
     actions:
       onRun:
         command: cinema4d-openjd

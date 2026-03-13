@@ -2,6 +2,8 @@
 
 from unittest import mock
 
+import yaml
+
 
 from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     _get_job_template,
@@ -11,6 +13,7 @@ from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     warn_duplicate_take_names,
     generate_take_parameter_names,
 )
+from deadline.cinema4d_submitter._yaml_utils import _build_embedded_yaml
 from deadline.cinema4d_submitter.data_classes import (
     RenderSubmitterUISettings,
     default_timeout_entries,
@@ -451,3 +454,83 @@ class TestWarnDuplicateTakeNames:
         assert len(warnings) == 1
         assert "MyTake" in warnings[0]
         assert "_1, _2" in warnings[0]
+
+
+class TestBuildEmbeddedYaml:
+    """Test _build_embedded_yaml handles special characters in paths after parameter substitution."""
+
+    def test_apostrophe_in_path(self):
+        """Paths with apostrophes must parse correctly after substitution."""
+
+        result = _build_embedded_yaml(
+            {
+                "scene_file": "{{Param.Cinema4DFile}}",
+                "take": "Main",
+                "output_path": "{{Param.OutputPath}}",
+                "activate_error_checking": "{{Param.ActivateErrorChecking}}",
+                "use_cached_text": "{{Param.UseCachedText}}",
+            },
+            unquoted_keys={"scene_file", "output_path"},
+        )
+
+        substituted = result.replace("{{Param.Cinema4DFile}}", "/Users/artist's work/scene.c4d")
+        substituted = substituted.replace("{{Param.OutputPath}}", "/Users/artist's work/render")
+        substituted = substituted.replace("{{Param.ActivateErrorChecking}}", "1")
+        substituted = substituted.replace("{{Param.UseCachedText}}", "0")
+
+        parsed = yaml.safe_load(substituted)
+        assert parsed["scene_file"] == "/Users/artist's work/scene.c4d"
+        assert parsed["output_path"] == "/Users/artist's work/render"
+
+    def test_double_quote_in_path(self):
+        """Paths with double quotes must parse correctly after substitution."""
+
+        result = _build_embedded_yaml(
+            {
+                "scene_file": "{{Param.Cinema4DFile}}",
+                "take": "Main",
+                "output_path": "{{Param.OutputPath}}",
+            },
+            unquoted_keys={"scene_file", "output_path"},
+        )
+
+        substituted = result.replace("{{Param.Cinema4DFile}}", '/path/with"quotes/scene.c4d')
+        substituted = substituted.replace("{{Param.OutputPath}}", '/path/with"quotes/render')
+
+        parsed = yaml.safe_load(substituted)
+        assert parsed["scene_file"] == '/path/with"quotes/scene.c4d'
+
+    def test_both_quotes_in_path(self):
+        """Paths with both apostrophes and double quotes must parse correctly after substitution."""
+
+        result = _build_embedded_yaml(
+            {
+                "scene_file": "{{Param.Cinema4DFile}}",
+                "take": "Main",
+            },
+            unquoted_keys={"scene_file"},
+        )
+
+        substituted = result.replace("{{Param.Cinema4DFile}}", '/path/it\'s a "test"/scene.c4d')
+
+        parsed = yaml.safe_load(substituted)
+        assert parsed["scene_file"] == '/path/it\'s a "test"/scene.c4d'
+
+    def test_non_path_values_stay_as_strings(self):
+        """Values not in unquoted_keys use deadline_yaml_dump and preserve string type."""
+
+        result = _build_embedded_yaml(
+            {
+                "activate_error_checking": "{{Param.ActivateErrorChecking}}",
+                "use_cached_text": "{{Param.UseCachedText}}",
+            },
+        )
+
+        substituted = result.replace("{{Param.ActivateErrorChecking}}", "1")
+        substituted = substituted.replace("{{Param.UseCachedText}}", "0")
+
+        parsed = yaml.safe_load(substituted)
+        assert parsed["activate_error_checking"] == "1"
+        assert parsed["use_cached_text"] == "0"
+        assert isinstance(parsed["activate_error_checking"], str)
+        assert isinstance(parsed["use_cached_text"], str)
