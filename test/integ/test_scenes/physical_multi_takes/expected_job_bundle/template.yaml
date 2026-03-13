@@ -215,10 +215,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'Main'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_Main'
+          take: Main
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_Main
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -253,7 +253,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -284,10 +284,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdei1234'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdei1234'
+          take: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdei1234
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdei1234
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -322,7 +322,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -353,10 +353,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeh1234'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeh1234'
+          take: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeh1234
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeh1234
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -391,7 +391,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -422,10 +422,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg'
+          take: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -460,7 +460,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -491,10 +491,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+          take: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -529,7 +529,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -560,10 +560,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: '0123456789abcdef0123456789abcdef0123456789abcdef789abcdeg'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef789abcdeg'
+          take: 0123456789abcdef0123456789abcdef0123456789abcdef789abcdeg
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef789abcdeg
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -598,7 +598,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -629,10 +629,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: '0123456789abcdef0123456789abcdef0123456789abcdef789abcdef'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef789abcdef'
+          take: 0123456789abcdef0123456789abcdef0123456789abcdef789abcdef
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0123456789abcdef0123456789abcdef0123456789abcdef789abcdef
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -667,7 +667,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -698,10 +698,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'abcdef124'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_abcdef124'
+          take: abcdef124
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_abcdef124
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -736,7 +736,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -767,10 +767,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'abcdef123'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_abcdef123'
+          take: abcdef123
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_abcdef123
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -805,7 +805,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -836,10 +836,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
           take: '{}|:test!@#$%^&*()_'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_{}__test!@#$%^&____'
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_{}__test!@#$%^&____
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -874,7 +874,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -905,10 +905,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'he llo'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_he_llo'
+          take: he llo
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_he_llo
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -943,7 +943,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -974,10 +974,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'hello'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_hello'
+          take: hello
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_hello
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -1012,7 +1012,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -1043,10 +1043,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
           take: '0'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0'
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_0
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -1081,7 +1081,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -1112,10 +1112,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'B'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_B'
+          take: B
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_B
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -1150,7 +1150,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd
@@ -1181,10 +1181,10 @@ steps:
       - name: initData
         filename: init-data.yaml
         type: TEXT
-        data: |-
+        data: |
           scene_file: '{{Param.Cinema4DFile}}'
-          take: 'A'
-          output_path: 'PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_A'
+          take: A
+          output_path: PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders\physical_multi_takes_A
           multi_pass_path: ''
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
@@ -1219,7 +1219,7 @@ steps:
       filename: run-data.yaml
       type: TEXT
       data: |
-        frame: {{Task.Param.Frame}}
+        frame: '{{Task.Param.Frame}}'
     actions:
       onRun:
         command: cinema4d-openjd

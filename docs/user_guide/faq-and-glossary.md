@@ -48,6 +48,22 @@ A: Job attachments enable you to transfer files back and forth between your work
 
 ## Rendering Questions
 
+**Q: Can I use tile rendering to speed up large single-frame renders?**
+
+A: Yes. The submitter has built-in tile rendering support. In the Job-Specific Settings tab, enable **Tile Rendering** and set the number of columns and rows. The submitter splits each frame into a grid of tiles that render in parallel across multiple workers, then automatically assembles them into the final image. See [Tile Rendering](submitter-features.md#tile-rendering) for details.
+
+**Q: My tile render outputs contain intermediary tile files that I don't want. How do I get just the final images?**
+
+A: When you submit a tile rendering job, it creates two steps: a "Render" step and an "Assemble Tiles" step. You can see both steps by selecting your job in the Deadline Cloud monitor and looking at the steps list. Download the output from the "Assemble Tiles" step instead of the "Render" step.
+
+The "Assemble Tiles" step contains only the final full-resolution images. The "Render" step produces the individual tile images (e.g. `image_0_tile_0_0.png`, `image_0_tile_1_0.png`, …) which are intermediary artifacts used as input for assembly.
+
+**Q: How many tiles should I use?**
+
+A: It depends on your scene. A 3×3 or 4×4 grid is a good starting point. More tiles means more parallelism but also more tasks and overhead. The total tasks per frame is (columns × rows) + 1 for assembly. Deadline Cloud has a maximum of 10,000 tasks per step. Exceeding this limit will cause the job to fail with a `CREATE_FAILED` status. 
+
+For example, a 99×99 grid on a single frame would produce 9,801 render tasks, which is close to the limit.
+
 **Q: Can I use Redshift?**
 
 A: Yes! Redshift GPU rendering is supported.

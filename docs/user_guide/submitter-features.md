@@ -47,6 +47,7 @@ Settings specific to your Cinema 4D render:
 - **Cinema 4D Shutdown Timeout** - Maximum time allowed for Cinema 4D to shut down cleanly
 - **Save Cinema 4D Project with Assets** - Prevents missing file errors during rendering by creating a temporary copy of your project with all assets and fixing file paths before submission. Uses more disk space and submission time
 - **Use cached text during render** - Prevents incorrect or missing text by re-animating the text on the worker using the cached fonts for each frame. Will increase rendering time.
+- **Tile Rendering** - Split each frame into a grid of tiles that render in parallel across multiple workers, then automatically assemble into the final image. Configure the number of columns and rows (1–99 each, default 2×2). See [Tile Rendering](#tile-rendering) below for details.
 
 ![Job-Specific Settings](images/job-specific-settings.png)
 
@@ -57,6 +58,31 @@ Settings specific to your Cinema 4D render:
 **Host Requirements** (optional) - Allows you to specify which types of hosts will be eligible for picking up tasks for this job.
 
 The submitter handles the technical details so you can focus on your creative work.
+
+## Tile Rendering
+
+Tile rendering splits each frame into a grid of smaller tiles that render independently across multiple workers, then automatically assembles them into the final full-resolution image. This is useful for large or complex single-frame scenes where a single frame takes a long time to render.
+
+### How to Enable
+
+1. In the **Job-Specific Settings** tab, find the **Tile Rendering** group
+2. Check **Enable Tile Rendering**
+3. Set the number of **Columns** and **Rows** for the tile grid (default: 2×2)
+
+### How It Works
+
+When enabled, the submitter creates a two-step job for each take:
+
+1. **Render step** — Each tile is a separate task. A 3×3 grid produces 9 tile tasks per frame, each rendering only its assigned tile.
+2. **Assembly step** — After all tiles for a frame finish, an assembly task automatically stitches them into the final full-resolution image. Both beauty and multi-pass outputs are assembled.
+
+No manual stitching or external tools required.
+
+### Downloading Outputs
+
+The Render step produces intermediary tile image files (e.g. `image_0_tile_0_0.png`, `image_0_tile_1_0.png`, …) that are used as input for assembly. If you only need the final composited images, download the output from the **Assemble Tiles** step rather than the Render step. The Assemble Tiles step contains only the final full-resolution images with all tiles stitched together.
+
+---
 
 ## Detailed Logging for Debugging
 
