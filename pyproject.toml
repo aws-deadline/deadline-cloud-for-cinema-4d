@@ -32,6 +32,7 @@ classifiers = [
 dependencies = [
     "deadline >= 0.51.1,< 0.55",
     "openjd-adaptor-runtime >= 0.7,< 0.10",
+    "PySide6-Essentials == 6.8.3",  # Use 6.8 to align with VFXP 2026: https://vfxplatform.com/#reference-platform
     # fonttools is Windows-only due to Cinema 4D technical limitations
     "fonttools >=4.59.2, <4.61; sys_platform == 'win32'",
 ]
@@ -93,6 +94,10 @@ mypy_path = "src"
 [[tool.mypy.overrides]]
 module = ["c4d.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["deadline.cinema4d_submitter.ui.*", "deadline.cinema4d_submitter.cinema4d_render_submitter"]
+disable_error_code = ["attr-defined", "assignment", "call-arg"]
 
 [tool.ruff]
 line-length = 100
