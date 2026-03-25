@@ -64,10 +64,10 @@ class FileSearchLineEdit(QWidget):
                 self,
                 "Open Directory",
                 self.edit.text(),
-                QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks,
+                QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks,
             )
         else:
-            new_txt = QFileDialog.getOpenFileName(self, "Select File", self.edit.text())
+            new_txt, _ = QFileDialog.getOpenFileName(self, "Select File", self.edit.text())
 
         if new_txt:
             self.edit.setText(new_txt)
@@ -221,7 +221,11 @@ class SceneSettingsWidget(QWidget):
             lyt.addWidget(self.include_adaptor_wheels, widget_row, 0)
             widget_row += 1
 
-        lyt.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding), widget_row, 0)
+        lyt.addItem(
+            QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding),
+            widget_row,
+            0,
+        )
 
     def _configure_settings(self, settings):
         self.op_path_chck.setChecked(settings.override_output_path)
@@ -298,15 +302,15 @@ class SceneSettingsWidget(QWidget):
         """
         Set the activated/deactivated status of the Frame override text box
         """
-        self.frame_override_txt.setEnabled(Qt.CheckState(state) == Qt.Checked)
+        self.frame_override_txt.setEnabled(Qt.CheckState(state) == Qt.CheckState.Checked)
 
     def activate_path_changed(self, state):
-        self.op_path_txt.setEnabled(Qt.CheckState(state) == Qt.Checked)
+        self.op_path_txt.setEnabled(Qt.CheckState(state) == Qt.CheckState.Checked)
 
     def activate_multi_path_changed(self, state):
-        self.op_multi_path_txt.setEnabled(Qt.CheckState(state) == Qt.Checked)
+        self.op_multi_path_txt.setEnabled(Qt.CheckState(state) == Qt.CheckState.Checked)
 
     def activate_tile_rendering_changed(self, state):
-        enabled = Qt.CheckState(state) == Qt.Checked
+        enabled = Qt.CheckState(state) == Qt.CheckState.Checked
         self.tiles_columns_spin.setEnabled(enabled)
         self.tiles_rows_spin.setEnabled(enabled)

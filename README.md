@@ -72,7 +72,7 @@ set SUBMITTER_LOCATION=%APPDATA%\DeadlineCloudSubmitter
 "C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\python.exe" -m ensurepip
 
 :: Install required Python packages to our custom location
-"C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\python.exe" -m pip install deadline-cloud-for-cinema-4d "deadline[gui]" -t %SUBMITTER_LOCATION%
+"C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\python.exe" -m pip install deadline-cloud-for-cinema-4d -t %SUBMITTER_LOCATION%
 
 :: Create plugins directory
 md %SUBMITTER_LOCATION%\cinema_4d_plugins
@@ -103,17 +103,9 @@ For shared workstations or enterprise environments where multiple users need acc
    - Select "system installation" option during installation
    - This installs the submitter to a shared location (e.g., `C:\Program Files\DeadlineCloudSubmitter\`)
 
-2. **Initial dependency setup:**
-   - Open Cinema 4D as Administrator (right-click → "Run as administrator")
-   - The first time you access the submitter (`Extensions` > `AWS Deadline Cloud Submitter`), it will prompt to install GUI dependencies
-   - Click "Yes" to install the dependencies
-   - This step configures permissions so all users can access the installed packages
-
-3. **Regular usage:**
-   - After the initial setup, any user can open Cinema 4D normally (without Administrator privileges)
-   - The AWS Deadline Cloud Submitter will be available to all users
-
-If you encounter permission errors, ensure that step 2 (initial dependency setup) was completed as Administrator.
+2. **Regular usage:**
+   - After installation, any user can open Cinema 4D normally
+   - The AWS Deadline Cloud Submitter will be available to all users via `Extensions` > `AWS Deadline Cloud Submitter`
 
 #### Mac
 
@@ -127,7 +119,7 @@ mkdir -p $SUBMITTER_LOCATION
 
 # Install Python packages
 python3 -m ensurepip
-python3 -m pip install deadline-cloud-for-cinema-4d "deadline[gui]" -t $SUBMITTER_LOCATION
+python3 -m pip install deadline-cloud-for-cinema-4d -t $SUBMITTER_LOCATION
 
 # Create plugins directory
 mkdir -p $SUBMITTER_LOCATION/cinema_4d_plugins
