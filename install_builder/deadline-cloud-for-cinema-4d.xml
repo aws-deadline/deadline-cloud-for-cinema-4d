@@ -44,6 +44,17 @@
                 </distributionDirectory>
             </distributionFileList>
         </folder>
+        <folder>
+            <description>Third Party Licenses</description>
+            <destination>${cinema_4d_submitter_installdir}</destination>
+            <name>thirdpartylicenses</name>
+            <platforms>all</platforms>
+            <distributionFileList>
+                <distributionFile>
+                    <origin>../THIRD_PARTY_LICENSES</origin>
+                </distributionFile>
+            </distributionFileList>
+        </folder>
     </folderList>
     <initializationActionList>
         <if>
