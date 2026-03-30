@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import re
 import shutil
 import subprocess
@@ -15,6 +16,126 @@ from _project import get_project_dict, get_dependencies, Dependency
 SUPPORTED_PYTHON_VERSIONS = ["3.10", "3.11", "3.12", "3.13"]
 SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
 NATIVE_DEPENDENCIES = ["xxhash", "psutil"]
+
+PYSIDE6_VERSION = "6.8.3"
+PYSIDE6_PACKAGES = [f"PySide6-Essentials=={PYSIDE6_VERSION}", f"shiboken6=={PYSIDE6_VERSION}"]
+
+# Files to keep from PySide6 and shiboken6 pip packages after installation.
+# Derived from the deadline-cloud pyinstaller allowlist to keep the bundle minimal.
+# Everything not matching these patterns is deleted before zipping.
+PYSIDE6_ALLOWLIST = {
+    # -- shiboken6 --
+    "shiboken6/__init__.py",
+    "shiboken6/_config.py",
+    "shiboken6/Shiboken.abi3.so",
+    "shiboken6/Shiboken.pyd",
+    "shiboken6/libshiboken6.abi3.*.dylib",
+    "shiboken6/libshiboken6.abi3.so.*",
+    "shiboken6/shiboken6.abi3.dll",
+    "shiboken6/VCRUNTIME140.dll",
+    "shiboken6/VCRUNTIME140_1.dll",
+    "shiboken6/MSVCP140.dll",
+    "shiboken6-*.dist-info/*",
+    "shiboken6-*.dist-info/**/*",
+    # -- PySide6 package metadata --
+    "PySide6/__init__.py",
+    "PySide6/_config.py",
+    "PySide6/_git_pyside_version.py",
+    "PySide6-*.dist-info/*",
+    "PySide6-*.dist-info/**/*",
+    "PySide6_Essentials-*.dist-info/*",
+    # -- PySide6 Python bindings --
+    "PySide6/Qt*.abi3.so",
+    "PySide6/QtCore.pyd",
+    "PySide6/QtGui.pyd",
+    "PySide6/QtWidgets.pyd",
+    "PySide6/QtDBus.pyd",
+    "PySide6/QtSvg.pyd",
+    "PySide6/QtNetwork.pyd",
+    "PySide6/QtOpenGL.pyd",
+    "PySide6/QtOpenGLWidgets.pyd",
+    # -- PySide6/shiboken6 shared libraries --
+    "PySide6/libpyside6.abi3.*.dylib",
+    "PySide6/libpyside6.abi3.so.*",
+    "PySide6/pyside6.abi3.dll",
+    # -- Windows MSVC runtime bundled with PySide6 --
+    "PySide6/VCRUNTIME140.dll",
+    "PySide6/VCRUNTIME140_1.dll",
+    "PySide6/MSVCP140.dll",
+    "PySide6/MSVCP140_1.dll",
+    "PySide6/MSVCP140_2.dll",
+    # -- Windows OpenGL software renderer --
+    "PySide6/opengl32sw.dll",
+    # -- Qt core DLLs (Windows) --
+    "PySide6/Qt6Core.dll",
+    "PySide6/Qt6Gui.dll",
+    "PySide6/Qt6Widgets.dll",
+    "PySide6/Qt6DBus.dll",
+    "PySide6/Qt6Svg.dll",
+    # -- Qt frameworks (macOS) --
+    # fnmatch's ** doesn't do recursive matching, so we need both * and **/* patterns
+    "PySide6/Qt/lib/QtCore.framework/*",
+    "PySide6/Qt/lib/QtCore.framework/**/*",
+    "PySide6/Qt/lib/QtGui.framework/*",
+    "PySide6/Qt/lib/QtGui.framework/**/*",
+    "PySide6/Qt/lib/QtWidgets.framework/*",
+    "PySide6/Qt/lib/QtWidgets.framework/**/*",
+    "PySide6/Qt/lib/QtDBus.framework/*",
+    "PySide6/Qt/lib/QtDBus.framework/**/*",
+    "PySide6/Qt/lib/QtSvg.framework/*",
+    "PySide6/Qt/lib/QtSvg.framework/**/*",
+    # -- Qt shared libraries (Linux) --
+    "PySide6/Qt/lib/libQt6Core.so.*",
+    "PySide6/Qt/lib/libQt6Gui.so.*",
+    "PySide6/Qt/lib/libQt6Widgets.so.*",
+    "PySide6/Qt/lib/libQt6DBus.so.*",
+    "PySide6/Qt/lib/libQt6Svg.so.*",
+    "PySide6/Qt/lib/libQt6XcbQpa.so.*",
+    "PySide6/Qt/lib/libQt6WaylandClient.so.*",
+    "PySide6/Qt/lib/libQt6WaylandEglClientHwIntegration.so.*",
+    "PySide6/Qt/lib/libQt6WlShellIntegration.so.*",
+    "PySide6/Qt/lib/libQt6OpenGL.so.*",
+    "PySide6/Qt/lib/libQt6EglFSDeviceIntegration.so.*",
+    "PySide6/Qt/lib/libQt6EglFsKmsSupport.so.*",
+    # ICU (required by Qt6Core on Linux)
+    "PySide6/Qt/lib/libicui18n.so.*",
+    "PySide6/Qt/lib/libicuuc.so.*",
+    "PySide6/Qt/lib/libicudata.so.*",
+    # -- Qt plugins (macOS/Linux: Qt/plugins/, Windows: plugins/) --
+    # platforms
+    "PySide6/Qt/plugins/platforms/libqcocoa.dylib",
+    "PySide6/Qt/plugins/platforms/libqoffscreen.*",
+    "PySide6/Qt/plugins/platforms/libqminimal.*",
+    "PySide6/Qt/plugins/platforms/libqminimalegl.so",
+    "PySide6/Qt/plugins/platforms/libqxcb.so",
+    "PySide6/Qt/plugins/platforms/libqeglfs.so",
+    "PySide6/Qt/plugins/platforms/libqlinuxfb.so",
+    "PySide6/Qt/plugins/platforms/libqvkkhrdisplay.so",
+    "PySide6/Qt/plugins/platforms/libqvnc.so",
+    "PySide6/Qt/plugins/platforms/libqwayland*.so",
+    "PySide6/plugins/platforms/qwindows.dll",
+    "PySide6/plugins/platforms/qminimal.dll",
+    "PySide6/plugins/platforms/qoffscreen.dll",
+    "PySide6/plugins/platforms/qdirect2d.dll",
+    # styles
+    "PySide6/Qt/plugins/styles/libqmacstyle.dylib",
+    "PySide6/plugins/styles/qwindowsvistastyle.dll",
+    "PySide6/plugins/styles/qmodernwindowsstyle.dll",
+    # iconengines
+    "PySide6/Qt/plugins/iconengines/libqsvgicon.*",
+    "PySide6/plugins/iconengines/qsvgicon.dll",
+    # imageformats (svg only)
+    "PySide6/Qt/plugins/imageformats/libqsvg.*",
+    "PySide6/plugins/imageformats/qsvg.dll",
+    # wayland (Linux)
+    "PySide6/Qt/plugins/wayland-shell-integration/lib*.so",
+    "PySide6/Qt/plugins/wayland-decoration-client/lib*.so",
+    # platform themes (Linux)
+    "PySide6/Qt/plugins/platformthemes/lib*.so",
+    # -- Qt translations --
+    "PySide6/Qt/translations/*",
+    "PySide6/translations/*",
+}
 
 
 def _get_package_version_regex(package: str) -> re.Pattern:
@@ -109,6 +230,43 @@ def _copy_zip_to_destination(zip_path: Path) -> Path:
     return zip_destination
 
 
+def _install_pyside6(install_path: Path) -> None:
+    """Install PySide6 and shiboken6, then strip to only the files in PYSIDE6_ALLOWLIST."""
+    pip_args = [
+        "pip",
+        "install",
+        "--target",
+        str(install_path),
+        "--only-binary=:all:",
+        *PYSIDE6_PACKAGES,
+    ]
+    subprocess.run(pip_args, check=True)
+    _strip_pyside6(install_path)
+
+
+def _strip_pyside6(install_path: Path) -> None:
+    """Remove PySide6/shiboken6 files not in PYSIDE6_ALLOWLIST."""
+    for prefix in (
+        "PySide6",
+        "shiboken6",
+        "PySide6_Essentials-*.dist-info",
+        "shiboken6-*.dist-info",
+    ):
+        for pkg_dir in install_path.glob(prefix):
+            if not pkg_dir.is_dir():
+                continue
+            for path in list(pkg_dir.rglob("*")):
+                if not path.is_file():
+                    continue
+                rel = str(path.relative_to(install_path))
+                if not any(fnmatch.fnmatch(rel, pat) for pat in PYSIDE6_ALLOWLIST):
+                    path.unlink()
+            # Clean up empty directories
+            for dirpath in sorted(pkg_dir.rglob("*"), reverse=True):
+                if dirpath.is_dir() and not any(dirpath.iterdir()):
+                    dirpath.rmdir()
+
+
 def build_deps_bundle() -> None:
     with TemporaryDirectory() as working_directory:
         working_directory = Path(working_directory)
@@ -120,6 +278,7 @@ def build_deps_bundle() -> None:
         base_env = _build_base_environment(working_directory, deps_noopenjd)
         native_dependency_paths = _download_native_dependencies(working_directory, base_env)
         _copy_native_to_base_env(base_env, native_dependency_paths)
+        _install_pyside6(base_env)
         zip_path = _get_zip_path(working_directory, project_dict)
         _zip_bundle(base_env, zip_path)
         print(list(working_directory.glob("*")))

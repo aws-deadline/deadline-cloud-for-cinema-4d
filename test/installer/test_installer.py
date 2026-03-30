@@ -93,6 +93,16 @@ def _validate_files(installation_path: Path) -> None:
     assert "xxhash" in top_level_dir
     assert "psutil" in top_level_dir
 
+    # Verify PySide6/shiboken6 are bundled and stripped correctly
+    assert "PySide6" in top_level_dir
+    assert "shiboken6" in top_level_dir
+    pyside_dir = [f.name for f in (installation_path / "PySide6").iterdir()]
+    assert "QtCore.abi3.so" in pyside_dir or "QtCore.pyd" in pyside_dir
+    assert "QtWidgets.abi3.so" in pyside_dir or "QtWidgets.pyd" in pyside_dir
+    # Verify unused Qt modules were stripped by the allowlist
+    assert "lupdate" not in pyside_dir
+    assert "lrelease" not in pyside_dir
+
     if platform.system() == "Windows":
         assert "cinema_4d_plugins" in top_level_dir
         # fontTools is Windows-only due to Cinema 4D technical limitations

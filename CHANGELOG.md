@@ -1,3 +1,14 @@
+## 0.10.1 (2026-03-26)
+
+
+### Features
+* Bundle GUI dependencies within Cinema 4D submitter installer. (#417) ([`a583eb7`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/a583eb79de17685da9667146aa6e043e598b0722))
+
+### Bug Fixes
+* Provide better instructions with Redshift/Nvidia version drivers (#405) ([`bd3b951`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/bd3b95110d74c1dc2b8918483f2b02fc3701a200))
+* Fail fast with clear error when LoadDocument fails on corrupted file (#404) ([`3e50dde`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/3e50ddedf80e5a92e5f60e55718711ee33968c3e))
+
+
 ## 0.10.0 (2026-03-09)
 
 
