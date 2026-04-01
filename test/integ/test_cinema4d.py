@@ -30,6 +30,7 @@ import pytest
         "physical_tiles",
         "redshift_tiles",
         "physical_apostrophe_path",
+        "physical_chunking",
     ],
 )
 def test_integ(

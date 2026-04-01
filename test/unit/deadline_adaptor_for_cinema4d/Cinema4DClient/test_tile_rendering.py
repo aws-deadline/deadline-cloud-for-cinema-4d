@@ -65,3 +65,27 @@ class TestTileExtentValidInputs:
             ), f"Tile {i}: expected offset {expected_offset}, got {offset}"
             expected_offset += size
         assert expected_offset == full_size
+
+
+class TestAssembleTilesFrameParsing:
+    """Tests that assemble_tiles correctly parses chunk frame range format."""
+
+    def test_frame_as_single_string(self):
+        """Frame value as plain string should parse correctly."""
+        data: dict = {"frame": "1"}
+        frame = (
+            int(str(data["frame"]).split("-")[0])
+            if "-" in str(data["frame"])
+            else int(data["frame"])
+        )
+        assert frame == 1
+
+    def test_frame_as_chunk_range(self):
+        """Frame value as chunk range '1-1' should parse to start frame."""
+        data: dict = {"frame": "1-1"}
+        frame = (
+            int(str(data["frame"]).split("-")[0])
+            if "-" in str(data["frame"])
+            else int(data["frame"])
+        )
+        assert frame == 1

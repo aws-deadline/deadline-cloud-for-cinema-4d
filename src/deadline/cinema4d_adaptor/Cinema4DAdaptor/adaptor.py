@@ -534,15 +534,17 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
     def on_run(self, run_data: dict) -> None:
         """
-        This starts a render in Cinema4D for the given frame, scene and layer(s) and
+        This starts a render in Cinema4D for the given frame(s), scene and layer(s) and
         performs a busy wait until the render completes.
+
+        Supports both single frames (e.g. "5") and contiguous chunk ranges (e.g. "1-10")
+        from the TASK_CHUNKING extension.
         """
         self.validators.run_data.validate(run_data)
 
         if not self._cinema4d_is_running:
             raise Cinema4DNotRunningError("Cannot render because Cinema4D is not running.")
 
-        run_data["frame"] = int(run_data["frame"])
         self._is_rendering = True
 
         for name in _CINEMA4D_RUN_KEYS:

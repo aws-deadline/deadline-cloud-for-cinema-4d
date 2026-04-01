@@ -72,6 +72,9 @@ class RenderSubmitterUISettings:
     tiles_columns: int = field(default=2, metadata={"sticky": True})
     tiles_rows: int = field(default=2, metadata={"sticky": True})
 
+    chunk_size: int = field(default=1, metadata={"sticky": True})
+    target_chunk_duration: int = field(default=0, metadata={"sticky": True})
+
     take_selection: TakeSelection = field(default=TakeSelection.MAIN, metadata={"sticky": True})
     activate_error_checking: str = field(
         default=ErrorChecking.ACTIVATE.value, metadata={"sticky": True}

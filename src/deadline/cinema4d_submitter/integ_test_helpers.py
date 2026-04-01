@@ -77,6 +77,8 @@ def internal_create_job_bundle(
     enable_tile_rendering: bool = False,
     tiles_columns: int = 2,
     tiles_rows: int = 2,
+    chunk_size: int = 1,
+    target_chunk_duration: int = 0,
 ):
     """
     This function mimics the call that Cinema 4D submitter does to generate the job bundle.
@@ -87,6 +89,8 @@ def internal_create_job_bundle(
     render_settings.enable_tile_rendering = enable_tile_rendering
     render_settings.tiles_columns = tiles_columns
     render_settings.tiles_rows = tiles_rows
+    render_settings.chunk_size = chunk_size
+    render_settings.target_chunk_duration = target_chunk_duration
 
     doc = c4d.documents.GetActiveDocument()
 

@@ -130,6 +130,11 @@ def _get_parameter_values(
         {"name": "DetailedLogging", "value": "1" if settings.activate_detailed_logging else "0"}
     )
     parameter_values.append({"name": "UseCachedText", "value": settings.use_cached_text})
+    # Set chunking parameter values
+    parameter_values.append({"name": "ChunkSize", "value": settings.chunk_size})
+    parameter_values.append(
+        {"name": "TargetChunkDuration", "value": settings.target_chunk_duration}
+    )
 
     if per_take_frames_parameters:
         for take_data in submit_takes:
@@ -619,7 +624,6 @@ def create_job_bundle(
             step["hostRequirements"] = host_requirements
 
     save_job_bundle_files(job_bundle_path, job_template, parameter_values, asset_references)
-
     # Save Sticky Settings
     if settings.export_job_bundle_to_temp:
         # Close temporary document

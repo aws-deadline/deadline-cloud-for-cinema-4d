@@ -434,7 +434,11 @@ def assemble_tiles(
     """
     tiles_columns = int(data["total_tiles_column"])
     tiles_rows = int(data["total_tiles_row"])
-    frame = int(data["frame"])
+    # Task chunking and tile rendering are mutually exclusive (enforced in the submitter UI),
+    # but the frame value still arrives in CHUNK[INT] contiguous range format (e.g. "1-1")
+    # since the template always uses CHUNK[INT]. Extract the start frame from the range.
+    frame = int(data["frame"].split("-")[0]) if "-" in str(data["frame"]) else int(data["frame"])
+
     output_path = data.get("output_path", "")
     multi_pass_path = data.get("multi_pass_path", "")
 

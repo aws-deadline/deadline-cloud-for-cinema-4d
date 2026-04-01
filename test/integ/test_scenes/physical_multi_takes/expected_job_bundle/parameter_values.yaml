@@ -13,6 +13,10 @@ parameterValues:
   value: '0'
 - name: UseCachedText
   value: '0'
+- name: ChunkSize
+  value: 1
+- name: TargetChunkDuration
+  value: 0
 - name: MainFrames
   value: '1'
 - name: _0123456789abcdef0123456789abcdef0123456789abcdef012345678Frames

@@ -170,20 +170,50 @@ class SceneSettingsWidget(QWidget):
         lyt.addWidget(export_group_box, widget_row, 0, 1, 2)
         widget_row += 1
 
-        rendering_options_box = QGroupBox("Cinema 4D rendering options", self)
-        rendering_options_layout = QVBoxLayout(rendering_options_box)
+        # Chunking group box
+        chunking_group_box = QGroupBox("Task Chunking", self)
+        chunking_layout = QGridLayout(chunking_group_box)
 
-        self.use_cached_text_chck = QCheckBox("Use cached text during render", self)
-        rendering_options_layout.addWidget(self.use_cached_text_chck)
-
-        use_cached_text_warning_label = QLabel(
-            "Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is "
-            "ignored. If there are fonts in the scene, this will increase rendering time."
+        chunking_layout.addWidget(QLabel("Frames per chunk"), 0, 0)
+        self.chunk_size_spin = QSpinBox(self)
+        # Min 1 (no chunking, one frame per task).
+        # Max 150 is the Deadline Cloud service limit for defaultTaskCount.
+        # https://docs.aws.amazon.com/deadline-cloud/latest/userguide/deadline-cloud-quotas.html
+        self.chunk_size_spin.setMinimum(1)
+        self.chunk_size_spin.setMaximum(150)
+        self.chunk_size_spin.setValue(1)
+        self.chunk_size_spin.setToolTip(
+            "Number of frames to group into each chunk.\n"
+            "Use 1 for one frame per task (default).\n"
+            "Higher values reduce per-task overhead.\n"
+            "When Target chunk duration is set, this value is used\n"
+            "only as the initial chunk size."
         )
-        use_cached_text_warning_label.setWordWrap(True)
-        rendering_options_layout.addWidget(use_cached_text_warning_label)
+        chunking_layout.addWidget(self.chunk_size_spin, 0, 1)
 
-        lyt.addWidget(rendering_options_box, widget_row, 0, 1, 2)
+        chunking_layout.addWidget(QLabel("Target chunk duration"), 1, 0)
+        self.target_chunk_duration_spin = QSpinBox(self)
+        # Min 0 (use fixed chunk size). Max 3600 (1 hour),
+        # a practical upper bound since chunking targets short-running tasks.
+        self.target_chunk_duration_spin.setMinimum(0)
+        self.target_chunk_duration_spin.setMaximum(3600)
+        self.target_chunk_duration_spin.setValue(0)
+        self.target_chunk_duration_spin.setSuffix(" seconds")
+        self.target_chunk_duration_spin.valueChanged.connect(self._on_duration_changed)
+        self.target_chunk_duration_spin.setToolTip(
+            "Target render time per chunk. Deadline Cloud will\n"
+            "automatically adjust how many frames are grouped\n"
+            "together to hit this target. Set to 0 to always use\n"
+            "the fixed frames-per-chunk value above."
+        )
+        chunking_layout.addWidget(self.target_chunk_duration_spin, 1, 1)
+
+        self.chunking_disabled_label = QLabel("Not available when tile rendering is enabled")
+        self.chunking_disabled_label.setStyleSheet("color: gray; font-style: italic;")
+        self.chunking_disabled_label.setVisible(False)
+        chunking_layout.addWidget(self.chunking_disabled_label, 2, 0, 1, 2)
+
+        lyt.addWidget(chunking_group_box, widget_row, 0, 1, 2)
         widget_row += 1
 
         # Tile Rendering group box
@@ -209,9 +239,33 @@ class SceneSettingsWidget(QWidget):
         self.tiles_rows_spin.setValue(2)
         tile_layout.addWidget(self.tiles_rows_spin, 2, 1)
 
+        self.tile_disabled_label = QLabel("Not available when frames per chunk is greater than 1")
+        self.tile_disabled_label.setStyleSheet("color: gray; font-style: italic;")
+        self.tile_disabled_label.setVisible(False)
+        tile_layout.addWidget(self.tile_disabled_label, 3, 0, 1, 2)
+
         self.tile_rendering_chck.stateChanged.connect(self.activate_tile_rendering_changed)
 
+        # Chunking and tile rendering are mutually exclusive
+        self.chunk_size_spin.valueChanged.connect(self._on_chunk_size_changed)
+
         lyt.addWidget(tile_group_box, widget_row, 0, 1, 2)
+        widget_row += 1
+
+        rendering_options_box = QGroupBox("Cinema 4D rendering options", self)
+        rendering_options_layout = QVBoxLayout(rendering_options_box)
+
+        self.use_cached_text_chck = QCheckBox("Use cached text during render", self)
+        rendering_options_layout.addWidget(self.use_cached_text_chck)
+
+        use_cached_text_warning_label = QLabel(
+            "Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is "
+            "ignored. If there are fonts in the scene, this will increase rendering time."
+        )
+        use_cached_text_warning_label.setWordWrap(True)
+        rendering_options_layout.addWidget(use_cached_text_warning_label)
+
+        lyt.addWidget(rendering_options_box, widget_row, 0, 1, 2)
         widget_row += 1
 
         if self.developer_options:
@@ -253,6 +307,18 @@ class SceneSettingsWidget(QWidget):
         self.tiles_columns_spin.setEnabled(settings.enable_tile_rendering)
         self.tiles_rows_spin.setEnabled(settings.enable_tile_rendering)
 
+        self.chunk_size_spin.setValue(settings.chunk_size)
+        self.target_chunk_duration_spin.setValue(settings.target_chunk_duration)
+
+        # Apply mutual exclusion between tile rendering and chunking
+        if settings.enable_tile_rendering:
+            self.chunk_size_spin.setEnabled(False)
+            self.target_chunk_duration_spin.setEnabled(False)
+            self.chunking_disabled_label.setVisible(True)
+        elif settings.chunk_size > 1:
+            self.tile_rendering_chck.setEnabled(False)
+            self.tile_disabled_label.setVisible(True)
+
         if self.developer_options:
             self.include_adaptor_wheels.setChecked(settings.include_adaptor_wheels)
 
@@ -293,6 +359,9 @@ class SceneSettingsWidget(QWidget):
         settings.tiles_columns = self.tiles_columns_spin.value()
         settings.tiles_rows = self.tiles_rows_spin.value()
 
+        settings.chunk_size = self.chunk_size_spin.value()
+        settings.target_chunk_duration = self.target_chunk_duration_spin.value()
+
         if self.developer_options:
             settings.include_adaptor_wheels = self.include_adaptor_wheels.isChecked()
         else:
@@ -314,3 +383,27 @@ class SceneSettingsWidget(QWidget):
         enabled = Qt.CheckState(state) == Qt.CheckState.Checked
         self.tiles_columns_spin.setEnabled(enabled)
         self.tiles_rows_spin.setEnabled(enabled)
+        if enabled:
+            # Disable chunking when tile rendering is enabled
+            self.chunk_size_spin.setValue(1)
+            self.target_chunk_duration_spin.setValue(0)
+            self.chunk_size_spin.setEnabled(False)
+            self.target_chunk_duration_spin.setEnabled(False)
+            self.chunking_disabled_label.setVisible(True)
+        else:
+            self.chunk_size_spin.setEnabled(True)
+            self.target_chunk_duration_spin.setEnabled(True)
+            self.chunking_disabled_label.setVisible(False)
+
+    def _on_chunk_size_changed(self, value):
+        if value > 1:
+            # Disable tile rendering when chunking is enabled
+            self.tile_rendering_chck.setChecked(False)
+            self.tile_rendering_chck.setEnabled(False)
+            self.tile_disabled_label.setVisible(True)
+        else:
+            self.tile_rendering_chck.setEnabled(True)
+            self.tile_disabled_label.setVisible(False)
+
+    def _on_duration_changed(self, value):
+        self.target_chunk_duration_spin.setSuffix(" second" if value == 1 else " seconds")

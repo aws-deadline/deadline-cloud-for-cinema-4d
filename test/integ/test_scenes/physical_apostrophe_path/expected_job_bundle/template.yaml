@@ -1,4 +1,6 @@
 specificationVersion: jobtemplate-2023-09
+extensions:
+- TASK_CHUNKING
 name: physical_apostrophe_path.c4d
 parameterDefinitions:
 - name: Cinema4DFile
@@ -32,6 +34,26 @@ parameterDefinitions:
     groupLabel: Cinema4D Settings
   description: The frames to render. E.g. 1-3,8,11-15
   minLength: 1
+- name: ChunkSize
+  type: INT
+  default: 1
+  minValue: 1
+  description: |
+    Number of frames per chunk. Use 1 for one frame per task (default). Higher values group frames into chunks to reduce per-task overhead.
+  userInterface:
+    control: SPIN_BOX
+    label: Frames Per Chunk
+    groupLabel: Cinema4D Settings
+- name: TargetChunkDuration
+  type: INT
+  default: 0
+  minValue: 0
+  description: |
+    Target render time per chunk in seconds. Deadline Cloud will automatically adjust how many frames are grouped together to hit this target. Set to 0 to always use the fixed frames-per-chunk value.
+  userInterface:
+    control: SPIN_BOX
+    label: Target Chunk Duration (Seconds)
+    groupLabel: Cinema4D Settings
 - name: OutputPath
   type: PATH
   objectType: FILE
@@ -90,8 +112,12 @@ steps:
   parameterSpace:
     taskParameterDefinitions:
     - name: Frame
-      type: INT
+      type: CHUNK[INT]
       range: '{{Param.Frames}}'
+      chunks:
+        defaultTaskCount: '{{Param.ChunkSize}}'
+        targetRuntimeSeconds: '{{Param.TargetChunkDuration}}'
+        rangeConstraint: CONTIGUOUS
   stepEnvironments:
   - name: Cinema4D
     description: Runs Cinema4D in the background.

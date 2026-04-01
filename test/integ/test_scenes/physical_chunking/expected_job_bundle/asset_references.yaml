@@ -1,0 +1,9 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_chunking\generated_bundle\physical_chunking.c4d
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_chunking\generated_bundle\renders
+  referencedPaths: []

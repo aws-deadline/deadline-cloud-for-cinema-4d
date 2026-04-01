@@ -756,6 +756,69 @@ class TestStartRenderWithTextCaching:
         assert handler.cached_text_was_used_in_previous_frame is False
 
 
+class TestParseFrameRange:
+    """Tests for Cinema4DHandler._parse_frame_range"""
+
+    def test_single_frame_int(self):
+        assert Cinema4DHandler._parse_frame_range(5) == (5, 5)
+
+    def test_single_frame_string(self):
+        assert Cinema4DHandler._parse_frame_range("5") == (5, 5)
+
+    def test_contiguous_range(self):
+        assert Cinema4DHandler._parse_frame_range("1-10") == (1, 10)
+
+    def test_single_frame_range(self):
+        assert Cinema4DHandler._parse_frame_range("5-5") == (5, 5)
+
+
+class TestStartRenderChunkRange:
+    """Tests that start_render correctly handles chunk frame ranges"""
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_start_render_with_chunk_range(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Tests that start_render sets FRAMEFROM and FRAMETO from a chunk range"""
+        handler = Cinema4DHandler(mock_map_path)
+        handler.cached_text_was_used_in_previous_frame = False
+
+        mock_doc = Mock()
+        mock_render_data = MagicMock()
+        mock_render_data.GetDataInstance = Mock()
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        mock_doc.GetFps.return_value = 24
+        handler.doc = mock_doc
+
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "10-20"})
+
+        # FRAMEFROM should be called with start frame, FRAMETO with end frame
+        # BaseTime is called as BaseTime(frame, fps)
+        start_frame, end_frame, fps = 10, 20, 24
+        calls = mock_base_time.call_args_list
+        assert (start_frame, fps) in [c.args for c in calls]
+        assert (end_frame, fps) in [c.args for c in calls]
+
+
+class TestSetFrameChunkRange:
+    """Tests that set_frame stores chunk range strings without casting to int"""
+
+    def test_set_frame_single(self):
+        handler = Cinema4DHandler(mock_map_path)
+        handler.set_frame({"frame": "42"})
+        assert handler.render_kwargs["frame"] == "42"
+
+    def test_set_frame_range(self):
+        handler = Cinema4DHandler(mock_map_path)
+        handler.set_frame({"frame": "1-10"})
+        assert handler.render_kwargs["frame"] == "1-10"
+
+
 class TestPathmapBaseObject:
     """Tests for the _pathmap_base_object method"""
 

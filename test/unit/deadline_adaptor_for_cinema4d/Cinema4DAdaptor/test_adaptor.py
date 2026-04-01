@@ -392,6 +392,35 @@ class TestCinema4DAdaptor_on_run:
         # THEN
         mock_sleep.assert_called_once_with(0.1)
 
+    @patch("time.sleep")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.LoggingSubprocess")
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.AdaptorServer")
+    def test_on_run_with_chunk_range(
+        self,
+        mock_server: Mock,
+        mock_logging_subprocess: Mock,
+        mock_actions_queue: Mock,
+        mock_sleep: Mock,
+        init_data: dict,
+    ) -> None:
+        """Tests that on_run works with a chunk frame range like '1-10'"""
+        # GIVEN
+        adaptor = Cinema4DAdaptor(init_data)
+        mock_server.return_value.server_path = "/tmp/9999"
+        is_rendering_mock = PropertyMock(side_effect=[None, True, False])
+        Cinema4DAdaptor._is_rendering = is_rendering_mock
+        adaptor.on_start()
+
+        # WHEN
+        adaptor.on_run({"frame": "1-10"})
+
+        # THEN
+        # Verify the busy-wait loop ran (sleep is called while waiting for
+        # _cinema4d_is_rendering to become False, ensuring on_run blocks
+        # until the render completes)
+        mock_sleep.assert_called_once_with(0.1)
+
 
 @pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_on_cleanup:

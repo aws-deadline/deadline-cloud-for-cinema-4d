@@ -1,8 +1,7 @@
-specificationVersion: 'jobtemplate-2023-09'
+specificationVersion: jobtemplate-2023-09
 extensions:
-  - TASK_CHUNKING
-name: Adaptor Cinema4D Job Template
-description: Adaptor Cinema4D Job Description
+- TASK_CHUNKING
+name: physical_chunking.c4d
 parameterDefinitions:
 - name: Cinema4DFile
   type: PATH
@@ -39,9 +38,8 @@ parameterDefinitions:
   type: INT
   default: 1
   minValue: 1
-  description: >
-    Number of frames per chunk. Use 1 for one frame per task (default).
-    Higher values group frames into chunks to reduce per-task overhead.
+  description: |
+    Number of frames per chunk. Use 1 for one frame per task (default). Higher values group frames into chunks to reduce per-task overhead.
   userInterface:
     control: SPIN_BOX
     label: Frames Per Chunk
@@ -50,10 +48,8 @@ parameterDefinitions:
   type: INT
   default: 0
   minValue: 0
-  description: >
-    Target render time per chunk in seconds. Deadline Cloud will automatically
-    adjust how many frames are grouped together to hit this target.
-    Set to 0 to always use the fixed frames-per-chunk value.
+  description: |
+    Target render time per chunk in seconds. Deadline Cloud will automatically adjust how many frames are grouped together to hit this target. Set to 0 to always use the fixed frames-per-chunk value.
   userInterface:
     control: SPIN_BOX
     label: Target Chunk Duration (Seconds)
@@ -104,13 +100,15 @@ parameterDefinitions:
     control: CHECK_BOX
     label: Use cached text during render
     groupLabel: Cinema4D Settings
-  description: Prevents incorrect or missing text by using cached fonts. If there are no fonts in the scene, this is ignored. If there are fonts in the scene, this will increase rendering time.
+  description: Prevents incorrect or missing text by using cached fonts. If there
+    are no fonts in the scene, this is ignored. If there are fonts in the scene, this
+    will increase rendering time.
   default: '0'
   allowedValues:
   - '1'
   - '0'
 steps:
-- name: Render
+- name: Main
   parameterSpace:
     taskParameterDefinitions:
     - name: Frame
@@ -124,21 +122,20 @@ steps:
   - name: Cinema4D
     description: Runs Cinema4D in the background.
     variables:
-      # Turn off buffering in Python
-      PYTHONUNBUFFERED: "1"
-      SUBMITTER_INTEGRATION_VERSION: "{{Param.SubmitterIntegrationVersion}}"
+      PYTHONUNBUFFERED: '1'
+      SUBMITTER_INTEGRATION_VERSION: '{{Param.SubmitterIntegrationVersion}}'
     script:
       embeddedFiles:
       - name: initData
         filename: init-data.yaml
         type: TEXT
         data: |
-          scene_file: '{{Param.Cinema4DFile}}'
-          take: 'Main'
-          output_path: '{{Param.OutputPath}}'
-          multi_pass_path: '{{Param.MultiPassPath}}'
+          take: Main
           activate_error_checking: '{{Param.ActivateErrorChecking}}'
           use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: {{Param.OutputPath}}
+          multi_pass_path: ''
       actions:
         onEnter:
           command: cinema4d-openjd
@@ -153,6 +150,7 @@ steps:
           - file://{{Env.File.initData}}
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
         onExit:
           command: cinema4d-openjd
           args:
@@ -162,6 +160,7 @@ steps:
           - '{{ Session.WorkingDirectory }}/connection.json'
           cancelation:
             mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
   script:
     embeddedFiles:
     - name: runData
@@ -181,3 +180,4 @@ steps:
         - file://{{ Task.File.runData }}
         cancelation:
           mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800
