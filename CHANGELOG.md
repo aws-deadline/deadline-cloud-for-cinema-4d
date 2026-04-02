@@ -1,3 +1,14 @@
+## 0.11.0 (2026-04-02)
+
+
+### Features
+* Add contiguous chunking support in Cinema 4d (#415) ([`bb76ae6`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/bb76ae6ef0afa7aa32a18f483522a585d7498a82))
+
+### Bug Fixes
+* Reduce the adaptor package size by moving GUI deps outside of re… (#422) ([`f027fd7`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f027fd766bfa2bbc034adc453f06c4a600676a72))
+* fix yaml delimeter in paths (#408) ([`895f12d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/895f12d3319e1f87af7fd8fddaa01eb4996b28ec))
+
+
 ## 0.10.1 (2026-03-26)
 
 
