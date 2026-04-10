@@ -62,10 +62,10 @@ def progress_callback(progress_percent, progress_type_int):
     else:
         progress_type_text = f"Unknown progress type ({progress_type_int})"
 
-    print(f"Progress update ({progress_type_text}): {progress_percent * 100.0}%")
+    print(f"Progress update ({progress_type_text}): {min(progress_percent * 100.0, 100.0)}%")
 
     if progress_type_int == c4d.RENDERPROGRESSTYPE_DURINGRENDERING:
-        print("ALF_PROGRESS %g" % (progress_percent * 100))
+        print("ALF_PROGRESS %g" % min(progress_percent * 100, 100))
 
 
 class Cinema4DHandler:

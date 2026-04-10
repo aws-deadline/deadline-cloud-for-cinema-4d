@@ -344,7 +344,9 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         percent = text[loc : loc + 2]
         # check for % in case of single digit progress
         percent = percent[0] if percent.endswith("%") else percent
-        progress = int(percent)
+        # C4D can report progress > 100%. This is also clamped in progress_callback(),
+        # but we clamp here too to prevent regression if progress_callback() is modified.
+        progress = min(int(percent), 100)
         self.update_status(progress=progress)
 
     def _handle_error(self, match: re.Match) -> None:

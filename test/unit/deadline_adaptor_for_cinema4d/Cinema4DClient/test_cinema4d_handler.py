@@ -13,17 +13,29 @@ def mock_map_path(path: str):
 
 class TestProgress:
     def test_progress(self, capsys):
-        progress_callback(42, 0)
+        progress_callback(0.5, 0)
         progress = capsys.readouterr()
-        assert progress.out == "Progress update (Unknown progress type (0)): 4200.0%\n"
+        assert progress.out == "Progress update (Unknown progress type (0)): 50.0%\n"
 
     def test_progress_during_rendering(self, capsys):
         with patch.object(c4d, "RENDERPROGRESSTYPE_DURINGRENDERING", 0):
-            progress_callback(42, 0)
+            progress_callback(0.5, 0)
             progress = capsys.readouterr()
-            assert (
-                progress.out == "Progress update (during rendering): 4200.0%\nALF_PROGRESS 4200\n"
-            )
+            assert progress.out == "Progress update (during rendering): 50.0%\nALF_PROGRESS 50\n"
+
+    def test_progress_clamped_to_100(self, capsys):
+        """C4D can report progress > 1.0 during non-rendering phases (e.g. before rendering).
+        The log output should be clamped to 100%."""
+        progress_callback(1.33, 0)
+        progress = capsys.readouterr()
+        assert progress.out == "Progress update (Unknown progress type (0)): 100.0%\n"
+
+    def test_progress_during_rendering_clamped_to_100(self, capsys):
+        """ALF_PROGRESS should also be clamped to 100 if C4D reports > 1.0 during rendering."""
+        with patch.object(c4d, "RENDERPROGRESSTYPE_DURINGRENDERING", 0):
+            progress_callback(1.16, 0)
+            progress = capsys.readouterr()
+            assert progress.out == "Progress update (during rendering): 100.0%\nALF_PROGRESS 100\n"
 
 
 class TestCinema4DHandler:
