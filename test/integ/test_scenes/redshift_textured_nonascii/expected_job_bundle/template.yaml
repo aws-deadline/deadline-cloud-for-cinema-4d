@@ -1,7 +1,7 @@
 specificationVersion: jobtemplate-2023-09
 extensions:
 - TASK_CHUNKING
-name: "redshift_textured-_\u20BF_\u0119_\xF1_\u03B2_\u0411_\u062A.c4d"
+name: "rs_test-\u20BF\u0119\xF1.c4d"
 parameterDefinitions:
 - name: Cinema4DFile
   type: PATH

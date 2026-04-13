@@ -1,0 +1,12 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\test_scenes\\\
+      redshift_textured_nonascii\\generated_bundle\\rs_test-\u20BF\u0119\xF1.c4d"
+    - "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\test_scenes\\\
+      redshift_textured_nonascii\\generated_bundle\\tex\\tx_test-\u20BF\u0119\xF1.bmp"
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\redshift_textured_nonascii\generated_bundle\renders
+  referencedPaths: []

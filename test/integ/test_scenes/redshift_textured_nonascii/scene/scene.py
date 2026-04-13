@@ -75,7 +75,7 @@ def main():
     # Create texture
     tex_dir = os.path.join(save_dir, "tex")
     os.makedirs(tex_dir, exist_ok=True)
-    texture_filename = "checkerboard-_₿_ę_ñ_β_Б_ت.bmp"
+    texture_filename = "tx_test-₿ęñ.bmp"
     texture_path = os.path.join(tex_dir, texture_filename)
     create_checkerboard_bmp(texture_path)
 
@@ -91,7 +91,7 @@ def main():
     setup_render_settings(doc, frame_time, frame_time)
 
     # Save document
-    save_name = "redshift_textured-_₿_ę_ñ_β_Б_ت.c4d"
+    save_name = "rs_test-₿ęñ.c4d"
     save_path = os.path.join(save_dir, save_name)
     doc.SetDocumentPath(save_dir)
     doc.SetDocumentName(save_name)
