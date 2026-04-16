@@ -66,13 +66,7 @@ For example, a 99×99 grid on a single frame would produce 9,801 render tasks, w
 
 **Q: Why is tile rendering failing with an `AttributeError: module 'c4d.documents' has no attribute 'BakeOcioViewToBitmap'`?**
 
-A: Tile rendering requires Cinema 4D 2025 or above. The tile assembly step uses the `c4d.documents.BakeOcioViewToBitmap` API, which was introduced in Cinema 4D 2025. If you're running an older version, the assemble step will fail with an error like:
-
-```
-AttributeError: module 'c4d.documents' has no attribute 'BakeOcioViewToBitmap'
-```
-
-To fix this, upgrade to Cinema 4D 2025 or later.
+A: This error occurs on older versions of the Cinema 4D submitter that required Cinema 4D 2025 or above for tile rendering. Update to the latest version of `deadline-cloud-for-cinema-4d`, which supports tile rendering on Cinema 4D 2024 and later. Note that on Cinema 4D 2024, OCIO view transform baking is skipped during tile rendering because the required API (`BakeOcioViewToBitmap`) is not available.
 
 **Q: Can I use Redshift?**
 
