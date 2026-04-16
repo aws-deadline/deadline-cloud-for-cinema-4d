@@ -383,6 +383,13 @@ def _get_job_template(
 
 def _prompt_save_current_document():
     doc = c4d.documents.GetActiveDocument()
+    if not doc.GetDocumentPath():
+        c4d.gui.MessageDialog(
+            "Please open an existing project or save the current scene to disk\n"
+            "before launching the submitter."
+        )
+        return False
+
     if not doc.GetChanged():
         # Document has no unsaved changes
         return True
