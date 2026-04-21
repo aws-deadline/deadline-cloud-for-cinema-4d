@@ -1,3 +1,12 @@
+## 0.12.0 (2026-04-21)
+
+### Features
+* You will now be notified within Cinema 4D if a newer version of the Deadline Cloud submitter is available. (#414)
+
+### Bug Fixes
+* Tile rendering is now supported in Cinema 4D 2024. Previously, tile rendering could fail or behave incorrectly in this version. (#433)
+* Opening the submitter on an empty project now shows a dialog prompting you to open a project instead of crashing. (#432)
+* Render progress is now clamped to 100%, preventing occasional reports of progress exceeding 100%. (#429)
 ## 0.11.0 (2026-04-02)
 
 
