@@ -6,7 +6,10 @@
 
 ### Bug Fixes
 * Reduce the adaptor package size by moving GUI deps outside of re… (#422) ([`f027fd7`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f027fd766bfa2bbc034adc453f06c4a600676a72))
-* fix yaml delimeter in paths (#408) ([`895f12d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/895f12d3319e1f87af7fd8fddaa01eb4996b28ec))
+* Fix yaml delimeter in paths (#408) ([`895f12d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/895f12d3319e1f87af7fd8fddaa01eb4996b28ec))
+* Support tile rendering in 2024 (#433) ([`e4b9866`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/e4b9866))
+* Show dialog to open a project instead of crashing on an empty project (#432) ([`f8e4fbf`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f8e4fbf))
+* Clamp render progress to 100% (#429) ([`af27664`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/af27664))
 
 
 ## 0.10.1 (2026-03-26)
