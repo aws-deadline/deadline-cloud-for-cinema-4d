@@ -1,10 +1,9 @@
 ## 0.11.0 (2026-04-21)
 
-### BREAKING CHANGES
-* The adaptor now uses contiguous frame chunking (e.g. "1-10" instead of "1") for task ranges. Jobs submitted with this version require a worker agent that supports the TASK_CHUNKING extension. (#415)
 
 ### Features
 * You will now be notified within Cinema 4D if a newer version of the submitter is available. (#414)
+* The adaptor now uses contiguous frame chunking (e.g. "1-10" instead of "1") for task ranges. Jobs submitted with this version require a worker agent that supports the TASK_CHUNKING extension. (#415)
 
 ### Bug Fixes
 * Tile rendering is now supported in Cinema 4D 2024. (#433)
@@ -12,18 +11,6 @@
 * Render progress is now clamped to 100%, preventing occasional reports of progress exceeding 100%. (#429)
 * Reduced the adaptor package size by moving GUI dependencies outside of the adaptor runtime requirements. (#422)
 * Fixed YAML delimiter handling in file paths, resolving issues with path mappings. (#408)
-## 0.11.0 (2026-04-02)
-
-
-### Features
-* Add contiguous chunking support in Cinema 4d (#415) ([`bb76ae6`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/bb76ae6ef0afa7aa32a18f483522a585d7498a82))
-
-### Bug Fixes
-* Reduce the adaptor package size by moving GUI deps outside of re… (#422) ([`f027fd7`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f027fd766bfa2bbc034adc453f06c4a600676a72))
-* Fix yaml delimeter in paths (#408) ([`895f12d`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/895f12d3319e1f87af7fd8fddaa01eb4996b28ec))
-* Support tile rendering in 2024 (#433) ([`e4b9866`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/e4b9866))
-* Show dialog to open a project instead of crashing on an empty project (#432) ([`f8e4fbf`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/f8e4fbf))
-* Clamp render progress to 100% (#429) ([`af27664`](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/commit/af27664))
 
 
 ## 0.10.1 (2026-03-26)
