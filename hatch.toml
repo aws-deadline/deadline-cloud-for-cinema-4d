@@ -42,3 +42,21 @@ test = "pytest --no-cov {args:test/integ} -vvv --numprocesses=1"
 
 [envs.installer.scripts]
 build-installer = "python {root}/scripts/build_installer_cli.py --installer-source-path {root}/installer/DeadlineCloudForCinema4dSubmitter.xml {args:}"
+
+[envs.integ-ci]
+pre-install-commands = [
+  "pip install -r requirements-testing.txt"
+]
+features = ["gui"]
+
+[[envs.integ-ci.matrix]]
+cinema4d = ["2025", "2026"]
+python = ["3.11"]
+
+[envs.integ-ci.env-vars]
+C4D_VERSION = "{matrix:cinema4d}"
+PYTHONIOENCODING = "utf-8"
+
+[envs.integ-ci.scripts]
+setup = "python ./pipeline/setup-runner.py --versions {matrix:cinema4d} {args}"
+integ = "pytest --no-cov {args:test/integ} -vvv --numprocesses=1"

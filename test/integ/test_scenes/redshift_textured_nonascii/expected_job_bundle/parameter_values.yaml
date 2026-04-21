@@ -1,14 +1,12 @@
 parameterValues:
 - name: Cinema4DFile
   value: "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\\
-    test_scenes\\redshift_textured_with_nonascii_characters\\generated_bundle\\redshift_textured-_\u20BF\
-    _\u0119_\xF1_\u03B2_\u0411_\u062A.c4d"
+    test_scenes\\redshift_textured_nonascii\\generated_bundle\\rs_test-\u20BF\u0119\xF1.c4d"
 - name: SubmitterIntegrationVersion
   value: 0.8.0
 - name: OutputPath
   value: "PATH_TO_BE_REPLACED\\deadline-cloud-for-cinema-4d\\test\\integ\\\
-    test_scenes\\redshift_textured_with_nonascii_characters\\generated_bundle\\renders\\\
-    redshift_textured-_\u20BF_\u0119_\xF1_\u03B2_\u0411_\u062A"
+    test_scenes\\redshift_textured_nonascii\\generated_bundle\\renders\\rs_test-\u20BF\u0119\xF1"
 - name: MultiPassPath
   value: ''
 - name: ActivateErrorChecking

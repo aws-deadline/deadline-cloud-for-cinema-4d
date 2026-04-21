@@ -1,7 +1,6 @@
 parameterValues:
 - name: Cinema4DFile
-  value: PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_apostrophe_path\generated_bundle\artist's
-    project\physical_apostrophe_path.c4d
+  value: PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_apostrophe_path\generated_bundle\it's\physical_apostrophe_path.c4d
 - name: SubmitterIntegrationVersion
   value: 0.8.0
 - name: OutputPath

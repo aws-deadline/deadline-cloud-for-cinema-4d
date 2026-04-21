@@ -2,8 +2,7 @@ assetReferences:
   inputs:
     directories: []
     filenames:
-    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_apostrophe_path\generated_bundle\artist's
-      project\physical_apostrophe_path.c4d
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_apostrophe_path\generated_bundle\it's\physical_apostrophe_path.c4d
   outputs:
     directories:
     - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_apostrophe_path\generated_bundle\renders

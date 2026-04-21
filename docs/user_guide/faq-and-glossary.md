@@ -64,16 +64,6 @@ A: It depends on your scene. A 3×3 or 4×4 grid is a good starting point. More 
 
 For example, a 99×99 grid on a single frame would produce 9,801 render tasks, which is close to the limit.
 
-**Q: Why is tile rendering failing with an `AttributeError: module 'c4d.documents' has no attribute 'BakeOcioViewToBitmap'`?**
-
-A: Tile rendering requires Cinema 4D 2025 or above. The tile assembly step uses the `c4d.documents.BakeOcioViewToBitmap` API, which was introduced in Cinema 4D 2025. If you're running an older version, the assemble step will fail with an error like:
-
-```
-AttributeError: module 'c4d.documents' has no attribute 'BakeOcioViewToBitmap'
-```
-
-To fix this, upgrade to Cinema 4D 2025 or later.
-
 **Q: Can I use Redshift?**
 
 A: Yes! Redshift GPU rendering is supported.

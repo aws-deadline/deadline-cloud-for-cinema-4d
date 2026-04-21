@@ -28,6 +28,12 @@ EXT_TO_FILTER = {v[0]: v[1] for v in FORMAT_MAP.values()}
 
 DEFAULT_FORMAT = FORMAT_MAP[c4d.FILTER_PNG]
 
+# Cinema 4D 2025.2 introduced BakeOcioViewToBitmap and the index parameter
+# for SetColorProfile. The COLORPROFILE_INDEX_* constants exist in earlier
+# versions but SetColorProfile does not accept them until 2025.2.
+# https://developers.maxon.net/docs/py/2025_2_0/misc/whatisnew.html
+C4D_VERSION_2025_2 = 2025200
+
 
 def get_format_info(format_id: int) -> tuple[str, int]:
     """Return (extension, save_filter) for a C4D render format ID."""
@@ -177,8 +183,13 @@ def setup_tile_render(
 
     # OCIO: for 8-bit output during tile renders, disable the render-time OCIO view
     # transform bake so we can bake it manually after rendering.
+    # BakeOcioViewToBitmap and RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER were introduced
+    # in Cinema 4D 2025.2 — skip OCIO baking on older versions.
     rd = render_data.GetDataInstance()
-    requires_baking = rd[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_8
+    _has_ocio_bake = hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER") and hasattr(
+        c4d.documents, "BakeOcioViewToBitmap"
+    )
+    requires_baking = _has_ocio_bake and rd[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_8
     orig_bake_flag = None
     if requires_baking:
         orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
@@ -225,12 +236,18 @@ def finalize_tile_render(
         baked = c4d.documents.BakeOcioViewToBitmap(bm, rd, c4d.SAVEBIT_NONE)
         bm = baked or bm
 
-    bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE)
-    bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM)
+    if c4d.GetC4DVersion() >= C4D_VERSION_2025_2:
+        bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE)
+        bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM)
+    else:
+        print(
+            f"Tile ({ctx.tile_col}, {ctx.tile_row}): Skipping OCIO color profile reset (pre-2025.2)"
+        )
 
     # Crop the tile region from the full bitmap using GetClonePart to preserve
     # bit depth and float data (GetPixel/SetPixel truncates to 8-bit integers).
     tile_bmp = bm.GetClonePart(ctx.region_left, ctx.region_top, ctx.tile_w, ctx.tile_h)
+
     if tile_bmp is None:
         raise RuntimeError(
             f"Failed to crop tile ({ctx.tile_col}, {ctx.tile_row}) from rendered bitmap"
@@ -288,8 +305,15 @@ def _apply_color_profile(final_bmp: Any, source_bmp: Any, is_multipass: bool) ->
     if profile is not None:
         final_bmp.SetColorProfile(profile)
     elif not is_multipass:
-        final_bmp.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE)
-        final_bmp.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM)
+        if c4d.GetC4DVersion() >= C4D_VERSION_2025_2:
+            final_bmp.SetColorProfile(
+                c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE
+            )
+            final_bmp.SetColorProfile(
+                c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM
+            )
+        else:
+            print("Assembly: Skipping OCIO color profile reset (pre-2025.2)")
 
 
 def _tile_path(base: str, ext: str, frame_str: str, col: int, row: int, is_multipass: bool) -> str:

@@ -25,7 +25,7 @@ def main():
     # Save scene inside a folder with an apostrophe to test special character
     # handling in paths (https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/issues/397)
     bundle_dir = sys.argv[1]
-    scene_dir = os.path.join(bundle_dir, "artist's project")
+    scene_dir = os.path.join(bundle_dir, "it's")
     os.makedirs(scene_dir, exist_ok=True)
 
     # Set render output to bundle_dir/renders so the test can find it,

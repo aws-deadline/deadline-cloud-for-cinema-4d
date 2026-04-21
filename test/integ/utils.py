@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import subprocess
 import os
+import sys
 from difflib import unified_diff
 import re
 from yaml import safe_load, dump
@@ -62,10 +63,11 @@ def assert_openjd_run_with_cinema4d_successful(
     Runs the steps for template using Open JD run with Cinema 4D.
     Returns True if successful.
     """
+    c4d_exe = cinema4d_location / (
+        "Commandline.exe" if sys.platform == "win32" else "bin" / Path("Commandline")
+    )
     test_env = {
-        # This will allow tests to know the path to run Cinema 4D Commandline.exe
-        "C4D_COMMANDLINE_EXECUTABLE": str(cinema4d_location / "Commandline.exe"),
-        # This is required for the Cinema 4D adaptor to work for tests.
+        "C4D_COMMANDLINE_EXECUTABLE": str(c4d_exe),
         "CINEMA4D_ADAPTOR_TESTING": "True",
     }
 
@@ -194,7 +196,19 @@ def assert_expected_job_bundle_and_generated_job_bundle_are_equal(
                 content1 = _strip_job_environments_from_template(content1)
                 content2 = _strip_job_environments_from_template(content2)
 
-            if content1 == content2:
+            # For YAML files, compare parsed data to avoid line-wrapping differences
+            if file in ("parameter_values.yaml", "asset_references.yaml"):
+                data1 = safe_load(content1)
+                data2 = safe_load(content2)
+                if data1 == data2:
+                    results["identical_files"].append(file)
+                else:
+                    results["different_content"].append(file)
+                    diff = "\n".join(
+                        unified_diff(content1.splitlines(), content2.splitlines(), lineterm="")
+                    )
+                    print(diff)
+            elif content1 == content2:
                 results["identical_files"].append(file)
             else:
                 results["different_content"].append(file)
