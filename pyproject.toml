@@ -38,7 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = [
-    "deadline[gui] >= 0.51.1,< 0.55",
+    "deadline[gui] >= 0.55.1,< 0.56",
     "PySide6-Essentials == 6.8.3",  # Use 6.8 to align with VFXP 2026: https://vfxplatform.com/#reference-platform
 ]
 

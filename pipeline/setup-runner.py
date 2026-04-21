@@ -181,35 +181,38 @@ def setup_windows(versions):
 
 
 def _configure_rlm_licensing(versions):
-    """Configure Cinema 4D to use RLM licensing without interactive GUI login.
-
-    Cinema 4D normally requires a user to select a license method via a GUI dialog on first launch.
-    For headless CI, we append 'g_licenseServerRLM=host:port' to Cinema 4D's resource/config.txt,
-    which is the official Maxon-documented way to enable automatic RLM licensing:
-    https://support.maxon.net/hc/en-us/articles/1500006333301
-
-    The RLM server address is read from the redshift_LICENSE env var (format: "port@host"),
-    which is set by the CodeBuild project and tunneled via SSH to the dev license server.
-    """
-    rlm_server = os.environ.get("redshift_LICENSE", "")
-    if not rlm_server:
+    """Configure Cinema 4D to use RLM licensing without interactive GUI login."""
+    license_dns = os.environ.get("LICENSE_ENDPOINT_DNS", "")
+    if not license_dns:
+        print(
+            "WARNING: LICENSE_ENDPOINT_DNS is not set. Skipping licensing config. The test will likely fail."
+        )
         return
 
-    # Convert "port@host" to "host:port" for config.txt
-    parts = rlm_server.split("@")
-    rlm_config = f"{parts[1]}:{parts[0]}" if len(parts) == 2 else rlm_server
+    license_port = os.environ.get("C4D_LICENSE_PORT")
+    if not license_port:
+        print("WARNING: C4D_LICENSE_PORT is not set. Skipping licensing config.")
+        return
 
+    rlm_config = f"{license_dns}:{license_port}"
     for version in versions:
         install_dir = C4D_INSTALL_PATHS[version]["windows"]
         config_txt = install_dir / "resource" / "config.txt"
         if not config_txt.exists():
             print(f"WARNING: config.txt not found at {config_txt}")
             continue
-        if "g_licenseServerRLM" in config_txt.read_text():
-            print(f"RLM licensing already configured in {config_txt}")
-            continue
-        with open(config_txt, "a") as f:
-            f.write(f"\ng_licenseServerRLM={rlm_config}\n")
+        content = config_txt.read_text()
+        lines = [
+            line
+            for line in content.splitlines()
+            if "g_licenseServerRLM" not in line
+            and "g_licenseServerURL" not in line
+            and "g_licenseModel" not in line
+        ]
+        lines.append(f"g_licenseServerRLM={rlm_config}")
+        lines.append(f"g_licenseServerURL={rlm_config}")
+        lines.append("g_licenseModel=LICENSEMODEL::RLM")
+        config_txt.write_text("\n".join(lines) + "\n")
         print(f"Configured RLM licensing ({rlm_config}) in {config_txt}")
 
 

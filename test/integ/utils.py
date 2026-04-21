@@ -21,7 +21,7 @@ def run_command(args: list[str]) -> subprocess.CompletedProcess[bytes]:
     """
 
     print(f"Args list: {args}")
-    output = subprocess.run(args, capture_output=True)
+    output = subprocess.run(args, capture_output=True, stdin=subprocess.DEVNULL)
 
     print(f"\nstdout:\n\n{output.stdout.decode('utf-8', errors='replace')}")
     print(f"\nstderr:\n\n{output.stderr.decode('utf-8', errors='replace')}")

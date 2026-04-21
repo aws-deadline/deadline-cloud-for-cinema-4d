@@ -47,7 +47,6 @@ build-installer = "python {root}/scripts/build_installer_cli.py --installer-sour
 pre-install-commands = [
   "pip install -r requirements-testing.txt"
 ]
-features = ["gui"]
 
 [[envs.integ-ci.matrix]]
 cinema4d = ["2025", "2026"]
