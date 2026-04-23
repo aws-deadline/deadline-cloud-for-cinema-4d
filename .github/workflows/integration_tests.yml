@@ -1,6 +1,9 @@
 name: Cinema 4D Integration Tests
 
 on:
+  push:
+    branches:
+      - mainline
   workflow_dispatch:
     inputs:
       ref_type:
