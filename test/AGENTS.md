@@ -67,7 +67,7 @@ test/integ/test_scenes/<scene_name>/
 | Scene | Renderer | Description |
 |-------|----------|-------------|
 | `physical` | Physical | Basic physical renderer test |
-| `physical_apostrophe_path` | Physical | Path with special characters (apostrophes) |
+| `phy_apos_path` | Physical | Path with special characters (apostrophes) |
 | `physical_chunking` | Physical | Frame chunking across tasks |
 | `physical_multi_takes` | Physical | Multiple takes rendering |
 | `physical_textured` | Physical | Scene with textures |

@@ -34,7 +34,7 @@ import pytest
         "physical_multi_takes",
         "physical_tiles",
         "redshift_tiles",
-        "physical_apostrophe_path",
+        "phy_apos_path",
         "physical_chunking",
     ],
 )

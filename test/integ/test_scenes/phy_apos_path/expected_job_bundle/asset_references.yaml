@@ -1,0 +1,9 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\phy_apos_path\generated_bundle\it's\phy_apos_path.c4d
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\phy_apos_path\generated_bundle\renders
+  referencedPaths: []

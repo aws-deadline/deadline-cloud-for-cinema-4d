@@ -30,9 +30,9 @@ def main():
 
     # Set render output to bundle_dir/renders so the test can find it,
     # while the scene itself lives in the apostrophe path
-    render_data[c4d.RDATA_PATH] = os.path.join(bundle_dir, "renders", "physical_apostrophe_path")
+    render_data[c4d.RDATA_PATH] = os.path.join(bundle_dir, "renders", "phy_apos_path")
 
-    save_name = "physical_apostrophe_path.c4d"
+    save_name = "phy_apos_path.c4d"
     save_file = os.path.join(scene_dir, save_name)
     doc.SetDocumentPath(scene_dir)
     doc.SetDocumentName(save_name)

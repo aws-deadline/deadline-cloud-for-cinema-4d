@@ -1,7 +1,7 @@
 specificationVersion: jobtemplate-2023-09
 extensions:
 - TASK_CHUNKING
-name: physical_apostrophe_path.c4d
+name: phy_apos_path.c4d
 parameterDefinitions:
 - name: Cinema4DFile
   type: PATH
