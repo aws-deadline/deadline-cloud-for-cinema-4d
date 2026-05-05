@@ -88,6 +88,20 @@ A: Make sure you've installed the extension correctly and restarted Cinema 4D. C
 
 A: Common causes include missing assets, incorrect file paths, or insufficient memory. Check the job logs in the Deadline Cloud monitor.
 
+**Q: My job completed successfully but I get "no outputs found" when trying to download outputs. Why?**
+
+A: This is most likely a version mismatch between the Cinema 4D submitter and Deadline Cloud Monitor (DCM). Jobs submitted with `deadline-cloud-for-cinema-4d` 0.11.1 (or newer) are incompatible with DCM 1.1.7 and earlier, which causes output downloads to fail even though the render itself succeeded.
+
+**How to verify you're affected:**
+
+1. **Check your submitter version.** The version is displayed in the submitter window title. If the version is `0.11.1` or later, you have the new submitter.
+
+2. **Check your DCM version.** Open Deadline Cloud Monitor and view the `About` dialog (on macOS, `Deadline Cloud Monitor` menu > `About Deadline Cloud Monitor`; on Windows, `Help` menu > `About Deadline Cloud Monitor`). If the version is `1.1.7` or earlier, you have the old DCM.
+
+If both conditions are true, you are hitting this issue.
+
+**Fix:** Update Deadline Cloud Monitor to **1.1.8 or later**. You can download the latest version from the [Deadline Cloud downloads page](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/working-with-deadline-monitor.html). After updating, re-open the job in DCM and the outputs will download as expected. No re-submission is required.
+
 **Q: Why are some of my textures or assets missing in the rendered output?**
 
 A: This is typically a path mapping issue. Cinema 4D sometimes stores deep links (absolute paths) to assets in the scene file that cannot be edited. When the scene is submitted and rendered on the farm, it may still reference the original workstation paths even though the assets were uploaded.
