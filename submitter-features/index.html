@@ -1,0 +1,1052 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Render Cinema 4D scenes in the cloud with AWS Deadline Cloud">
+      
+      
+      
+        <link rel="canonical" href="https://aws-deadline.github.io/deadline-cloud-for-cinema-4d/submitter-features/">
+      
+      
+        <link rel="prev" href="../getting-started/">
+      
+      
+        <link rel="next" href="../faq-and-glossary/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Submitter Features - Cinema 4D + AWS Deadline Cloud</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#what-the-submitter-can-do" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Cinema 4D + AWS Deadline Cloud" class="md-header__button md-logo" aria-label="Cinema 4D + AWS Deadline Cloud" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cinema 4D + AWS Deadline Cloud
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Submitter Features
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="orange" data-md-color-accent="orange"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/aws-deadline/deadline-cloud-for-cinema-4d" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    deadline-cloud-for-cinema-4d
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Cinema 4D + AWS Deadline Cloud" class="md-nav__button md-logo" aria-label="Cinema 4D + AWS Deadline Cloud" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cinema 4D + AWS Deadline Cloud
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/aws-deadline/deadline-cloud-for-cinema-4d" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    deadline-cloud-for-cinema-4d
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Submitter Features
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Submitter Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#key-benefits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Benefits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Benefits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#smart-asset-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Smart Asset Detection 🎯
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚙️ Advanced Settings ⚙️
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interface-walkthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Walkthrough
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interface Walkthrough">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-job-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Job Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#job-specific-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Job-Specific Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-tabs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional Tabs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tile-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tile Rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tile Rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-enable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Enable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downloading-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloading Outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-logging-for-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Logging for Debugging
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed Logging for Debugging">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-detailed-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Use Detailed Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-the-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing the Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#important-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq-and-glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ and Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Get Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#key-benefits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Benefits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Benefits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#smart-asset-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Smart Asset Detection 🎯
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚙️ Advanced Settings ⚙️
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#interface-walkthrough" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Walkthrough
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Interface Walkthrough">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-job-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared Job Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#job-specific-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Job-Specific Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#optional-tabs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional Tabs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tile-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tile Rendering
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tile Rendering">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-enable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Enable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downloading-outputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downloading Outputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-logging-for-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Logging for Debugging
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed Logging for Debugging">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-detailed-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Use Detailed Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewing-the-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Viewing the Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#important-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="what-the-submitter-can-do">What the Submitter Can Do<a class="headerlink" href="#what-the-submitter-can-do" title="Permanent link">&para;</a></h1>
+<p>The Cinema 4D submitter transforms your rendering workflow with powerful automation and intelligent features.</p>
+<h2 id="key-benefits">Key Benefits<a class="headerlink" href="#key-benefits" title="Permanent link">&para;</a></h2>
+<h3 id="smart-asset-detection">🎯 Smart Asset Detection 🎯<a class="headerlink" href="#smart-asset-detection" title="Permanent link">&para;</a></h3>
+<p>Automatically finds and includes all textures, models, and other files your scene needs. No more missing asset errors or manual file hunting.</p>
+<h3 id="advanced-settings">⚙️ Advanced Settings ⚙️<a class="headerlink" href="#advanced-settings" title="Permanent link">&para;</a></h3>
+<p>Provides additional configuration options beyond basic settings, allowing you to customize output paths, frame ranges, takes, and error checking to fit your workflow.</p>
+<h2 id="interface-walkthrough">Interface Walkthrough<a class="headerlink" href="#interface-walkthrough" title="Permanent link">&para;</a></h2>
+<p>The submitter interface has several tabs to configure your job.</p>
+<h3 id="shared-job-settings">Shared Job Settings<a class="headerlink" href="#shared-job-settings" title="Permanent link">&para;</a></h3>
+<p>Settings that apply to the entire job:</p>
+<ul>
+<li><strong>Farm Selection</strong> - Choose which farm your job will render on</li>
+<li><strong>Queue Selection</strong> - Select the specific queue within your chosen farm</li>
+<li><strong>Job Name</strong> - Give your render job a descriptive name</li>
+<li><strong>Job Description</strong> - Add optional details about your render job</li>
+<li><strong>Priority</strong> - Set job priority for queue management</li>
+<li><strong>Initial State</strong> - Control whether the job starts immediately or remains paused</li>
+<li><strong>Max Failed Tasks Count</strong> - Maximum number of tasks that can fail before the job is marked as failed</li>
+<li><strong>Max Retries Per Task</strong> - Number of times a failed task will be retried</li>
+<li><strong>Max Worker Count</strong> - Maximum number of workers that can work on this job simultaneously</li>
+<li><strong>Conda Packages</strong> - Specify additional conda packages required for your render</li>
+<li><strong>Conda Channels</strong> - Define custom conda channels for package installation</li>
+</ul>
+<p><img alt="Shared Job Settings" src="../images/shared-job-settings.png" /></p>
+<h3 id="job-specific-settings">Job-Specific Settings<a class="headerlink" href="#job-specific-settings" title="Permanent link">&para;</a></h3>
+<p>Settings specific to your Cinema 4D render:</p>
+<ul>
+<li><strong>Override Output Path</strong> - Override the main render output path from your scene settings</li>
+<li><strong>Override Multipass Path</strong> - Override the multipass output path for additional render passes</li>
+<li><strong>Takes</strong> - Select which Cinema 4D takes to render</li>
+<li><strong>Override Frame Range</strong> - Override the frame range from your scene settings</li>
+<li><strong>Automatic Error Checking</strong> - Optional checkbox to activate/deactivate error checking during rendering</li>
+<li><strong>Activate detailed logging</strong> - Enable detailed logging to capture detailed logs for debugging rendering issues. When enabled, debug logs are automatically captured and printed to the job output for easy review</li>
+<li><strong>Task Run Timeout</strong> - Maximum time allowed for each task to complete</li>
+<li><strong>Cinema 4D Launch Timeout</strong> - Maximum time allowed for Cinema 4D to start up</li>
+<li><strong>Cinema 4D Shutdown Timeout</strong> - Maximum time allowed for Cinema 4D to shut down cleanly</li>
+<li><strong>Save Cinema 4D Project with Assets</strong> - Prevents missing file errors during rendering by creating a temporary copy of your project with all assets and fixing file paths before submission. Uses more disk space and submission time</li>
+<li><strong>Use cached text during render</strong> - Prevents incorrect or missing text by re-animating the text on the worker using the cached fonts for each frame. Will increase rendering time.</li>
+<li><strong>Tile Rendering</strong> - Split each frame into a grid of tiles that render in parallel across multiple workers, then automatically assemble into the final image. Configure the number of columns and rows (1–99 each, default 2×2). See <a href="#tile-rendering">Tile Rendering</a> below for details.</li>
+</ul>
+<p><img alt="Job-Specific Settings" src="../images/job-specific-settings.png" /></p>
+<h3 id="optional-tabs">Optional Tabs<a class="headerlink" href="#optional-tabs" title="Permanent link">&para;</a></h3>
+<p><strong>Job Attachments</strong> (optional) - Select which files will be uploaded and attached to the job. Files are automatically detected and attached by default.</p>
+<p><strong>Host Requirements</strong> (optional) - Allows you to specify which types of hosts will be eligible for picking up tasks for this job.</p>
+<p>The submitter handles the technical details so you can focus on your creative work.</p>
+<h2 id="tile-rendering">Tile Rendering<a class="headerlink" href="#tile-rendering" title="Permanent link">&para;</a></h2>
+<p>Tile rendering splits each frame into a grid of smaller tiles that render independently across multiple workers, then automatically assembles them into the final full-resolution image. This is useful for large or complex single-frame scenes where a single frame takes a long time to render.</p>
+<h3 id="how-to-enable">How to Enable<a class="headerlink" href="#how-to-enable" title="Permanent link">&para;</a></h3>
+<ol>
+<li>In the <strong>Job-Specific Settings</strong> tab, find the <strong>Tile Rendering</strong> group</li>
+<li>Check <strong>Enable Tile Rendering</strong></li>
+<li>Set the number of <strong>Columns</strong> and <strong>Rows</strong> for the tile grid (default: 2×2)</li>
+</ol>
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<p>When enabled, the submitter creates a two-step job for each take:</p>
+<ol>
+<li><strong>Render step</strong> — Each tile is a separate task. A 3×3 grid produces 9 tile tasks per frame, each rendering only its assigned tile.</li>
+<li><strong>Assembly step</strong> — After all tiles for a frame finish, an assembly task automatically stitches them into the final full-resolution image. Both beauty and multi-pass outputs are assembled.</li>
+</ol>
+<p>No manual stitching or external tools required.</p>
+<h3 id="downloading-outputs">Downloading Outputs<a class="headerlink" href="#downloading-outputs" title="Permanent link">&para;</a></h3>
+<p>The Render step produces intermediary tile image files (e.g. <code>image_0_tile_0_0.png</code>, <code>image_0_tile_1_0.png</code>, …) that are used as input for assembly. If you only need the final composited images, download the output from the <strong>Assemble Tiles</strong> step rather than the Render step. The Assemble Tiles step contains only the final full-resolution images with all tiles stitched together.</p>
+<hr />
+<h2 id="detailed-logging-for-debugging">Detailed Logging for Debugging<a class="headerlink" href="#detailed-logging-for-debugging" title="Permanent link">&para;</a></h2>
+<p>The <strong>Activate detailed logging</strong> feature helps you troubleshoot rendering issues by capturing detailed logs.</p>
+<h3 id="when-to-use-detailed-logging">When to Use Detailed Logging<a class="headerlink" href="#when-to-use-detailed-logging" title="Permanent link">&para;</a></h3>
+<p>Enable detailed logging when you need to:
+- Debug Redshift rendering issues or unexpected behavior
+- Investigate rendering artifacts or errors
+- Analyze renderer performance and behavior
+- Capture detailed information for technical support</p>
+<h3 id="how-it-works_1">How It Works<a class="headerlink" href="#how-it-works_1" title="Permanent link">&para;</a></h3>
+<p>When you enable the "Activate detailed logging" checkbox in the Job-Specific Settings:</p>
+<ol>
+<li><strong>Log Capture</strong> - The system automatically enables Redshift debug logging by setting the <code>REDSHIFT_DEBUGCAPTURE</code> environment variable</li>
+<li><strong>Log Output</strong> - After rendering completes, all Redshift logs are automatically printed to the job output for easy review</li>
+</ol>
+<h3 id="viewing-the-logs">Viewing the Logs<a class="headerlink" href="#viewing-the-logs" title="Permanent link">&para;</a></h3>
+<p>To view the detailed logs:</p>
+<ol>
+<li>Open Deadline Cloud monitor</li>
+<li>Navigate to your completed job</li>
+<li>Right-click on a task and select "View logs"</li>
+<li>Enable the "View logs for all tasks" button</li>
+<li>Scroll through the task run logs to find the "Shut down DetailedLogging" section for detailed logs.</li>
+</ol>
+<p>The Redshift logs are output in HTML format and include timestamps at the start of each line. If you want to save and view the logs in a web browser without timestamps, you can use the provided cleanup utility:</p>
+<ol>
+<li>Download the detailed log file from Deadline Cloud Monitor (right-click on task → "Download logs")</li>
+<li>Run the cleanup script with the log file path:
+   <code>bash
+   cd deadline-cloud-for-cinema-4d/scripts
+   python clean_redshift_detailed_logs.py /path/to/detailed_logs.log</code>
+   Or run it without arguments and enter the path when prompted:
+   <code>bash
+   python clean_redshift_detailed_logs.py</code></li>
+<li>Open the generated <code>redshift_log_cleaned.html</code> file in your web browser</li>
+</ol>
+<p>The cleanup script automatically extracts the Redshift HTML logs from the detailed log file and removes timestamp prefixes (e.g., <code>2024/11/17 14:23:45-08:00</code>) from each line, making the logs easier to read and compare.</p>
+<h3 id="important-notes">Important Notes<a class="headerlink" href="#important-notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Detailed logging is <strong>disabled by default</strong> to minimize overhead</li>
+<li>Only enable it when you need to debug specific issues</li>
+<li>Logs are captured on a per-job basis - each job has its own log output</li>
+<li>The feature works across Windows, Linux worker nodes</li>
+</ul>
+<hr />
+<p><a href="../faq-and-glossary/">FAQ and Glossary →</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.share"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
