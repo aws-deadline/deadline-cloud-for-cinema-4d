@@ -922,7 +922,7 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
     asset_references.input_filenames = temp_assets
 
 
-def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType(0)):  # type: ignore[call-overload]
+def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: ignore[call-overload]
     """
     Creates and returns a submission dialog for rendering jobs.
 
