@@ -99,7 +99,12 @@ def show_submitter():
             prefix="scene_with_assets_", dir=scene_dir_path
         ) as temp_dir:
             app.setStyleSheet(C4D_STYLE)  # type: ignore[attr-defined]
-            w = _show_submitter(temp_dir, None)
+            if is_windows():
+                w = _show_submitter(
+                    temp_dir, None, Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint
+                )
+            else:
+                w = _show_submitter(temp_dir, None)
             w.setStyleSheet(C4D_STYLE)
             w.exec_()
     except Exception:
