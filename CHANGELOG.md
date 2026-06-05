@@ -1,4 +1,5 @@
-## 0.11.2 (2026-06-05)
+
+## 0.11.3 (2026-06-05)
 
 ### Bug Fixes
 * Fixed an issue where the submitter dialog could lose focus and go behind the Cinema 4D main window when the parent window was clicked. (#457)
