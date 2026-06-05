@@ -102,7 +102,7 @@ This repo includes three skills in `skills/` (following the [Agent Skills standa
 ## External References
 
 - **Cinema 4D Python SDK:** https://developers.maxon.net/docs/py/2026/
-- **User Guide:** https://aws-deadline.github.io/deadline-cloud-for-cinema-4d
+- **User Guide:** https://docs.aws.amazon.com/deadline-cloud/latest/userguide/maxon-cinema-4d.html
 - **Public conda recipes:** https://github.com/aws-deadline/deadline-cloud-samples
 - **OpenJD Adaptor Runtime:** https://github.com/OpenJobDescription/openjd-adaptor-runtime-for-python
 - **Software architecture:** `docs/software_arch.md`

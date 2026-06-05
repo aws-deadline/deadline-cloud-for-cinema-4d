@@ -1,6 +1,6 @@
 # AWS Deadline Cloud for Cinema 4D
 
-### [User guide](https://aws-deadline.github.io/) | [Service documentation](https://docs.aws.amazon.com/deadline-cloud/) | [Deadline Cloud on GitHub](https://github.com/aws-deadline/) 
+### [User guide](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/maxon-cinema-4d.html) | [Service documentation](https://docs.aws.amazon.com/deadline-cloud/) | [Deadline Cloud on GitHub](https://github.com/aws-deadline/) 
 
 [![pypi](https://img.shields.io/pypi/v/deadline-cloud-for-cinema-4d.svg?style=flat)](https://pypi.python.org/pypi/deadline-cloud-for-cinema-4d)
 [![python](https://img.shields.io/pypi/pyversions/deadline-cloud-for-cinema-4d.svg?style=flat)](https://pypi.python.org/pypi/deadline-cloud-for-cinema-4d)
@@ -8,7 +8,7 @@
 
 AWS Deadline Cloud for Cinema 4D is a Python package that allows users to create [Deadline Cloud][deadline-cloud] jobs from within Cinema 4D. It provides both the implementation of a Cinema 4D extension for your workstation that helps you offload the computation for your rendering workloads to Deadline Cloud to free up your workstation's compute for other tasks, and the implementation of a command-line adaptor application based on the [Open Job Description (OpenJD) Adaptor Runtime][openjd-adaptor-runtime] that improves Deadline Cloud's ability to run Cinema 4D efficiently on your render farm.
 
-For instructions on installing and using this integration, visit the [user guide](https://aws-deadline.github.io/deadline-cloud-for-cinema-4d).
+For instructions on installing and using this integration, visit the [user guide](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/maxon-cinema-4d.html).
 
 [cmf-ubl]: https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/cmf-ubl.html
 [deadline-cloud]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/what-is-deadline-cloud.html
@@ -227,7 +227,7 @@ We take all security reports seriously. When we receive such reports, we will in
 
 ## Telemetry
 
-See [telemetry](https://github.com/aws-deadline/deadline-cloud-for-cinema-4d/blob/release/docs/telemetry.md) for more information.
+See [telemetry](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/opt-out.html) for more information.
 
 ## Troubleshooting
 

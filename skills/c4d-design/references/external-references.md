@@ -17,7 +17,7 @@ Use these links when designing features. Only fetch URLs when the keywords match
 | openjd, session, job template, step, task, environment, action | [OpenJD Sessions](https://github.com/OpenJobDescription/openjd-sessions-for-python) | OpenJD Sessions for Python — runtime library for executing Open Job Description jobs |
 | adaptor, runtime, lifecycle, daemon, run | [OpenJD Adaptor Runtime](https://github.com/OpenJobDescription/openjd-adaptor-runtime-for-python) | OpenJD Adaptor Runtime — base framework for the cinema4d-openjd CLI |
 | conda, recipes, packaging, smf | [Deadline Cloud Samples](https://github.com/aws-deadline/deadline-cloud-samples) | Public conda recipes and samples for Cinema 4D, Arnold, V-Ray, INSYDIUM |
-| user guide, setup, submitter, installation | [User Guide](https://aws-deadline.github.io/deadline-cloud-for-cinema-4d) | Official Cinema 4D for Deadline Cloud user guide |
+| user guide, setup, submitter, installation | [User Guide](https://docs.aws.amazon.com/deadline-cloud/latest/userguide/maxon-cinema-4d.html) | Official Cinema 4D for Deadline Cloud user guide |
 | software architecture, adaptor, submitter, client | [Software Architecture](../../../docs/software_arch.md) | Architecture overview of submitter and adaptor components |
 
 ## Plugin Documentation
