@@ -1,8 +1,3 @@
-## 0.11.2 (2026-06-05)
-
-### Bug Fixes
-* The submitter window now stays in the foreground when the parent Cinema 4D window is clicked, preventing it from getting lost behind other windows. (#452)
-* Fixed an issue where jobs with long file paths containing apostrophes could fail on Windows due to exceeding the 260 character path limit. (#443)
 
 ## 0.11.1 (2026-04-22)
 
