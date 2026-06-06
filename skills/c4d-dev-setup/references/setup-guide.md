@@ -139,6 +139,8 @@ chmod +x ~/Desktop/Cinema4D.command
 
 Integration tests are currently only supported on Windows.
 
+> **Important:** The Python version used for installing pywin32 must match Cinema 4D's bundled Python (3.11 for Cinema 4D 2026). Using a different version (e.g., 3.13) causes DLL conflicts at runtime. You can verify Cinema 4D's Python version by checking the `resource/modules/python/libs/` folder inside the Cinema 4D installation directory.
+
 Install pywin32 to Cinema 4D's Python:
 ```powershell
 pip install pywin32==308 -t "C:\Program Files\Maxon Cinema 4D {VERSION}\resource\modules\python\libs\win64\lib\site-packages"
