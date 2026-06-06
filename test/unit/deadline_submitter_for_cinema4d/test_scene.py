@@ -5,7 +5,13 @@ from unittest import mock
 
 import pytest
 
-from deadline.cinema4d_submitter.scene import Animation, FrameRange, RendererNames, Scene
+from deadline.cinema4d_submitter.scene import (
+    Animation,
+    FrameRange,
+    RendererNames,
+    Scene,
+    UnsupportedRendererError,
+)
 
 
 def test_renderer_names():
@@ -35,6 +41,23 @@ def test_renderer():
     renderer = Scene.renderer(render_data=render_data)
     assert renderer is not None
     assert renderer == "standard"
+
+
+@mock.patch("c4d.RDATA_RENDERENGINE", 0)
+def test_renderer_unsupported_raises_error():
+    """Verify that an unsupported renderer ID raises UnsupportedRendererError."""
+    # 300001061 is the Viewport Renderer
+    render_data = {0: 300001061}
+    with pytest.raises(UnsupportedRendererError):
+        Scene.renderer(render_data=render_data)
+
+
+@mock.patch("c4d.RDATA_RENDERENGINE", 0)
+def test_renderer_unknown_id_raises_error():
+    """Verify that any unknown renderer ID raises UnsupportedRendererError."""
+    render_data = {0: 9999999}
+    with pytest.raises(UnsupportedRendererError):
+        Scene.renderer(render_data=render_data)
 
 
 class TestAnimation:

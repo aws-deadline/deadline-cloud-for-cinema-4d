@@ -13,6 +13,31 @@ Functionality used for querying scene settings
 """
 
 
+class UnsupportedRendererError(Exception):
+    """Raised when the scene uses a renderer not supported for Deadline Cloud submission."""
+
+    def __init__(self, render_id: int):
+        self.render_id = render_id
+        # Try to get the renderer's display name from Cinema 4D's plugin registry
+        renderer_name = None
+        try:
+            plugin = c4d.plugins.FindPlugin(render_id, c4d.PLUGINTYPE_VIDEOPOST)
+            if plugin:
+                renderer_name = plugin.GetName()
+        except Exception:
+            pass
+        if not renderer_name:
+            renderer_name = str(render_id)
+
+        supported = ", ".join(r.name.replace("_", " ").title() for r in RendererNames)
+        super().__init__(
+            f"Unsupported Renderer\n\n"
+            f'The selected renderer "{renderer_name}" is not supported for Deadline Cloud rendering.\n\n'
+            f"Supported renderers: {supported}.\n\n"
+            f"Please change your renderer in Render Settings before submitting."
+        )
+
+
 class RendererNames(IntEnum):
     """
     A collection of supported renderers and their respective name.
@@ -120,13 +145,20 @@ class Scene:
     @staticmethod
     def renderer(render_data=None) -> str:
         """
-        Returns the name of the current renderer as defined in the scene
+        Returns the name of the current renderer as defined in the scene.
+
+        Raises:
+            UnsupportedRendererError: If the renderer ID is not in the supported
+                RendererNames enum.
         """
         if render_data is None:
             doc = c4d.documents.GetActiveDocument()
             render_data = doc.GetActiveRenderData()
         render_id = render_data[c4d.RDATA_RENDERENGINE]
-        return RendererNames(render_id).name
+        try:
+            return RendererNames(render_id).name
+        except ValueError:
+            raise UnsupportedRendererError(render_id)
 
     @staticmethod
     def get_output_directories(render_data=None, take=None) -> set[str]:

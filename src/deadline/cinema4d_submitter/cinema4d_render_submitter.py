@@ -33,7 +33,7 @@ from .detailed_logging_utils import get_detailed_logging_environment
 from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
 from .warning_collector import warning_collector
 from .platform_utils import is_windows
-from .scene import Animation, Scene
+from .scene import Animation, Scene, UnsupportedRendererError
 from .style import C4D_STYLE
 from .takes import TakeSelection
 from .template_timeout_patcher import add_timeouts_to_job_template
@@ -107,6 +107,8 @@ def show_submitter():
                 w = _show_submitter(temp_dir, None)
             w.setStyleSheet(C4D_STYLE)
             w.exec_()
+    except UnsupportedRendererError as e:
+        c4d.gui.MessageDialog(str(e))
     except Exception:
         print("Deadline UI launch failed")
         import traceback
