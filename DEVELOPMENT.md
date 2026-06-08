@@ -250,13 +250,30 @@ You can also run `c4dpy` and `Commandline.exe` separately and set the license in
    1. `set C4D_LOCATION=<Cinema 4D location>` on Windows Command or `$env:C4D_LOCATION = <Cinema 4D location>` on Windows Powershell.
       1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2026\`. This location would be automatically used if the directory exists.
 2. For running the adaptor tests, we would need to install `pywin32` to the installation paths as its an adaptor dependency.
+
+   > **Important: Python version must match Cinema 4D's bundled Python.**
+   >
+   > Cinema 4D 2026 bundles Python 3.11. Your system Python and hatch must also use 3.11 to avoid DLL version conflicts.
+   >
+   > Using a different version (e.g., 3.13) will cause pywin32 DLLs to be built for the wrong version, resulting in:
+   > ```
+   > ImportError: Module use of python313.dll conflicts with this version of Python.
+   > ```
+   >
+   > To ensure compatibility:
+   > 1. Install Python 3.11 and make it your default (`python --version` should show 3.11.x)
+   > 2. Install hatch using Python 3.11 (`python -m pip install hatch`)
+   > 3. Use Python 3.11's pip for the pywin32 install below
+   >
+   > You can verify Cinema 4D's Python version by checking the `resource/modules/python/libs/` folder inside your Cinema 4D installation directory.
+
    2.1 Run `pip install pywin32==308 -t <your Python site-packages location>`
        * e.g. `pip install pywin32==308 -t "C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\lib\site-packages"`
    
    During testing, pywin32's version 308 was required because of other dependencies requiring this version.
    2.2. Copy PyWin32 DLLs (there are some post installation things required for PyWin32):
     * Copy `pythoncom311.dll` and `pywintypes311.dll`.
-    * From: `C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\Lib\site-packages\pywin32_system32`
+    * From: `C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\lib\site-packages\pywin32_system32`
     * To: `C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\dlls`
 3. Set the environment variable `PYTHONIOENCODING` to `utf-8` so that the test can use non-ASCII characters.
 
