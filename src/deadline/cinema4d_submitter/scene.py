@@ -13,31 +13,6 @@ Functionality used for querying scene settings
 """
 
 
-class UnsupportedRendererError(Exception):
-    """Raised when the scene uses a renderer not supported for Deadline Cloud submission."""
-
-    def __init__(self, render_id: int):
-        self.render_id = render_id
-        # Try to get the renderer's display name from Cinema 4D's plugin registry
-        renderer_name = None
-        try:
-            plugin = c4d.plugins.FindPlugin(render_id, c4d.PLUGINTYPE_VIDEOPOST)
-            if plugin:
-                renderer_name = plugin.GetName()
-        except Exception:
-            pass
-        if not renderer_name:
-            renderer_name = str(render_id)
-
-        supported = ", ".join(r.name.replace("_", " ").title() for r in RendererNames)
-        super().__init__(
-            f"Unsupported Renderer\n\n"
-            f'The selected renderer "{renderer_name}" is not supported for Deadline Cloud rendering.\n\n'
-            f"Supported renderers: {supported}.\n\n"
-            f"Please change your renderer in Render Settings before submitting."
-        )
-
-
 class RendererNames(IntEnum):
     """
     A collection of supported renderers and their respective name.
@@ -46,7 +21,7 @@ class RendererNames(IntEnum):
     # native
     standard = 0
     physical = 1023342
-    # previewhardware = 300001061  # Not supported for submission
+    viewport_renderer = 300001061
 
     # 3rd party, now acquired as maxon default
     redshift = 1036219
@@ -57,6 +32,85 @@ class RendererNames(IntEnum):
     corona = 1030480
     cycles = 1035287
     octane = 1029525
+
+
+# Renderers that are fully verified to work on Deadline Cloud
+VERIFIED_RENDERERS = {
+    RendererNames.standard,
+    RendererNames.physical,
+    RendererNames.redshift,
+}
+
+# 3rd party renderers that require plugins installed on workers
+THIRD_PARTY_PLUGIN_RENDERERS = {
+    RendererNames.arnold,
+    RendererNames.vray,
+}
+
+# Renderers not supported on Deadline Cloud
+UNSUPPORTED_RENDERERS = {
+    RendererNames.octane,
+    RendererNames.corona,
+    RendererNames.cycles,
+}
+
+# Renderers that work but produce viewport-quality output (not a full render)
+VIEWPORT_RENDERERS = {
+    RendererNames.viewport_renderer,
+}
+
+
+def _get_renderer_display_name(render_id: int) -> str:
+    """Gets the renderer's display name from Cinema 4D's plugin registry.
+    Falls back to the numeric ID if the plugin can't be found."""
+    try:
+        plugin = c4d.plugins.FindPlugin(render_id, c4d.PLUGINTYPE_VIDEOPOST)
+        if plugin:
+            return plugin.GetName()
+    except Exception:
+        # FindPlugin may fail if the plugin isn't loaded or C4D is not fully initialized.
+        pass
+    return str(render_id)
+
+
+def get_renderer_warning(render_id: int) -> Optional[str]:
+    """
+    Returns a warning message for the given renderer ID, or None if no warning is needed.
+    """
+    renderer_name = _get_renderer_display_name(render_id)
+
+    try:
+        renderer = RendererNames(render_id)
+    except ValueError:
+        # Unknown renderer not in enum
+        return (
+            f'The selected renderer "{renderer_name}" has not been verified for '
+            f"Deadline Cloud rendering. It may not produce expected results."
+        )
+
+    if renderer in VERIFIED_RENDERERS:
+        return None
+
+    if renderer in THIRD_PARTY_PLUGIN_RENDERERS:
+        return (
+            f'The selected renderer "{renderer_name}" is a third-party '
+            f"plugin. Ensure it is installed and licensed on your Deadline Cloud workers."
+        )
+
+    if renderer in UNSUPPORTED_RENDERERS:
+        return (
+            f'The selected renderer "{renderer_name}" is not supported '
+            f"on Deadline Cloud. Please change your renderer in Render Settings before submitting."
+        )
+
+    if renderer in VIEWPORT_RENDERERS:
+        return (
+            f'The selected renderer "{renderer_name}" produces viewport-quality output, '
+            f"not a full render. The output will look like a viewport screenshot "
+            f"rather than a production render."
+        )
+
+    return None
 
 
 class Animation:
@@ -146,10 +200,8 @@ class Scene:
     def renderer(render_data=None) -> str:
         """
         Returns the name of the current renderer as defined in the scene.
-
-        Raises:
-            UnsupportedRendererError: If the renderer ID is not in the supported
-                RendererNames enum.
+        For unknown renderers not in the RendererNames enum, returns the string
+        representation of the renderer ID.
         """
         if render_data is None:
             doc = c4d.documents.GetActiveDocument()
@@ -158,7 +210,9 @@ class Scene:
         try:
             return RendererNames(render_id).name
         except ValueError:
-            raise UnsupportedRendererError(render_id)
+            # Renderer ID not in enum — return the ID as a string so the submitter
+            # can still open. The warning is handled separately by get_renderer_warning().
+            return str(render_id)
 
     @staticmethod
     def get_output_directories(render_data=None, take=None) -> set[str]:

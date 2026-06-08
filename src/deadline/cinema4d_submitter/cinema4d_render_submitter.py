@@ -33,7 +33,7 @@ from .detailed_logging_utils import get_detailed_logging_environment
 from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
 from .warning_collector import warning_collector
 from .platform_utils import is_windows
-from .scene import Animation, Scene, UnsupportedRendererError
+from .scene import Animation, Scene, get_renderer_warning
 from .style import C4D_STYLE
 from .takes import TakeSelection
 from .template_timeout_patcher import add_timeouts_to_job_template
@@ -77,6 +77,9 @@ def show_submitter():
     if _prompt_save_current_document() is False:
         return
 
+    if _check_renderer_warning() is False:
+        return
+
     try:
         app = QtWidgets.QApplication.instance()
         if not app:
@@ -107,8 +110,6 @@ def show_submitter():
                 w = _show_submitter(temp_dir, None)
             w.setStyleSheet(C4D_STYLE)
             w.exec_()
-    except UnsupportedRendererError as e:
-        c4d.gui.MessageDialog(str(e))
     except Exception:
         print("Deadline UI launch failed")
         import traceback
@@ -439,6 +440,21 @@ def _prompt_save_current_document():
     c4d.documents.InsertBaseDocument(doc)
     # Update UI
     c4d.EventAdd()
+    return True
+
+
+def _check_renderer_warning() -> bool:
+    """
+    Checks if the active renderer requires a warning.
+    Shows a question dialog and returns False if the user chooses not to continue.
+    Returns True if no warning is needed or the user chooses to continue.
+    """
+    doc = c4d.documents.GetActiveDocument()
+    render_data = doc.GetActiveRenderData()
+    render_id = render_data[c4d.RDATA_RENDERENGINE]
+    warning = get_renderer_warning(render_id)
+    if warning:
+        return c4d.gui.QuestionDialog(warning + "\n\nDo you want to continue?")
     return True
 
 
