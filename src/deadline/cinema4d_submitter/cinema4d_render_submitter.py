@@ -1,4 +1,5 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+import logging
 import os
 import re
 import tempfile
@@ -32,6 +33,7 @@ from .data_classes import (
 from .detailed_logging_utils import get_detailed_logging_environment
 from .font_utils import scene_has_fonts, get_font_manager_environment, FONTS_DIR
 from .warning_collector import warning_collector
+from .warning_logging_handler import WarningCollectorHandler
 from .platform_utils import is_windows
 from .scene import Animation, Scene, get_renderer_warning
 from .style import C4D_STYLE
@@ -41,6 +43,10 @@ from .tile_utils import build_assembly_step, build_tile_task_parameters
 from .ui.components import SceneSettingsWidget, SubmissionWarningDialog
 from ._yaml_utils import _build_embedded_yaml
 from .update_utils import check_and_show_update_dialog
+
+logger = logging.getLogger(__name__)
+if not any(isinstance(h, WarningCollectorHandler) for h in logger.handlers):
+    logger.addHandler(WarningCollectorHandler())
 
 LOADED = False
 
@@ -75,9 +81,6 @@ class TakeData:
 
 def show_submitter():
     if _prompt_save_current_document() is False:
-        return
-
-    if _check_renderer_warning() is False:
         return
 
     try:
@@ -440,21 +443,6 @@ def _prompt_save_current_document():
     c4d.documents.InsertBaseDocument(doc)
     # Update UI
     c4d.EventAdd()
-    return True
-
-
-def _check_renderer_warning() -> bool:
-    """
-    Checks if the active renderer requires a warning.
-    Shows a question dialog and returns False if the user chooses not to continue.
-    Returns True if no warning is needed or the user chooses to continue.
-    """
-    doc = c4d.documents.GetActiveDocument()
-    render_data = doc.GetActiveRenderData()
-    render_id = render_data[c4d.RDATA_RENDERENGINE]
-    warning = get_renderer_warning(render_id)
-    if warning:
-        return c4d.gui.QuestionDialog(warning + "\n\nDo you want to continue?")
     return True
 
 
@@ -967,6 +955,14 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: 
 
     auto_detected_attachments = setup_auto_detected_attachments(takes["take_data_list"])
     attachments = setup_attachments(render_settings)
+
+    # Check for renderer warnings
+    # (must be after setup_auto_detected_attachments which clears warnings)
+    render_data = doc.GetActiveRenderData()
+    render_id = render_data[c4d.RDATA_RENDERENGINE]
+    renderer_warning = get_renderer_warning(render_id)
+    if renderer_warning:
+        logger.warning(renderer_warning)
 
     conda_packages = get_conda_packages(doc)
 
