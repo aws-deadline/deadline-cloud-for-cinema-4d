@@ -65,6 +65,60 @@ class TestCinema4DHandler:
         with pytest.raises(RuntimeError, match="Failed to load the scene file"):
             handler.set_scene_file({"scene_file": "file.c4d"})
 
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_set_take_not_found_raises_error(self, mock_get_doc: Mock):
+        """Verify that set_take raises RuntimeError when the take name doesn't exist."""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Set up mock takes: "Main" and "A"
+        mock_main_take = Mock()
+        mock_main_take.GetName.return_value = "Main"
+        mock_main_take.GetChildren.return_value = []
+
+        mock_take_a = Mock()
+        mock_take_a.GetName.return_value = "A"
+        mock_take_a.GetChildren.return_value = []
+
+        mock_take_data = Mock()
+        mock_take_data.GetCurrentTake.return_value = mock_main_take
+        mock_main_take.GetChildren.return_value = [mock_take_a]
+
+        mock_doc = Mock()
+        mock_doc.GetTakeData.return_value = mock_take_data
+        mock_get_doc.return_value = mock_doc
+
+        with pytest.raises(RuntimeError, match="Take not found: NonExistentTake"):
+            handler.set_take({"take": "NonExistentTake"})
+
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_set_take_found_sets_take(self, mock_get_doc: Mock):
+        """Verify that set_take correctly sets the take when it exists."""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Set up mock takes: "Main" and "A"
+        mock_main_take = Mock()
+        mock_main_take.GetName.return_value = "Main"
+        mock_main_take.GetChildren.return_value = []
+
+        mock_take_a = Mock()
+        mock_take_a.GetName.return_value = "A"
+        mock_take_a.GetChildren.return_value = []
+
+        mock_take_data = Mock()
+        mock_take_data.GetCurrentTake.return_value = mock_main_take
+        mock_main_take.GetChildren.return_value = [mock_take_a]
+
+        mock_doc = Mock()
+        mock_doc.GetTakeData.return_value = mock_take_data
+        mock_get_doc.return_value = mock_doc
+
+        handler.set_take({"take": "A"})
+        mock_take_data.SetCurrentTake.assert_called_once_with(mock_take_a)
+
 
 class TestShouldCacheText:
     """Tests for the use_cached_text method"""
