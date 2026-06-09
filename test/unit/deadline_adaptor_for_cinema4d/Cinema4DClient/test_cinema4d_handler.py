@@ -853,9 +853,16 @@ class TestStartRenderChunkRange:
 
         mock_doc = Mock()
         mock_render_data = MagicMock()
+
+        def mock_getitem(self, key):
+            if key == c4d.RDATA_FRAMERATE:
+                return 24
+            return MagicMock()
+
+        mock_render_data.__getitem__ = mock_getitem
         mock_render_data.GetDataInstance = Mock()
         mock_doc.GetActiveRenderData.return_value = mock_render_data
-        mock_doc.GetFps.return_value = 24
+        mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
 
         mock_render_document.return_value = c4d.RENDERRESULT_OK
@@ -864,7 +871,8 @@ class TestStartRenderChunkRange:
             handler.start_render({"frame": "10-20"})
 
         # FRAMEFROM should be called with start frame, FRAMETO with end frame
-        # BaseTime is called as BaseTime(frame, fps)
+        # BaseTime is called as BaseTime(frame, fps) using RDATA_FRAMERATE (24),
+        # not doc.GetFps() (30)
         start_frame, end_frame, fps = 10, 20, 24
         calls = mock_base_time.call_args_list
         assert (start_frame, fps) in [c.args for c in calls]

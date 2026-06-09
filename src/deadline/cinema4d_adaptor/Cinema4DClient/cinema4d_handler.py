@@ -279,7 +279,7 @@ class Cinema4DHandler:
         start_frame, end_frame = self._parse_frame_range(frame_value)
         self.render_kwargs[FRAME_KEY] = start_frame
 
-        fps = self.doc.GetFps()
+        fps = self.render_data[c4d.RDATA_FRAMERATE]
         self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(start_frame, fps)
         self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(end_frame, fps)
         self.render_data[c4d.RDATA_FRAMESTEP] = 1

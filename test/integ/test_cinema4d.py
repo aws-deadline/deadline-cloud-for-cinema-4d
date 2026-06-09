@@ -36,6 +36,7 @@ import pytest
         "redshift_tiles",
         "phy_apos_path",
         "physical_chunking",
+        "physical_custom_fps",
     ],
 )
 def test_integ(
