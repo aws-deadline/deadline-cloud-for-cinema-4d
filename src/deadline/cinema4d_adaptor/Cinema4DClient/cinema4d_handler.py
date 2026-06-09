@@ -378,13 +378,16 @@ class Cinema4DHandler:
         main_take = take_data.GetCurrentTake()
         all_takes = [main_take] + get_child_takes(main_take)
 
-        take = None
+        matched_take = None
         for take in all_takes:
             if take.GetName() == take_name:
+                matched_take = take
                 break
-        if take is None:
-            print("Error: take not found: %s" % take_name)
-        take_data.SetCurrentTake(take)
+
+        if matched_take is None:
+            raise RuntimeError("Take not found: %s" % take_name)
+
+        take_data.SetCurrentTake(matched_take)
 
     def use_cached_text(self, data: dict) -> None:
         """
