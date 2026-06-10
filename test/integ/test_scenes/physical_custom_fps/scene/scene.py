@@ -48,11 +48,10 @@ def main():
     render_data[c4d.RDATA_FRAMERATE_SYNC_WITH_PROJECT] = False
     render_data[c4d.RDATA_FRAMERATE] = 12.0
 
-    # Render frames 6-8 at 12fps — cube moves between different positions
-    # With fix (12fps): frames map to correct times, cube at expected positions
-    # With bug (30fps): frames map to wrong times, cube at different positions
-    frame_start = c4d.BaseTime(6, 12)
-    frame_end = c4d.BaseTime(8, 12)
+    # Render frames 0-12 at 12fps = 0s to 1s of animation
+    # Cube moves from X=0 to X=500, so each frame should show different position
+    frame_start = c4d.BaseTime(0, 12)
+    frame_end = c4d.BaseTime(12, 12)
     render_data[c4d.RDATA_FRAMEFROM] = frame_start
     render_data[c4d.RDATA_FRAMETO] = frame_end
 

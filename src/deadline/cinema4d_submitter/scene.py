@@ -124,24 +124,21 @@ class Animation:
         """
         Returns the current frame number from Cinema 4D.
         """
-        doc = c4d.documents.GetActiveDocument()
-        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(doc.GetFps()))
+        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(int(data[c4d.RDATA_FRAMERATE])))
 
     @staticmethod
     def start_frame(data) -> int:
         """
         Returns the start frame for the scenes render
         """
-        doc = c4d.documents.GetActiveDocument()
-        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(doc.GetFps()))
+        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(int(data[c4d.RDATA_FRAMERATE])))
 
     @staticmethod
     def end_frame(data) -> int:
         """
         Returns the End frame for the scenes Render
         """
-        doc = c4d.documents.GetActiveDocument()
-        return int(data[c4d.RDATA_FRAMETO].GetFrame(doc.GetFps()))
+        return int(data[c4d.RDATA_FRAMETO].GetFrame(int(data[c4d.RDATA_FRAMERATE])))
 
     @staticmethod
     def frame_step(data) -> int:

@@ -113,6 +113,7 @@ class TestAnimation:
         MOCK_RDATA_FRAMESTEP = 1007
         MOCK_RDATA_FRAME_RANGE_STRING = 1008
         MOCK_RDATA_FRAMESEQUENCE = 1009
+        MOCK_RDATA_FRAMERATE = 1010
 
     class MockGetFrame:
         def __init__(self, value):
@@ -136,6 +137,7 @@ class TestAnimation:
                 TestAnimation.MockC4d.MOCK_RDATA_FRAMESTEP: "2",
                 TestAnimation.MockC4d.MOCK_RDATA_FRAME_RANGE_STRING: "3,6-10:2,15-17",
                 TestAnimation.MockC4d.MOCK_RDATA_FRAMESEQUENCE: self.frame_spec_type,
+                TestAnimation.MockC4d.MOCK_RDATA_FRAMERATE: 30,
             }[key]
 
     @pytest.fixture
@@ -159,6 +161,7 @@ class TestAnimation:
             mock_c4d.RDATA_FRAMEFROM = TestAnimation.MockC4d.MOCK_RDATA_FRAMEFROM
             mock_c4d.RDATA_FRAMETO = TestAnimation.MockC4d.MOCK_RDATA_FRAMETO
             mock_c4d.RDATA_FRAMESTEP = TestAnimation.MockC4d.MOCK_RDATA_FRAMESTEP
+            mock_c4d.RDATA_FRAMERATE = TestAnimation.MockC4d.MOCK_RDATA_FRAMERATE
             mock_c4d.RDATA_FRAME_RANGE_STRING = TestAnimation.MockC4d.MOCK_RDATA_FRAME_RANGE_STRING
             mock_c4d.RDATA_FRAMESEQUENCE = TestAnimation.MockC4d.MOCK_RDATA_FRAMESEQUENCE
             yield mock_c4d

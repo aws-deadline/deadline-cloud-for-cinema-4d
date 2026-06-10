@@ -18,7 +18,7 @@ parameterValues:
 - name: TargetChunkDuration
   value: 0
 - name: Frames
-  value: 15-20
+  value: 0-12
 - name: CondaPackages
   value: cinema4d=2026.* cinema4d-openjd=0.11.*
 - name: CondaChannels
