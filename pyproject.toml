@@ -30,7 +30,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "deadline[gui] >= 0.55.1,< 0.59",
+    "deadline[gui] >= 0.59, <0.60",
     "openjd-adaptor-runtime >= 0.7,< 0.10",
     # fonttools is Windows-only due to Cinema 4D technical limitations
     "fonttools >=4.59.2, <4.64; sys_platform == 'win32'",
@@ -38,7 +38,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = [
-    "deadline[gui] >= 0.55.1,< 0.59",
+    "deadline[gui] >= 0.59, <0.60",
     "PySide6-Essentials == 6.8.3",  # Use 6.8 to align with VFXP 2026: https://vfxplatform.com/#reference-platform
 ]
 

@@ -1031,6 +1031,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: 
         f=f,
         show_host_requirements_tab=True,
         submitter_info=submitter_info,
+        use_deadline_cloud_v2_channel=True,
     )
 
     return submitter_dialog
