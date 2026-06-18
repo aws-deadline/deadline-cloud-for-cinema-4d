@@ -1,3 +1,9 @@
+## 0.11.4 (2026-06-18)
+
+### Bug Fixes
+* Fixed incorrect frame time mapping by using RDATA_FRAMERATE instead of doc.GetFps() in both the submitter and handler, ensuring frames are correctly mapped during rendering. (#462)
+* The submitter now shows a categorized warning message when an unsupported renderer is selected, instead of silently crashing. (#460)
+* An error is now properly raised when attempting to set a take that does not exist, instead of failing silently. (#461)
 
 ## 0.11.3 (2026-06-05)
 
