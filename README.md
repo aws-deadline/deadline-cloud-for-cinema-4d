@@ -252,7 +252,7 @@ To remedy these errors, you can switch to a later version of Cinema 4D which res
 
 Plugins for Cinema 4D fall into two categories when running on Deadline Cloud:
 
-- **3rd party plugins** — plugins that Deadline Cloud has packaged for you (Redshift, Arnold, V-Ray, X-Particles, Cargo, Red Giant). Use these if your scenes depend on one of the supported renderers or vendor plugins below.
+- **3rd party plugins** — common Cinema 4D vendor plugins with Deadline Cloud support (Redshift, Arnold, V-Ray, X-Particles, Cargo, Red Giant). Most are delivered as conda packages; Cargo works with no extra fleet or submitter setup, and Red Giant uses a host configuration script instead of a conda recipe. See the per-plugin sections below for setup details.
 - **Custom plugins** — a delivery mechanism for any other plugins you bring yourself (custom scripts, in-house tools, or 3rd party plugins not packaged by Deadline Cloud). Plugins are downloaded from S3 onto the worker at session start and registered with Cinema 4D.
 
 ### 3rd party plugins
