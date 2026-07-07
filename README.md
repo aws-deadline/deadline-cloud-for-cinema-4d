@@ -248,90 +248,133 @@ To remedy these errors, you can switch to a later version of Cinema 4D which res
 "C:\Program Files\Maxon Cinema 4D 2024\resource\modules\python\libs\win64\python.exe"-m pip install MISSING_MODULE
 ```
 
-## 3rd party plugins
+## Plugins
+
+Plugins for Cinema 4D fall into two categories when running on Deadline Cloud:
+
+- **3rd party plugins** — common Cinema 4D vendor plugins with Deadline Cloud support (Redshift, Arnold, V-Ray, X-Particles, Cargo, Red Giant). Most are delivered as conda packages; Cargo works with no extra fleet or submitter setup, and Red Giant uses a host configuration script instead of a conda recipe. See the per-plugin sections below for setup details.
+- **Custom plugins** — a delivery mechanism for any other plugins you bring yourself (custom scripts, in-house tools, or 3rd party plugins not packaged by Deadline Cloud). Plugins are downloaded from S3 onto the worker at session start and registered with Cinema 4D.
+
+### 3rd party plugins
 
 Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Redshift and Arnold plugins are available on service-managed fleets automatically. Many additional plugins can be installed on service-managed fleets using a [conda recipe](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/README.md) from the [deadline-cloud-samples repository](https://github.com/aws-deadline/deadline-cloud-samples).
 
-
-
-### Autodesk Arnold
+#### Autodesk Arnold
 
 Arnold is supported automatically on Cinema 4D 2025 (Windows and Linux) and 2026 (Windows) on Deadline Cloud service-managed fleets.
 
 For customer-managed fleets, follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/main/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe supports both Windows and Linux fleets.
 
-#### Installation instructions for workstations
+##### Installation instructions for workstations
 
 1. Install the Cinema 4D to Arnold plugin by following [instructions here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Installation_ci_Installing_Arnold_for_Cinema_4D_on_Windows_html).
 2. [Optional] Verify that Arnold works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Tutorials_ci_Learning_Scenes_html).
 3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter**. The `cinema4d-c4dtoa` option should be added to the Conda Packages parameter automatically.
 
-#### Licensing instructions
+##### Licensing instructions
 
 Arnold licensing is available automatically on service-managed fleets. To set up licensing on a customer-managed fleet, you can use a [Deadline Cloud license endpoint][cmf-ubl] or [set up your own licenses](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_ci_Getting_Started_ci_Licensing_Arnold_html).
 
-#### Version compatibility
+##### Version compatibility
 
 C4DtoA v4.8.3.1 is supported for Cinema 4D 2025 (Windows and Linux) and 2026 (Windows) on Deadline Cloud service-managed fleets. More recent versions should still be compatible with the latest versions of Cinema 4D. For more information on compatibility, refer to the [C4DtoA release notes](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_481_html).
 
-### Chaos Group V-Ray
+#### Chaos Group V-Ray
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-vray-2025/README.md) to build the V-Ray for Cinema 4D conda package for service-managed or customer-managed fleets.
 
-#### Installation instructions for workstations
+##### Installation instructions for workstations
 
 1. Install the V-Ray for Cinema 4D plugin by [following instructions here](https://docs.chaos.com/display/VC4D/Installation).
    i. Choose "Workstation" install
 2. [Optional] Verify that "V-Ray" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://www.chaos.com/cloud/scenes?srsltid=AfmBOorJmV6Bugw1DTiIyfiA1gxANUxdp1tUaHOTdyZLJnBGJxLON8Xi#cinema-4d).
 3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-vray` in the Conda Packages parameter.
 
-#### Licensing instructions
+##### Licensing instructions
 
 V-Ray licensing is available by default on service-managed fleets. To set up licensing on a customer-managed fleet, you can use a [Deadline Cloud license endpoint][cmf-ubl] or [set up your own licenses](https://documentation.chaos.com/space/VC4D/116855120/Installation#Licensing).
 
-#### Version compatibility
+##### Version compatibility
 
 V-Ray for Cinema 4D v7.10.01 has been tested with Cinema 4D 2025 on Deadline Cloud. More recent versions should still be compatible with the latest versions of Cinema 4D. For more information on compatibility refer to the [V-Ray System Requirements](https://documentation.chaos.com/space/VC4D/116855102/System+Requirements).
 
-### INSYDIUM X-Particles
+#### INSYDIUM X-Particles
 
 Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/mainline/conda_recipes/cinema4d-insydium-2025/README.md) to build the INSYDIUM conda package which includes X-Particles.
 
-#### Installation instructions for workstations
+##### Installation instructions for workstations
 
 1. Install by following [instructions here](https://insydium.ltd/help/?q=1608)
 2. [Optional] Verify that "INSYDIUM" works with Cinema 4D locally. You can test this using any of the sample scenes available [here](https://insydium.ltd/support-home/content-repository/).
 3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter** with `cinema4d-insydium` in the Conda Packages parameter.
 
-#### Licensing instructions
+##### Licensing instructions
 
 Licensing is built into your Insydium plugin by default. For more information, see [here](https://insydium.ltd/help/?q=1608)
 
-#### Version compatibility
+##### Version compatibility
 
 Insydium Fused v2024.4.1 has been tested with Cinema 4D 2025 on Deadline Cloud. More recent versions should still be compatible with the latest versions of Cinema 4D. For more information on compatibility, refer to the [Insydium Compatibility Documentation](https://insydium.ltd/help/?q=2025).
 
-### Kit-Bash Cargo
+#### Kit-Bash Cargo
 
 [Cargo](https://kit-bash.myshopify.com/pages/cargo) works without requiring extra fleet or submitter configuration. Use **File > Save Project with Assets** to save your scene before submitting.
 
-### Red Giant
+#### Red Giant
 
 Red Giant is different from other plugins as it requires a host configuration script instead of a conda recipe. Follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/tree/mainline/host_configuration_scripts/cinema4d/cinema4d_redgiant) to set up Red Giant.
 
-#### Installation instructions for workstations
+##### Installation instructions for workstations
 
 1. Install the Red Giant plugin by [following instructions here](https://support.maxon.net/hc/en-us/articles/212354258-How-do-I-install-my-products)
 2. [Optional] Learn how to use Red Giant inside Cinema 4D with [this demonstration video](https://www.youtube.com/watch?v=L6B1REPQoPU)
 3. Submit to Deadline Cloud from Cinema 4D by using menu command **Extensions > AWS Deadline Cloud Submitter**
 
-#### Licensing instructions
+##### Licensing instructions
 
 Red Giant licensing is available by default on service-managed fleets. To set up licensing on a customer-managed fleet, you can use a [Deadline Cloud license endpoint][cmf-ubl].
 
-#### Version compatibility
+##### Version compatibility
 
 Red Giant 2025.6.0 has been tested with Cinema 4D 2025 on Deadline Cloud. More recent versions should still be compatible with the latest versions of Cinema 4D. For more information on compatibility, refer to [the Maxon system requirements](https://support.maxon.net/hc/en-us/articles/16797414314012-System-Requirements-for-Maxon-Products).
+
+### Custom plugins
+
+The `cinema4d` conda package ships a customer plugin hook that downloads your own Cinema 4D plugins from S3 onto the render worker at the start of each session, then registers them with Cinema 4D via `g_additionalModulePath` so they load at startup. Use this when you have plugins (custom scripts, in-house tools, or 3rd party plugins not packaged by Deadline Cloud) that you want available on workers without baking them into a conda package.
+
+The customer plugin hook is available for the following Cinema 4D versions:
+
+| Cinema 4D version | Linux | Windows |
+|-------------------|-------|---------|
+| 2024              | n/a¹  | not yet² |
+| 2025              | ✅    | ✅      |
+| 2026              | ✅    | ✅      |
+
+¹ Cinema 4D 2024 is only supported on Windows by Deadline Cloud — see the [Compatibility](#compatibility) section.
+² Customer plugin hook support for Cinema 4D 2024 on Windows is planned and will be added once verified.
+
+The sync looks for plugins in your Job Attachments S3 bucket at:
+
+- `s3://<DEADLINE_JA_S3_BUCKET>/[<DEADLINE_JA_ROOT_PREFIX>/]plugins/generic/` — generic plugin files copied for every DCC
+- `s3://<DEADLINE_JA_S3_BUCKET>/[<DEADLINE_JA_ROOT_PREFIX>/]plugins/<os>/cinema4d/<C4D_VERSION>/` — Cinema 4D version-specific plugins, where `<os>` is `linux` or `windows`
+
+The downloaded plugins are written to `${OPENJD_SESSION_WORKING_DIR}/deadline-plugins/cinema4d` on the worker and prepended to `g_additionalModulePath`. The S3 paths are optional — if no plugins are present, the sync silently skips, so the feature is safe to leave enabled even when you have no custom plugins.
+
+#### Uploading plugins
+
+Upload your Cinema 4D plugin folders to the matching S3 path before submitting jobs. For example, for a plugin called `MyPlugin` targeting Cinema 4D 2026 on Linux workers:
+
+```sh
+aws s3 cp --recursive ./MyPlugin/ s3://<your-ja-bucket>/<prefix>/plugins/linux/cinema4d/2026/MyPlugin/
+```
+
+For the same plugin targeting Windows workers:
+
+```sh
+aws s3 cp --recursive ./MyPlugin/ s3://<your-ja-bucket>/<prefix>/plugins/windows/cinema4d/2026/MyPlugin/
+```
+
+The queue's job role must have `s3:GetObject` and `s3:ListBucket` permissions on the prefix.
 
 
 ## License
