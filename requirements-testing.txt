@@ -9,7 +9,7 @@ twine == 6.*
 types-pyyaml == 6.*
 # for integ tests
 numpy == 2.*; python_version >= "3.12"
-numpy >= 2.0, < 2.5; python_version < "3.12"
+numpy >= 2.2.6, < 2.5; python_version < "3.12"
 pillow == 12.*
 openjd-cli == 0.7.*
 fonttools >= 4.0.0
