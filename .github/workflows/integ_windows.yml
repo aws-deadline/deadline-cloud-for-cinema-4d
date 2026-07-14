@@ -1,0 +1,157 @@
+name: "Integ Tests - Windows"
+
+on:
+  workflow_call:
+    secrets:
+      AWS_OIDC_ROLE_ARN:
+        required: true
+      AWS_REGION:
+        required: true
+      RLM_PORT:
+        required: true
+      INSTALLER_BUCKET:
+        required: true
+      INSTALLER_BUCKET_EXPECTED_OWNER:
+        required: true
+      LICENSE_ROLE_ARN:
+        required: true
+      BASTION_INSTANCE_TAG:
+        required: true
+
+jobs:
+  IntegWindows:
+    if: >-
+      github.repository == 'aws-deadline/deadline-cloud-for-cinema-4d' &&
+      github.ref == 'refs/heads/mainline'
+    name: Integration Tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      LICENSE_ENDPOINT_DNS: "127.0.0.1"
+      C4D_LICENSE_PORT: ${{ secrets.RLM_PORT }}
+      redshift_LICENSE: "${{ secrets.RLM_PORT }}@127.0.0.1"
+      g_licenseServerRLM: "127.0.0.1:${{ secrets.RLM_PORT }}"
+      g_licenseModel: "LICENSEMODEL::RLM"
+      C4D_VERSION: "2026"
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Install hatch
+        run: pip install --upgrade hatch
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - name: Install and configure Cinema 4D
+        shell: pwsh
+        run: |
+          pip install boto3
+          python ./pipeline/setup-runner.py --versions $env:C4D_VERSION
+
+      - name: Bring up license tunnel and run tests
+        shell: pwsh
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          RLM_PORT: ${{ secrets.RLM_PORT }}
+          LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+          BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+        run: |
+          $rlmPort = $env:RLM_PORT.Trim()
+          $region  = $env:AWS_REGION.Trim()
+
+          # Install SSM plugin
+          $ssmUrl = "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/windows/SessionManagerPluginSetup.exe"
+          Invoke-WebRequest -Uri $ssmUrl -OutFile "$env:RUNNER_TEMP\ssm-plugin.exe" -UseBasicParsing
+          Start-Process -FilePath "$env:RUNNER_TEMP\ssm-plugin.exe" -ArgumentList "/quiet" -Wait
+          $ssmPluginDir = Join-Path $env:ProgramFiles "Amazon\SessionManagerPlugin\bin"
+          $env:PATH = "$ssmPluginDir;$env:PATH"
+          if (-not (Get-Command "session-manager-plugin.exe" -ErrorAction SilentlyContinue)) {
+            Write-Error "Session Manager plugin was not found after installation"
+            exit 1
+          }
+
+          # Configure a profile that assumes the licensing role. Credentials come
+          # from the OIDC creds already in the environment (credential_source=
+          # Environment), so the role is assumed transparently on each
+          # --profile license call -- nothing is printed or stored by us.
+          aws configure set profile.license.role_arn $env:LICENSE_ROLE_ARN
+          aws configure set profile.license.credential_source Environment
+          aws configure set profile.license.region $region
+
+          # Resolve the bastion instance by tag at runtime (don't hardcode the ID).
+          # The bastion listens on the RLM port and relays to the license
+          # server itself -- CI only ever opens a session on the bastion.
+          $bastion = (aws ec2 describe-instances `
+            --filters "Name=tag:Name,Values=$($env:BASTION_INSTANCE_TAG)" "Name=instance-state-name,Values=running" `
+            --query 'Reservations[0].Instances[0].InstanceId' `
+            --profile license --region $region --output text).Trim()
+          if (-not $bastion -or $bastion -eq "None") { Write-Error "Bastion host not found"; exit 1 }
+
+          # Start SSM port forwarding to the bastion (params via file to avoid
+          # quoting issues). Redirect stdout to a log file so we can capture
+          # the SessionId for deterministic teardown.
+          $paramsFile = Join-Path $env:RUNNER_TEMP "ssm_params.json"
+          @{portNumber=@($rlmPort);localPortNumber=@($rlmPort)} | ConvertTo-Json -Compress | Out-File -FilePath $paramsFile -Encoding ascii
+          $ssmLog = Join-Path $env:RUNNER_TEMP "ssm.log"
+          Start-Process -FilePath "aws" -ArgumentList "ssm start-session --target $bastion --document-name DccInteg-PortForwardToLicenseServer --parameters file://$paramsFile --profile license --region $region" -NoNewWindow -RedirectStandardOutput $ssmLog
+
+          # Wait for port (retry up to 30s)
+          $ready = $false
+          for ($i = 0; $i -lt 6; $i++) {
+            Start-Sleep -Seconds 5
+            $t = Test-NetConnection -ComputerName 127.0.0.1 -Port $rlmPort -WarningAction SilentlyContinue
+            if ($t.TcpTestSucceeded) { $ready = $true; break }
+          }
+          if (-not $ready) { Write-Error "SSM port forward not up after 30s"; if (Test-Path $ssmLog) { Get-Content $ssmLog }; exit 1 }
+          Write-Host "License tunnel up via SSM"
+
+          # Capture the SSM session id so the teardown step can terminate the
+          # session on the (shared, long-lived) license host explicitly, rather
+          # than relying on SSM's disconnect detection to reap it.
+          $ssmSessionId = ""
+          if (Test-Path $ssmLog) {
+            $m = Select-String -Path $ssmLog -Pattern 'SessionId: ([A-Za-z0-9._-]+)' | Select-Object -First 1
+            if ($m) { $ssmSessionId = $m.Matches[0].Groups[1].Value }
+          }
+          "SSM_SESSION_ID=$ssmSessionId" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          if ($ssmSessionId) { Write-Host "SSM session id: $ssmSessionId" } else { Write-Host "SSM session id: <not captured>" }
+
+          hatch run integ-xa11y:test
+
+      - name: Tear down
+        if: always()
+        shell: pwsh
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          $region = $env:AWS_REGION.Trim()
+          # Terminate the SSM session on the shared license host so the
+          # port-forward is released immediately instead of lingering until
+          # SSM notices the dropped connection. The license profile was
+          # configured in the previous step (credential_source=Environment).
+          if ($env:SSM_SESSION_ID) {
+            aws ssm terminate-session --session-id $env:SSM_SESSION_ID --profile license --region $region 2>$null
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "Failed to terminate SSM session $env:SSM_SESSION_ID"
+              $global:LASTEXITCODE = 0
+            }
+          }
+          # Kill the local plugin as a fallback (harmless on ephemeral runners).
+          Get-Process -Name "session-manager-plugin" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue

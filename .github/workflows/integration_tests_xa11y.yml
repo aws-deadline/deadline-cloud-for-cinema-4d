@@ -1,0 +1,35 @@
+name: "Cinema 4D xa11y Integration Tests"
+
+on:
+  push:
+    branches:
+      - mainline
+
+jobs:
+  windows:
+    uses: ./.github/workflows/integ_windows.yml
+    secrets:
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      RLM_PORT: ${{ secrets.RLM_PORT }}
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+      LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+      BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+    permissions:
+      id-token: write
+      contents: read
+
+  macos:
+    uses: ./.github/workflows/integ_macos.yml
+    secrets:
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      RLM_PORT: ${{ secrets.RLM_PORT }}
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+      LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+      BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+    permissions:
+      id-token: write
+      contents: read
