@@ -610,7 +610,7 @@ def test_integ(
     assert (
         backend.unmatched_requests == []
     ), f"submitter hit routes the mock doesn't implement: {backend.unmatched_requests}"
-    for op in ("ListFarms", "GetFarm", "GetQueue", "ListQueueEnvironments"):
+    for op in ("ListFarms", "ListQueues", "ListQueueEnvironments"):
         assert (
             backend.call_counts.get(op, 0) >= 1
         ), f"expected the submitter to call {op}; saw {dict(backend.call_counts)}"

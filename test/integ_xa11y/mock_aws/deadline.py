@@ -4,8 +4,9 @@
 
 Scope is grounded on reality: the operation set and response shapes were
 captured by running the real xa11y Export-bundle test against a live farm with
-the API logger in ``AutoOpenSubmitter.pyp`` enabled. The backend implements four
-operations -- ``ListFarms``, ``GetFarm``, ``GetQueue``, ``ListQueueEnvironments``.
+the API logger in ``AutoOpenSubmitter.pyp`` enabled. The backend implements six
+operations -- ``ListFarms``, ``GetFarm``, ``ListQueues``, ``GetQueue``,
+``ListQueueEnvironments``, ``ListStorageProfilesForQueue``.
 
 Protocol: Deadline Cloud speaks **rest-json**. Routes carry the ``/2023-10-12``
 API prefix; path parameters like ``{farmId}`` are templated into the URI. The
@@ -145,6 +146,20 @@ class MockDeadlineBackend:
         if farmId != self.farm_id or queueId != self.queue_id:
             raise _resource_not_found("queue", queueId, "GetQueue")
         return dict(data.GET_QUEUE_RESPONSE)
+
+    @route("GET", "/farms/{farmId}/queues", "ListQueues")
+    def list_queues(self, *, farmId: str, **kwargs) -> dict:
+        if farmId != self.farm_id:
+            raise _resource_not_found("farm", farmId, "ListQueues")
+        return {"queues": [data.GET_QUEUE_RESPONSE]}
+
+    @route(
+        "GET", "/farms/{farmId}/queues/{queueId}/storage-profiles", "ListStorageProfilesForQueue"
+    )
+    def list_storage_profiles_for_queue(self, *, farmId: str, queueId: str, **kwargs) -> dict:
+        if farmId != self.farm_id or queueId != self.queue_id:
+            raise _resource_not_found("queue", queueId, "ListStorageProfilesForQueue")
+        return {"storageProfiles": []}
 
     @route("GET", "/farms/{farmId}/queues/{queueId}/environments", "ListQueueEnvironments")
     def list_queue_environments(self, *, farmId: str, queueId: str) -> dict:
