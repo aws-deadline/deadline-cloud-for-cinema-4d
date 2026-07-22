@@ -50,7 +50,7 @@ Summary of steps:
 7. Build the package (`hatch build`)
 8. Build the installer (optional, requires InstallBuilder)
 9. Install the submitter into Cinema 4D
-10. Set up integration test environment (Windows only)
+10. Set up Windows integration rendering prerequisites, when applicable
 11. Display summary
 
 ## Troubleshooting

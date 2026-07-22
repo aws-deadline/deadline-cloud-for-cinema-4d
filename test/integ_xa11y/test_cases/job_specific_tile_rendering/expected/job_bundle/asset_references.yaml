@@ -1,9 +1,0 @@
-assetReferences:
-  inputs:
-    directories: []
-    filenames:
-    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/job_specific_tile_rendering/actual/job_specific_tile_rendering.c4d
-  outputs:
-    directories:
-    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/job_specific_tile_rendering/actual/renders
-  referencedPaths: []

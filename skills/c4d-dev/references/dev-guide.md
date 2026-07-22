@@ -11,7 +11,9 @@ Day-to-day development workflows. For architecture details, see the relevant AGE
 - Cinema 4D 2026: Python 3.11
 - Cinema 4D 2024-2025: Python 3.10
 
-For development, Python 3.10+ on your system is sufficient for unit tests. Integration tests require Windows and Cinema 4D's bundled Python.
+For development, Python 3.10+ on your system is sufficient for unit tests.
+Integration tests require Windows or macOS and Cinema 4D's bundled Python;
+render assertions run only on Windows.
 
 ## Build & Install Workflow
 

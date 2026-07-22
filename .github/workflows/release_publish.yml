@@ -29,7 +29,7 @@ jobs:
 
   UnitTests:
     needs: [TagRelease]
-    name: Unit and Integration Tests
+    name: Unit Tests
     uses: ./.github/workflows/code_quality.yml
     with:
       tag: ${{ needs.TagRelease.outputs.tag }}
@@ -65,13 +65,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
-  ManualTestGate:
-    needs: [TagRelease, BuildInstaller]
-    runs-on: ubuntu-latest
-    environment: release-gate
-    steps:
-      - run: echo "Manual testing approved for ${{ needs.TagRelease.outputs.tag }}"
 
   PreRelease:
       needs: [TagRelease, UnitTests, Xa11yWindows, Xa11yMacOS]
@@ -116,7 +109,7 @@ jobs:
          :
   
   ReleaseInstaller:
-    needs: [TagRelease, IsCondaReady, ManualTestGate]
+    needs: [TagRelease, IsCondaReady]
     uses: aws-deadline/.github/.github/workflows/reusable_release_installers.yml@mainline
     secrets: inherit
     permissions:

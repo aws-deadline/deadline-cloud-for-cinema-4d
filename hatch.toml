@@ -32,44 +32,18 @@ deps = "pip install -r requirements-release.txt"
 bump = "semantic-release -v --strict version --no-push --no-commit --no-tag --skip-build {args}"
 version = "semantic-release -v --strict version --print {args}"
 
+# Drives the real Deadline Cloud submitter dialog end-to-end with xa11y.
 [envs.integ]
-pre-install-commands = [
-  "pip install -r requirements-testing.txt"
-]
-
-[envs.integ.scripts]
-test = "pytest --no-cov {args:test/integ} -vvv --numprocesses=1"
-
-# xa11y-driven integration test. Drives the real Deadline Cloud submitter
-# dialog end-to-end. Will replace `integ` once we're happy with it.
-[envs.integ-xa11y]
 python = "3.11"
 pre-install-commands = [
   "pip install -r requirements-testing.txt"
 ]
 
-[envs.integ-xa11y.env-vars]
+[envs.integ.env-vars]
 PYTHONIOENCODING = "utf-8"
 
-[envs.integ-xa11y.scripts]
-test = "pytest --no-cov {args:test/integ_xa11y} -vvv --numprocesses=1"
+[envs.integ.scripts]
+test = "pytest --no-cov {args:test/integ} -vvv --numprocesses=1"
 
 [envs.installer.scripts]
 build-installer = "python {root}/scripts/build_installer_cli.py --installer-source-path {root}/installer/DeadlineCloudForCinema4dSubmitter.xml {args:}"
-
-[envs.integ-ci]
-pre-install-commands = [
-  "pip install -r requirements-testing.txt"
-]
-
-[[envs.integ-ci.matrix]]
-cinema4d = ["2025", "2026"]
-python = ["3.11"]
-
-[envs.integ-ci.env-vars]
-C4D_VERSION = "{matrix:cinema4d}"
-PYTHONIOENCODING = "utf-8"
-
-[envs.integ-ci.scripts]
-setup = "python ./pipeline/setup-runner.py --versions {matrix:cinema4d} {args}"
-integ = "pytest --no-cov {args:test/integ} -vvv --numprocesses=1"

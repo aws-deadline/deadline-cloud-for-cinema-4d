@@ -32,11 +32,13 @@ To develop the Python code in this repository you will need:
    of Python on the same system. When running unit tests against all supported Python versions, for instance.
 2. The [hatch](https://github.com/pypa/hatch) package installed (`pip install --upgrade hatch`) into your Python environment.
 3. An install of a supported version of Cinema 4D.
-4. A valid AWS Account.
-5. An AWS Deadline Cloud Farm to run jobs on. We recommend following the quickstart in the Deadline Cloud console to create a
-   Queue with the default Queue Environment, and a Service Managed Fleet.
 
-You can develop on any Windows workstation. 
+The xa11y integration suite uses an offline mock Deadline backend, so it does
+not require an AWS account or farm. A real AWS account, farm, queue, and fleet
+are only required when testing jobs on Deadline Cloud.
+
+Submitter and xa11y development are supported on Windows and macOS. Adaptor
+development is supported on Windows and Linux.
 
 ## Software Architecture
 
@@ -51,7 +53,7 @@ from any directory of this repository:
 * `hatch build` - To build the installable Python wheel and sdist packages into the `dist/` directory.
 * `hatch run test` - To run the PyTest unit tests found in the `test/unit` directory. See [Testing](#testing).
 * `hatch run all:test` - To run the PyTest unit tests against all available supported versions of Python.
-* `hatch run integ:test` - To run all the integration tests against your current build.
+* `hatch run integ:test` - To run the xa11y integration tests against your current build.
 * `hatch run lint` - To check that the package's formatting adheres to our standards.
 * `hatch run fmt` - To automatically reformat all code to adhere to our formatting standards.
 * `hatch shell` - Enter a shell environment that will have Python set up to import your development version of this package.
@@ -90,7 +92,7 @@ The tests for the plug-in have two forms:
 
 ##### Unit Tests
 
-Unit tests are all located under the `test/deadline_submitter_for_cinema4d/unit` directory of this repository. If you are adding
+Unit tests are located under the `test/unit/deadline_submitter_for_cinema4d/` directory of this repository. If you are adding
 or modifying functionality, then you will almost always want to be writing one or more unit tests to demonstrate that your
 logic behaves as expected and that future changes do not accidentally break your change.
 
@@ -186,7 +188,7 @@ This should have automatically added the latest patch onto the S3 bucket for the
 
 ##### Unit tests
 
-Unit tests are all located under the `test/deadline_adaptor_for_cinema4d/unit` directory of this repository. If you are adding
+Unit tests are located under the `test/unit/deadline_adaptor_for_cinema4d/` directory of this repository. If you are adding
 or modifying functionality, then you will almost always want to be writing one or more unit tests to demonstrate that your
 logic behaves as expected and that future changes do not accidentally break your change.
 
@@ -200,83 +202,34 @@ hatch run test
 
 ### Integration Tests
 
-We run integration tests by running it in Cinema 4D's python i.e. c4dpy for submitter and using Commandline.exe for adaptor tests. 
-
-#### Test Flow
-1. Scene generation:
-   - Each test case uses scene generation scripts to create test scenes (and assets if necessary)
-   - Scenes are created with specific configurations for testing different scenarios
-
-2. Job bundle generation:
-   - Generated scenes are processed through the submitter code
-   - Job bundles are exported to a temporary location within the /integ folder.
-
-3. Validation of job bundle:
-   - Exported bundles are compared against expected bundles
-   - Tests verify structure and content of the exports.
-
-4. Scene rendering:
-   - The job bundles are run using OpenJD `run` command with Cinema 4D Commandline. 
-
-5. Validation of output files:
-   - The generated output files are compared with expected scene files. 
+The xa11y suite launches the real Cinema 4D submitter, drives its UI against an
+offline mock Deadline backend, validates the exported job bundle, and renders
+the bundle on Windows. Cinema 4D and renderer licensing must be configured.
 
 #### Test Structure
 
-<pre>
-   /test
-      /integ
-         /test_scenes/           
-            /scene_1
-               /expected_job_bundle/      # Reference job bundle for validation
-                  asset_references.yaml
-                  parameter_values.yaml
-                  template.yaml 
-               /expected_job_output/
-                  renders/
-                     output files
-               /scene
-                  scene.py      # Contains test scene generation scripts
-         conftest.py            # Test configuration and fixtures
-         test_cinema4d.py       # Runs all the tests scenes in a parametrized fashion.
-</pre>
+```text
+test/integ/
+├── test_cinema4d.py               # Orchestrates scene build, UI export, and validation
+├── conftest.py                    # Cinema 4D and mock Deadline fixtures
+├── submitter_ui.py                # xa11y controls for the submitter dialog
+├── utils.py                       # Scene, bundle, and render helpers
+├── fixtures/auto_open_submitter/  # Test-only plugin that opens the submitter
+└── test_cases/<name>/
+    ├── input/
+    │   ├── scene.py               # Builds the Cinema 4D scene
+    │   └── configure.py           # Optional xa11y dialog configuration
+    ├── expected/
+    │   ├── job_bundle/            # Golden bundle files
+    │   └── renders/               # Golden render images
+    └── actual/                    # Gitignored runtime output
+```
 
-You would have to setup Cinema 4D and Redshift licensing before you run the tests.
-For Cinema 4D licensing, set environment variable by using `$env:g_licenseServerURL = <your-license-server-host>:<port>` on Windows Powershell. 
-For redshift licensing, set the environment variable by using `$env:redshift_LICENSE = <port>@<your-license-server-host>` on Windows Powershell. 
-Or
-You can also run `c4dpy` and `Commandline.exe` separately and set the license information there. 
-1. Set the environment variable `C4D_LOCATION` to the installation folder of Cinema 4D.
-   1. `set C4D_LOCATION=<Cinema 4D location>` on Windows Command or `$env:C4D_LOCATION = <Cinema 4D location>` on Windows Powershell.
-      1. The default location for `Cinema 4D` on Windows is `C:\Program Files\Maxon Cinema 4D 2026\`. This location would be automatically used if the directory exists.
-2. For running the adaptor tests, we would need to install `pywin32` to the installation paths as its an adaptor dependency.
+Run the suite with:
 
-   > **Important: Python version must match Cinema 4D's bundled Python.**
-   >
-   > Cinema 4D 2026 bundles Python 3.11. Your system Python and hatch must also use 3.11 to avoid DLL version conflicts.
-   >
-   > Using a different version (e.g., 3.13) will cause pywin32 DLLs to be built for the wrong version, resulting in:
-   > ```
-   > ImportError: Module use of python313.dll conflicts with this version of Python.
-   > ```
-   >
-   > To ensure compatibility:
-   > 1. Install Python 3.11 and make it your default (`python --version` should show 3.11.x)
-   > 2. Install hatch using Python 3.11 (`python -m pip install hatch`)
-   > 3. Use Python 3.11's pip for the pywin32 install below
-   >
-   > You can verify Cinema 4D's Python version by checking the `resource/modules/python/libs/` folder inside your Cinema 4D installation directory.
+```bash
+hatch run integ:test
+```
 
-   2.1 Run `pip install pywin32==308 -t <your Python site-packages location>`
-       * e.g. `pip install pywin32==308 -t "C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\lib\site-packages"`
-   
-   During testing, pywin32's version 308 was required because of other dependencies requiring this version.
-   2.2. Copy PyWin32 DLLs (there are some post installation things required for PyWin32):
-    * Copy `pythoncom311.dll` and `pywintypes311.dll`.
-    * From: `C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\lib\site-packages\pywin32_system32`
-    * To: `C:\Program Files\Maxon Cinema 4D 2026\resource\modules\python\libs\win64\dlls`
-3. Set the environment variable `PYTHONIOENCODING` to `utf-8` so that the test can use non-ASCII characters.
-
-
-3. Run `hatch run integ:test`
-
+See [`test/AGENTS.md`](test/AGENTS.md) for platform support, setup, focused runs,
+test-case authoring, selector discovery, and golden-bundle capture.

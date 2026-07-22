@@ -9,12 +9,7 @@ test/
 ├── unit/                    # Unit tests (always runnable, no Cinema 4D required)
 │   ├── deadline_adaptor_for_cinema4d/
 │   └── deadline_submitter_for_cinema4d/
-├── integ/                   # Integration tests (Windows only, requires Cinema 4D)
-│   ├── test_scenes/         # Test scene definitions
-│   ├── test_cinema4d.py     # Parametrized test runner
-│   ├── conftest.py          # Test fixtures
-│   └── utils.py             # Test utilities
-├── integ_xa11y/             # xa11y-driven submitter test, offline mock backend
+├── integ/                   # xa11y-driven submitter test, offline mock backend
 │   ├── test_cases/          # Self-contained cases: input/ expected/ actual/
 │   ├── test_cinema4d.py     # Drives the real submitter dialog via xa11y
 │   ├── submitter_ui.py      # C4D-specific controls; re-exports shared controls
@@ -33,7 +28,7 @@ hatch run test                                    # All unit tests
 hatch run test test/unit/<path>                   # One test file or directory
 hatch run test -k "test_name"                     # One test by name
 hatch run all:test                                # All supported Python versions
-hatch run integ:test                              # Integration tests (Windows only)
+hatch run integ:test                              # xa11y integration tests
 hatch run test-installer                          # Installer tests
 ```
 
@@ -43,77 +38,13 @@ Unit tests do NOT require Cinema 4D installed. They should use mocks for the `c4
 
 When adding new features or fixing bugs, always add unit tests.
 
-## Integration Tests (Windows Only)
-
-Integration tests are currently only supported on Windows. They require Cinema 4D installed with licensing configured.
-
-### Test flow
-
-1. **Scene generation**: Each test case uses scene generation scripts (`scene.py`) to create test scenes with specific configurations
-2. **Job bundle generation**: Generated scenes are processed through the submitter code, exporting job bundles to a temporary location
-3. **Job bundle validation**: Exported bundles are compared against expected bundles in `expected_job_bundle/`
-4. **Scene rendering**: Job bundles are run using OpenJD `run` command with Cinema 4D Commandline
-5. **Output validation**: Generated output files are compared with expected output files
-
-### Test scene structure
-
-```
-test/integ/test_scenes/<scene_name>/
-├── expected_job_bundle/      # Reference job bundle for validation
-│   ├── asset_references.yaml
-│   ├── parameter_values.yaml
-│   └── template.yaml
-├── expected_job_output/      # Expected render output
-│   └── renders/
-└── scene/
-    └── scene.py              # Scene generation script
-```
-
-### Existing test scenes
-
-| Scene | Renderer | Description |
-|-------|----------|-------------|
-| `physical` | Physical | Basic physical renderer test |
-| `phy_apos_path` | Physical | Path with special characters (apostrophes) |
-| `physical_chunking` | Physical | Frame chunking across tasks |
-| `physical_custom_fps` | Physical | Custom frames-per-second setting |
-| `physical_multi_takes` | Physical | Multiple takes rendering |
-| `physical_textured` | Physical | Scene with textures |
-| `physical_tiles` | Physical | Tile rendering |
-| `redshift` | Redshift | Basic Redshift render |
-| `redshift_takes` | Redshift | Redshift with multiple takes |
-| `redshift_textured` | Redshift | Redshift with textures |
-| `redshift_textured_nonascii` | Redshift | Non-ASCII path handling |
-| `redshift_tiles` | Redshift | Redshift tile rendering |
-
-### Adding a new test scene
-
-1. Create a new directory under `test/integ/test_scenes/<scene_name>/`
-2. Add a `scene/scene.py` script that generates the test scene programmatically
-3. Add `expected_job_bundle/` with the expected template, parameter values, and asset references
-4. Add `expected_job_output/` with expected render output files
-5. Add `<scene_name>` to the `@pytest.mark.parametrize("test_name", [...])` list in `test_cinema4d.py` so the runner picks it up
-
-### Running specific integration tests
-
-```bash
-hatch run integ:test -k "physical"
-hatch run integ:test -k "redshift"
-hatch run integ:test -k "redshift_tiles"
-```
-
-### xa11y-driven integration test (`test/integ_xa11y/`)
+## xa11y Integration Tests (`test/integ/`)
 
 Drives the **real Deadline Cloud submitter dialog** with
-[xa11y](https://xa11y.dev) instead of calling `internal_create_job_bundle()`
-directly. The existing `test/integ/` test calls `internal_create_job_bundle()`,
-which validates bundle generation but **skips the entire UI layer** (the Qt
-dialog, queue-environment loading, the Export button, the plugin entry point a
-user clicks). This test closes that gap: it launches the real Cinema 4D GUI with
+[xa11y](https://xa11y.dev). It launches the real Cinema 4D GUI with
 the real, unmodified plugin, opens the submitter as a user does, drives it via
 the OS accessibility tree, clicks **Export bundle**, and runs the same bundle/
-render assertions as the old test. Once we're confident in it, the plan is to
-delete `test/integ/` and rename this folder to `test/integ/`.
+render assertions as the previous suite.
 
 This file is the single source of truth for the suite — there is no separate
 README.
@@ -241,14 +172,14 @@ dump mode, which prints both settings tabs' accessibility trees and then stops
 (no Export):
 
 ```bash
-# macOS / Linux
-DIALOG_DUMP=1 hatch -e integ-xa11y run pytest --no-cov \
-    test/integ_xa11y/test_cinema4d.py --numprocesses=0 -s -k <case>
+# macOS
+DIALOG_DUMP=1 hatch -e integ run pytest --no-cov \
+    test/integ/test_cinema4d.py --numprocesses=0 -s -k <case>
 ```
 ```powershell
 # Windows PowerShell
-$env:DIALOG_DUMP=1; hatch -e integ-xa11y run pytest --no-cov `
-    test/integ_xa11y/test_cinema4d.py --numprocesses=0 -s -k <case>; $env:DIALOG_DUMP=$null
+$env:DIALOG_DUMP=1; hatch -e integ run pytest --no-cov `
+    test/integ/test_cinema4d.py --numprocesses=0 -s -k <case>; $env:DIALOG_DUMP=$null
 ```
 
 Each line is `<role> "<name>" value="<value>"`. Match on role + name. Shared
@@ -273,7 +204,7 @@ Two env vars slow a run down so a human can follow it. Both default to `0`
 ```powershell
 # Windows PowerShell: 5s per interaction, 60s artifact review
 $env:DIALOG_CONFIG_OBSERVE_DELAY_S=5; $env:ARTIFACT_REVIEW_DELAY_S=60
-hatch -e integ-xa11y run python -m pytest --no-cov test/integ_xa11y/test_cinema4d.py --numprocesses=0 -s -k <case>
+hatch -e integ run python -m pytest --no-cov test/integ/test_cinema4d.py --numprocesses=0 -s -k <case>
 $env:DIALOG_CONFIG_OBSERVE_DELAY_S=$null; $env:ARTIFACT_REVIEW_DELAY_S=$null
 ```
 
@@ -318,19 +249,19 @@ production.
   omit them too.
 
 ```bash
-hatch run integ-xa11y:test                        # all xa11y integ tests
+hatch run integ:test                              # all xa11y integ tests
 ```
 
-The `integ-xa11y:test` script hardcodes the `test/integ_xa11y` path and
+The `integ:test` script hardcodes the `test/integ` path and
 `--numprocesses=1`. Beware: any args you pass *replace* the path (hatch
-`{args:test/integ_xa11y}` falls back to the global `testpaths = ["test"]`), so
-`hatch run integ-xa11y:test -k physical` would scan the whole `test/` tree. To
+`{args:test/integ}` falls back to the global `testpaths = ["test"]`), so
+`hatch run integ:test -k physical` would scan the whole `test/` tree. To
 filter or run in-process (e.g. to see C4D/xa11y stdout, which xdist hides), call
 pytest directly with an explicit path — the test spawns its own subprocesses
 regardless of `--numprocesses`:
 
 ```bash
-hatch -e integ-xa11y run pytest --no-cov test/integ_xa11y/test_cinema4d.py \
+hatch -e integ run pytest --no-cov test/integ/test_cinema4d.py \
     --numprocesses=0 -s -k physical
 ```
 
@@ -367,56 +298,44 @@ exactly the three files (`template.yaml`, `parameter_values.yaml`,
 #### Adding / changing a case
 
 **Plain case (no UI interaction):**
-1. Create `test_cases/<name>/input/scene.py` (model it on `physical`'s).
-2. Add `"<name>"` to the `_CASES` list in `test_cinema4d.py`.
-3. Run it once (it fails — `expected/` is empty), capture the golden (below), re-run.
+1. Create `test/integ/test_cases/<name>/input/scene.py`, using the nearest
+   existing case as the model. The script receives the `actual/` directory as
+   `sys.argv[1]` and must save `<name>.c4d` there.
+2. Add `"<name>"` to `_CASES` in `test/integ/test_cinema4d.py`.
+3. Run the focused case. The missing expected bundle should fail after leaving
+   generated files in `actual/`.
+4. Capture the golden bundle, then rerun the focused case.
 
 **Configured case (drive the dialog before Export):** same, plus an
 `input/configure.py` with a top-level `configure(dialog)` using the
 `submitter_ui` page-object:
 
 ```python
-from test.integ_xa11y import submitter_ui as ui
+from test.integ import submitter_ui as ui
 
 def configure(dialog):
     ui.set_priority(dialog, 51)
     ui.set_detailed_logging(dialog, True)
 ```
 
-It runs after the dialog settles and before Export. See `submitter_ui.py` for
-the helpers and gotchas, and `shared_job_settings`'s `input/configure.py` for a worked example.
+It runs after the dialog settles and before Export. Reuse helpers from
+`submitter_ui.py`; add a C4D-specific helper there, plus a focused unit test in
+`test_submitter_ui.py`, when no helper exists. Do not guess accessibility
+selectors. Use `DIALOG_DUMP=1`, then verify new selectors on Windows and macOS.
+See `shared_job_settings/input/configure.py` for a worked example.
 
-**Capturing the golden bundle (manual):** after a run, the generated bundle is in
-the case's `actual/`. Copy the three files into `expected/job_bundle/`, replacing
-the absolute prefix up to (not including) `deadline-cloud-for-cinema-4d` with
-`PATH_TO_BE_REPLACED`, and **strip `jobEnvironments` from `template.yaml`** —
-it embeds the detailed-logging scripts (hundreds of lines that change with
-unrelated code edits), and the comparison ignores it anyway
-(`ignored_template_keys`), so committing it is pure noise:
+**Capturing the golden bundle:** after a run, the generated bundle is in the
+case's `actual/`. Parse the three bundle files as YAML, recursively replace the
+machine-specific path preceding `deadline-cloud-for-cinema-4d` with
+`PATH_TO_BE_REPLACED`, normalize path separators to `/`, and remove
+`jobEnvironments` from `template.yaml`. Serialize the result as block YAML
+under `expected/job_bundle/`, or `expected/<variant>/job_bundle/` for a
+parametrized case. On Windows, copy reviewed render PNGs from `actual/renders/`
+to the matching expected directory.
 
-```bash
-case=<name>
-parent="$(dirname "$(pwd)")"   # run from the repo root
-for f in template.yaml parameter_values.yaml asset_references.yaml; do
-  perl -pe "s{\Q$parent\E}{PATH_TO_BE_REPLACED}g" \
-    test/integ_xa11y/test_cases/$case/actual/$f \
-    > test/integ_xa11y/test_cases/$case/expected/job_bundle/$f
-done
-python - << 'EOF'
-import io, os, yaml
-from deadline.client.job_bundle._yaml import deadline_yaml_dump
-p = f"test/integ_xa11y/test_cases/{os.environ['case']}/expected/job_bundle/template.yaml"
-data = yaml.safe_load(open(p, encoding="utf-8"))
-data.pop("jobEnvironments", None)
-buf = io.StringIO(); deadline_yaml_dump(data, buf)
-open(p, "w", encoding="utf-8", newline="\n").write(buf.getvalue())
-EOF
-```
-
-The submitter sometimes emits `parameter_values.yaml` as single-line JSON; the
-comparison parses both, but commit block YAML (re-serialize with
-`deadline.client.job_bundle._yaml.deadline_yaml_dump`). The render PNGs
-(`expected/renders/`) are captured the same way and only compared on Windows.
+Use structured YAML operations rather than text substitutions. Review every
+golden diff; do not accept generated output without checking that it represents
+the intended behavior.
 
 **New mocked operation:** if a submitter change calls a Deadline operation the
 mock doesn't implement, the test fails its `unmatched_requests` assertion (and

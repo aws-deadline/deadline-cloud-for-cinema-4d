@@ -1,9 +1,0 @@
-assetReferences:
-  inputs:
-    directories: []
-    filenames:
-    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/physical_tiles_multi_takes/actual/physical_tiles_multi_takes.c4d
-  outputs:
-    directories:
-    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/physical_tiles_multi_takes/actual/renders
-  referencedPaths: []

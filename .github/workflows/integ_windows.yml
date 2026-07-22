@@ -133,7 +133,7 @@ jobs:
           "SSM_SESSION_ID=$ssmSessionId" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           if ($ssmSessionId) { Write-Host "SSM session id: $ssmSessionId" } else { Write-Host "SSM session id: <not captured>" }
 
-          hatch run integ-xa11y:test
+          hatch run integ:test
 
       - name: Tear down
         if: always()

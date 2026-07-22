@@ -64,8 +64,8 @@ jobs:
           # Create the hatch environment first so that pip's install output
           # (which can include marker-mismatch messages containing quotes)
           # doesn't pollute the captured Python path below.
-          hatch env create integ-xa11y
-          HATCH_PYTHON=$(hatch -e integ-xa11y run python -c "import os,sys; print(os.path.realpath(sys.executable))")
+          hatch env create integ
+          HATCH_PYTHON=$(hatch -e integ run python -c "import os,sys; print(os.path.realpath(sys.executable))")
           SETUP_PYTHON=$(python3 -c "import os,sys; print(os.path.realpath(sys.executable))")
           for BIN_PATH in "$SETUP_PYTHON" "$HATCH_PYTHON"; do
             sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
@@ -151,7 +151,7 @@ jobs:
           echo "SSM_SESSION_ID=$ssmSessionId" >> "$GITHUB_ENV"
           echo "SSM session id: ${ssmSessionId:-<not captured>}"
 
-          hatch run integ-xa11y:test
+          hatch run integ:test
 
       - name: Tear down
         if: always()

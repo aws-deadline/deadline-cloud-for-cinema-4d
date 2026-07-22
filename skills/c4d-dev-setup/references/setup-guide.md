@@ -135,9 +135,10 @@ echo '"/Applications/Maxon Cinema 4D {VERSION}/Cinema 4D.app/Contents/MacOS/Cine
 chmod +x ~/Desktop/Cinema4D.command
 ```
 
-## Step 10: Set Up Integration Test Environment (Windows Only)
+## Step 10: Set Up Windows Integration Rendering
 
-Integration tests are currently only supported on Windows.
+The xa11y suite also validates bundles on macOS. Its render stage runs only on
+Windows and requires the following additional setup.
 
 > **Important:** The Python version used for installing pywin32 must match Cinema 4D's bundled Python (3.11 for Cinema 4D 2026). Using a different version (e.g., 3.13) causes DLL conflicts at runtime. You can verify Cinema 4D's Python version by checking the `resource/modules/python/libs/` folder inside the Cinema 4D installation directory.
 
@@ -176,7 +177,7 @@ Quick Commands:
 - Unit tests:     hatch run test
 - Lint:           hatch run lint
 - Format:         hatch run fmt
-- Integ tests:    hatch run integ:test (Windows only)
+- Integ tests:    hatch run integ:test
 
 Next Steps:
 1. Configure Cinema 4D licensing for your environment

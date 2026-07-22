@@ -1,57 +1,41 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-from pathlib import Path
+
+"""Cinema 4D launch/render helpers and local normalization policy."""
+
+import contextlib
 import json
-import subprocess
 import os
+import site
+import subprocess
 import sys
-from difflib import unified_diff
-import re
-from yaml import safe_load, dump
+import time
+from datetime import datetime
+from pathlib import Path
 from unittest.mock import patch
 
+from deadline_test_fixtures.images import assert_images_close
+from deadline_test_fixtures.job_bundle import (
+    BundleNormalization,
+    assert_job_bundles_equal,
+)
+from yaml import safe_load
 
-import numpy as np
-import PIL.Image
+_T0 = time.monotonic()
+
+
+def log(msg: str) -> None:
+    elapsed = time.monotonic() - _T0
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    print(f"[integ {timestamp} +{elapsed:6.2f}s] {msg}", flush=True)
 
 
 def run_command(args: list[str]) -> subprocess.CompletedProcess[bytes]:
-    """
-    Runs a command and returns the output. Additionally, we also log the stdout/stderr
-    in case of a test failures.
-    """
-
     print(f"Args list: {args}")
     output = subprocess.run(args, capture_output=True, stdin=subprocess.DEVNULL)
-
     print(f"\nstdout:\n\n{output.stdout.decode('utf-8', errors='replace')}")
     print(f"\nstderr:\n\n{output.stderr.decode('utf-8', errors='replace')}")
-
     assert output.returncode == 0, f"Failed to run command {args}"
-
     return output
-
-
-def assert_is_valid_job_bundle(template_location: Path) -> None:
-    """
-    Runs the `openjd check` command and asserts that the job bundle is valid.
-    """
-    output = run_command(["openjd", "check", str(template_location), "--output", "json"])
-
-    output_json = json.loads(output.stdout)
-
-    assert output_json["status"] == "success"
-
-
-def create_c4d_job_bundle(
-    cinema4d_location: Path, scene_script_location: Path, path_to_create_job_bundle: Path
-) -> None:
-    """
-    Creates a job bundle by using 'c4dpy' to create a scene file and submit the job
-    using internal integ helpers.
-    """
-    run_command(
-        [str(cinema4d_location), str(scene_script_location), str(path_to_create_job_bundle)]
-    )
 
 
 def assert_openjd_run_with_cinema4d_successful(
@@ -59,37 +43,31 @@ def assert_openjd_run_with_cinema4d_successful(
     template_path: Path,
     params_path: Path,
 ) -> None:
-    """
-    Runs the steps for template using Open JD run with Cinema 4D.
-    Returns True if successful.
-    """
-    c4d_exe = cinema4d_location / (
-        "Commandline.exe" if sys.platform == "win32" else "bin" / Path("Commandline")
-    )
+    c4d_exe = resolve_c4d_exe(cinema4d_location, "Commandline")
     test_env = {
         "C4D_COMMANDLINE_EXECUTABLE": str(c4d_exe),
         "CINEMA4D_ADAPTOR_TESTING": "True",
     }
 
     with patch.dict(os.environ, test_env):
-        with open(template_path, encoding="utf-8") as f:
-            template = safe_load(f)
+        with open(template_path, encoding="utf-8") as file:
+            template = safe_load(file)
+        with open(params_path, encoding="utf-8") as file:
+            parameter_values = safe_load(file)["parameterValues"]
 
-        with open(params_path, encoding="utf-8") as f:
-            parameter_values = safe_load(f)["parameterValues"]
-            job_params = {item["name"]: item["value"] for item in parameter_values}
-
-            # Remove the queue Env Parameters
-            job_params.pop("CondaChannels", None)
-            job_params.pop("CondaPackages", None)
-            # Remove Deadline Cloud specific parameters
-            job_params.pop("deadline:maxFailedTasksCount", None)
-            job_params.pop("deadline:priority", None)
-            job_params.pop("deadline:maxRetriesPerTask", None)
-            job_params.pop("deadline:targetTaskRunStatus", None)
+        job_params = {item["name"]: item["value"] for item in parameter_values}
+        for name in (
+            "CondaChannels",
+            "CondaPackages",
+            "deadline:maxFailedTasksCount",
+            "deadline:priority",
+            "deadline:maxRetriesPerTask",
+            "deadline:targetTaskRunStatus",
+        ):
+            job_params.pop(name, None)
 
         for step in template["steps"]:
-            output = run_command(
+            run_command(
                 [
                     "openjd",
                     "run",
@@ -101,196 +79,119 @@ def assert_openjd_run_with_cinema4d_successful(
                 ]
             )
 
-            assert output.returncode == 0
+
+def resolve_c4d_exe(cinema4d_location: Path, name: str) -> Path:
+    if sys.platform == "win32":
+        executable = cinema4d_location / f"{name}.exe"
+    elif sys.platform == "darwin":
+        executable = cinema4d_location / f"{name}.app" / "Contents" / "MacOS" / name
+    else:
+        executable = cinema4d_location / name
+    if not executable.exists():
+        raise FileNotFoundError(f"{name} executable not found at {executable}")
+    log(f"resolved {name}: {executable}")
+    return executable
 
 
-def replace_backslashes(content: str) -> str:
-    """
-    Replaces backslashes that are path separators.
-    Note: This also preserves the backslashes in unicode characters.
-    """
-    content = re.sub(
-        r"\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2})", r"UNICODE_ESCAPE\1", content
-    )  # To avoid unicode '\' getting replaced
-    content = re.sub(r"\\+", "/", content)
-    content = content.replace("UNICODE_ESCAPE", "\\")  # Add unicode escape back
-    return content
+def c4d_extra_python_paths(repo_root: Path) -> list[str]:
+    parts = [str(repo_root / "src"), *site.getsitepackages()]
+    if sys.platform == "win32":
+        for site_packages in site.getsitepackages():
+            for subdirectory in ("win32", "win32/lib"):
+                path = Path(site_packages) / subdirectory
+                if path.exists():
+                    parts.append(str(path))
+    return list(dict.fromkeys(path for path in parts if path))
 
 
-def _strip_job_environments_from_template(content: str) -> str:
-    """
-    Strip the jobEnvironments section from a template.yaml file.
-    """
+def build_submitter_pythonpath(repo_root: Path) -> str:
+    return os.pathsep.join(c4d_extra_python_paths(repo_root))
+
+
+def build_cinema4d_scene(
+    c4dpy_location: Path,
+    scene_script_location: Path,
+    scene_dir: Path,
+    scene_name: str,
+    scene_args: tuple[str, ...] = (),
+) -> Path:
+    result = subprocess.run(
+        [
+            str(c4dpy_location),
+            str(scene_script_location),
+            str(scene_dir),
+            *scene_args,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    # c4dpy can exit nonzero during shutdown after successfully running the script.
+    # The generated scene is the reliable success signal.
+    scene = scene_dir / scene_name
+    assert scene.is_file(), (
+        f"scene.py did not save expected file at {scene} " f"(c4dpy exit code {result.returncode})"
+    )
+    return scene
+
+
+def kill_proc(proc: subprocess.Popen) -> None:
+    if proc.poll() is not None:
+        log(f"C4D process pid={proc.pid} already exited (rc={proc.returncode})")
+        return
+    log(f"terminating C4D process pid={proc.pid}")
     try:
-        data = safe_load(content)
-        if isinstance(data, dict) and "jobEnvironments" in data:
-            del data["jobEnvironments"]
-        return dump(data, default_flow_style=False, sort_keys=True)
-    except Exception:
-        # If parsing fails, return original content
-        return content
+        proc.terminate()
+        proc.wait(timeout=10)
+        log(f"C4D process pid={proc.pid} terminated cleanly")
+    except subprocess.TimeoutExpired:
+        log(f"C4D process pid={proc.pid} did not respond to terminate, killing")
+        proc.kill()
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            proc.wait(timeout=5)
+    except (ProcessLookupError, OSError) as error:
+        log(f"C4D process pid={proc.pid} already gone before terminate ({error!r})")
 
 
 def assert_expected_job_bundle_and_generated_job_bundle_are_equal(
-    expected_job_bundle_dir_path: Path, generated_job_bundle_dir_path: Path
+    expected_job_bundle_dir_path: Path,
+    generated_job_bundle_dir_path: Path,
 ) -> None:
-    """
-    Assert that the generated job bundle matches with the expected job bundle.
-    """
-
-    results: dict[str, list[str]] = {
-        "different_content": [],
-        "identical_files": [],
-    }
-
-    # So that we can replace PATH_TO_BE_REPLACED in the expected job bundle.
-    prefix_path = os.path.abspath(expected_job_bundle_dir_path).split(
-        "deadline-cloud-for-cinema-4d"
-    )[0]
-
-    # Get list of files in both directories
-    expected_job_bundle_files = set(
-        f.name for f in expected_job_bundle_dir_path.glob("*") if f.is_file()
+    repo_parent = (
+        os.path.abspath(expected_job_bundle_dir_path)
+        .rsplit("deadline-cloud-for-cinema-4d", 1)[0]
+        .rstrip("/\\")
     )
-    generated_job_bundle_files = set(
-        f.name for f in generated_job_bundle_dir_path.glob("*") if f.is_file()
+    assert_job_bundles_equal(
+        expected_job_bundle_dir_path,
+        generated_job_bundle_dir_path,
+        normalization=BundleNormalization(
+            replacements={"PATH_TO_BE_REPLACED": repo_parent},
+            regex_replacements=(
+                (
+                    r"cinema4d=202[4-9]\.\* cinema4d-openjd=0\.\d+\.\*",
+                    "cinema4d=2026.* cinema4d-openjd=0.8.*",
+                ),
+                (
+                    r"scene_with_assets_[^/\\]+",
+                    "scene_with_assets_NORMALIZED",
+                ),
+            ),
+            normalized_parameter_values={
+                "SubmitterIntegrationVersion": "NORMALIZED",
+            },
+            ignored_template_keys=("jobEnvironments",),
+        ),
     )
 
-    # Compare contents of files that exist in both directories
-    common_files = expected_job_bundle_files.intersection(generated_job_bundle_files)
 
-    for file in common_files:
-        file1_path = expected_job_bundle_dir_path / file
-        file2_path = generated_job_bundle_dir_path / file
-
-        # Read files and compare their contents directly
-        with (
-            open(file1_path, "r", encoding="utf-8") as f1,
-            open(file2_path, "r", encoding="utf-8") as f2,
-        ):
-            content1 = f1.read().strip()  # strip() removes trailing whitespace
-            content2 = f2.read().strip()
-
-            # Normalize line endings
-            content1 = content1.replace("\r\n", "\n")
-            content2 = content2.replace("\r\n", "\n")
-
-            # Replace the prefix path in the generated job bundle files.
-            content1 = content1.replace("PATH_TO_BE_REPLACED", prefix_path)
-            content1 = replace_backslashes(content1)
-            content2 = replace_backslashes(content2)
-
-            # Special handling for parameter_values.yaml to normalize version differences
-            if file == "parameter_values.yaml":
-                content1 = _normalize_conda_packages_version(content1)
-                content2 = _normalize_conda_packages_version(content2)
-                content1 = _normalize_submitter_integration_version(content1)
-                content2 = _normalize_submitter_integration_version(content2)
-
-            # Special handling for template.yaml to strip job environments.
-            # Job environments can contain code that changes frequently
-            # We don't want to update all tests every time there's a
-            # small change in the job environment code, so we strip it before comparison.
-            # We check for the code comparison in our unit tests which should be sufficient.
-            if file == "template.yaml":
-                content1 = _strip_job_environments_from_template(content1)
-                content2 = _strip_job_environments_from_template(content2)
-
-            # For YAML files, compare parsed data to avoid line-wrapping differences
-            if file in ("parameter_values.yaml", "asset_references.yaml"):
-                data1 = safe_load(content1)
-                data2 = safe_load(content2)
-                if data1 == data2:
-                    results["identical_files"].append(file)
-                else:
-                    results["different_content"].append(file)
-                    diff = "\n".join(
-                        unified_diff(content1.splitlines(), content2.splitlines(), lineterm="")
-                    )
-                    print(diff)
-            elif content1 == content2:
-                results["identical_files"].append(file)
-            else:
-                results["different_content"].append(file)
-                diff = "\n".join(
-                    unified_diff(content1.splitlines(), content2.splitlines(), lineterm="")
-                )
-                print(diff)
-
-    assert len(results["different_content"]) == 0
-    assert len(results["identical_files"]) == 3
-    assert "template.yaml" in results["identical_files"]
-    assert "parameter_values.yaml" in results["identical_files"]
-    assert "asset_references.yaml" in results["identical_files"]
-
-
-def _normalize_conda_packages_version(content: str) -> str:
-    """
-    Normalize the CondaPackages parameter to match the expected test format.
-    This allows tests to pass regardless of the actual version numbers by
-    normalizing the generated content to match the expected format.
-    """
-
-    content = re.sub(
-        r"cinema4d=202[4-9].\* cinema4d-openjd=0.\d+.\*",
-        "cinema4d=2026.* cinema4d-openjd=0.8.*",
-        content,
+def assert_all_images_close(
+    expected_image_directory: Path,
+    actual_image_directory: Path,
+) -> None:
+    assert_images_close(
+        expected_image_directory,
+        actual_image_directory,
+        collapse_underscores=True,
+        allow_extra=True,
     )
-    return content
-
-
-def _normalize_submitter_integration_version(content: str) -> str:
-    """
-    Normalize the SubmitterIntegrationVersion parameter to match the expected test format.
-    This allows tests to pass regardless of the actual version numbers by
-    normalizing the generated content to match the expected format.
-    """
-    content = re.sub(
-        r"(name: SubmitterIntegrationVersion\n\s+value: )\S+",
-        r"\g<1>0.8.0",
-        content,
-    )
-    return content
-
-
-def _find_actual_image(actual_image_directory: Path, expected_image_name: str) -> Path:
-    """
-    Find the actual image file, handling variations in special character sanitization.
-    Cinema 4D and our code may sanitize special characters differently (e.g., 2 vs 4 underscores).
-    """
-    # Try exact match first
-    exact_path = actual_image_directory / expected_image_name
-    if exact_path.exists():
-        return exact_path
-
-    # Try to find a file that matches when normalizing underscores
-    # This handles cases where expected has "__" but actual has "____" or vice versa
-    for actual_file in actual_image_directory.iterdir():
-        if not actual_file.is_file():
-            continue
-        # Normalize both names by collapsing multiple underscores to single
-        normalized_expected = re.sub(r"_+", "_", expected_image_name)
-        normalized_actual = re.sub(r"_+", "_", actual_file.name)
-        if normalized_expected == normalized_actual:
-            return actual_file
-
-    # No match found, return original path (will fail with clear error)
-    return exact_path
-
-
-def assert_all_images_close(expected_image_directory: Path, actual_image_directory: Path):
-    for image in (expected_image_directory).iterdir():
-        if not image.is_file():
-            continue
-
-        # Find the actual image, handling sanitization variations
-        actual_image_path = _find_actual_image(actual_image_directory, image.name)
-
-        # Verify the actual image exists and has valid dimensions
-        actual = np.asarray(PIL.Image.open(actual_image_path))
-        expected = np.asarray(PIL.Image.open(image))
-
-        # Check that images have the same shape (dimensions match)
-        assert (
-            actual.shape == expected.shape
-        ), f"Image dimensions differ: {actual.shape} vs {expected.shape}"
