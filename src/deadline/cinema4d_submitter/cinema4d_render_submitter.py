@@ -163,7 +163,7 @@ def _get_parameter_values(
         if settings.override_frame_range:
             frame_list = settings.frame_list
         else:
-            frame_list = Animation.frame_list()
+            frame_list = submit_takes[0].frame_range
         parameter_values.append({"name": "Frames", "value": frame_list})
 
     # Check for any overlap between the job parameters we've defined and the

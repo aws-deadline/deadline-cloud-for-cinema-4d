@@ -39,8 +39,10 @@ def main():
     take_a.SetRenderData(take_data, render_settings_2)
 
     selection_variant = sys.argv[2]
-    if selection_variant not in ("current", "main", "all"):
+    if selection_variant not in ("current", "main", "marked", "all"):
         raise ValueError(f"Unknown take-selection variant: {selection_variant}")
+    main_take.SetChecked(False)
+    take_a.SetChecked(selection_variant == "marked")
     take_data.SetCurrentTake(take_a if selection_variant == "current" else main_take)
 
     save_dir = sys.argv[1]

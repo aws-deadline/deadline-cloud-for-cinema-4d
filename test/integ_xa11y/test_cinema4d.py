@@ -662,6 +662,7 @@ _CASES = [
 _TAKE_SELECTIONS = [
     pytest.param("current", "Current Take", id="current"),
     pytest.param("main", "Main Take", id="main"),
+    pytest.param("marked", "Marked Takes", id="marked"),
     pytest.param("all", "All Takes", id="all"),
 ]
 
@@ -690,7 +691,7 @@ def test_job_specific_take_selection(
     expected_variant: str,
     selection: str,
 ) -> None:
-    """Verify Current, Main, and All Takes produce the intended job steps."""
+    """Verify Current, Main, Marked, and All Takes produce the intended job steps."""
     _run_integ_case(
         cinema4d_location,
         test_cases_folder_location,

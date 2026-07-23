@@ -214,7 +214,7 @@ Each settings case changes only the named setting group before exporting:
 | `shared_job_settings` | Job name, priority, maximum failed tasks, maximum retries |
 | `job_specific_output_path` | Override Output Path and path value |
 | `job_specific_multi_pass_path` | Override Multi-Pass Path and path value |
-| `job_specific_take_selection` | Current, Main, and All Takes modes and their generated steps |
+| `job_specific_take_selection` | Current, Main, Marked, and All Takes modes and their generated steps |
 | `physical_multi_takes` | All Takes naming, truncation, and deduplication edge cases |
 | `job_specific_frame_range` | Override Frame Range and frame expression |
 | `job_specific_detailed_logging` | Detailed logging |
@@ -222,6 +222,11 @@ Each settings case changes only the named setting group before exporting:
 | `job_specific_save_project_with_assets` | Save project with assets |
 | `job_specific_task_chunking` | Frames per chunk and target chunk duration |
 | `job_specific_tile_rendering` | Tile rendering, columns, and rows |
+
+Unit tests in
+`test/unit/deadline_submitter_for_cinema4d/test_cinema4d_render_submitter.py`
+also cover take-name truncation, OpenJD parameter-name collisions, and `$take`
+path sanitization.
 
 The environment-gated **Include Adaptor Wheels** developer option is excluded
 because it is not present in the customer-facing dialog.
