@@ -1,0 +1,10 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - "PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/physical_nonascii/actual/physical-\u20BF\
+      \u0119\xF1.c4d"
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/physical_nonascii/actual/renders
+  referencedPaths: []

@@ -28,13 +28,13 @@ C4D_INSTALLERS = {
     },
     "2026": {
         "windows": {
-            "s3_key": "cinema4d/2026/Cinema4D_2026_2026.0_Win.exe",
-            "sha256": "412b069a00b39564aaaa7c1ccfa080d9e154669028e3521b96282c4dfcfd4024",
+            "s3_key": "cinema4d/2026/Cinema4D_2026_2026.3.3_Win.exe",
+            "sha256": "4dcfb6ea44fd45dcf6c77a4540f47fcaea1c322440d564cbd40c0a03ad7de681",
             "type": "exe",
         },
         "macos": {
-            "s3_key": "cinema4d/2026/Cinema4D_2026_2026.3_Mac.dmg",
-            "sha256": "8759463ca17aa94c527cbdd12c2289cc60b3c937729a9b7304af6ff8ef493557",
+            "s3_key": "cinema4d/2026/Cinema4D_2026_2026.3.3_Mac.dmg",
+            "sha256": "ad758efdb24e0ee01e126a4e8ee54f148981a583bb84f8f832eedcbf1793716f",
             "type": "dmg",
         },
     },

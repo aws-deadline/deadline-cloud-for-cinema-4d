@@ -1,8 +1,5 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-"""Build the legacy physical-renderer integration scene.
-
-Usage: c4dpy scene.py <scene_dir>
-"""
+"""Build a physical-renderer scene with a non-ASCII document name."""
 
 import os
 import sys
@@ -35,7 +32,7 @@ def main() -> int:
     render_data[c4d.RDATA_ALPHACHANNEL] = False
     render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
 
-    scene_name = "job_specific_detailed_logging.c4d"
+    scene_name = "physical-\u20bf\u0119\u00f1.c4d"
     scene_path = os.path.join(scene_dir, scene_name)
     doc.SetDocumentPath(scene_dir)
     doc.SetDocumentName(scene_name)

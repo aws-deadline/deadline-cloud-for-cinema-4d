@@ -32,6 +32,7 @@ def main() -> int:
     render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(1, doc.GetFps())
     render_data[c4d.RDATA_RENDERENGINE] = 1023342  # Physical
     render_data[c4d.RDATA_FORMAT] = c4d.FILTER_PNG
+    render_data[c4d.RDATA_ALPHACHANNEL] = False
     render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
 
     scene_name = "job_specific_output_path.c4d"

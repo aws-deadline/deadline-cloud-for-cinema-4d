@@ -1,11 +1,11 @@
 parameterValues:
 - name: Cinema4DFile
-  value: "PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/redshift_textured_nonascii/actual/rs_test-\u20BF\
+  value: "PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/physical_nonascii/actual/physical-\u20BF\
     \u0119\xF1.c4d"
 - name: SubmitterIntegrationVersion
   value: 0.11.4.post16.g410384bf3.d20260720
 - name: OutputPath
-  value: "PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/redshift_textured_nonascii/actual/renders/rs_test-\u20BF\
+  value: "PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ_xa11y/test_cases/physical_nonascii/actual/renders/physical-\u20BF\
     \u0119\xF1"
 - name: MultiPassPath
   value: ''

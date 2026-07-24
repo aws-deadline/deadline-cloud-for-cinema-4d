@@ -64,6 +64,7 @@ def main():
     render_data[c4d.RDATA_FRAMETO] = frame_end
     render_data[c4d.RDATA_RENDERENGINE] = 1023342  # physical
     render_data[c4d.RDATA_FORMAT] = c4d.FILTER_PNG
+    render_data[c4d.RDATA_ALPHACHANNEL] = False
     render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
 
     save_name = "physical_textured.c4d"

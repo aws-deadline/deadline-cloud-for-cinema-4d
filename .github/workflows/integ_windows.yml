@@ -112,9 +112,9 @@ jobs:
           $ssmLog = Join-Path $env:RUNNER_TEMP "ssm.log"
           Start-Process -FilePath "aws" -ArgumentList "ssm start-session --target $bastion --document-name DccInteg-PortForwardToLicenseServer --parameters file://$paramsFile --profile license --region $region" -NoNewWindow -RedirectStandardOutput $ssmLog
 
-          # Wait for port (retry up to 30s)
+          # Wait for port (retry up to 60s)
           $ready = $false
-          for ($i = 0; $i -lt 6; $i++) {
+          for ($i = 0; $i -lt 12; $i++) {
             Start-Sleep -Seconds 5
             $t = Test-NetConnection -ComputerName 127.0.0.1 -Port $rlmPort -WarningAction SilentlyContinue
             if ($t.TcpTestSucceeded) { $ready = $true; break }

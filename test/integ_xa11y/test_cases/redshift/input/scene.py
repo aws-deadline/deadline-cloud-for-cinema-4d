@@ -20,6 +20,7 @@ def main():
     render_data[c4d.RDATA_FRAMETO] = frame_end
     render_data[c4d.RDATA_RENDERENGINE] = 1036219  # redshift
     render_data[c4d.RDATA_FORMAT] = c4d.FILTER_PNG
+    render_data[c4d.RDATA_ALPHACHANNEL] = False
     render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
     save_dir = sys.argv[1]
     save_name = "redshift.c4d"

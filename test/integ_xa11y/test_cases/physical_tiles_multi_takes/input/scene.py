@@ -39,6 +39,7 @@ def main() -> int:
     render_settings_1[c4d.RDATA_FRAMETO] = c4d.BaseTime(1, doc.GetFps())
     render_settings_1[c4d.RDATA_RENDERENGINE] = 1023342  # Physical
     render_settings_1[c4d.RDATA_FORMAT] = c4d.FILTER_PNG
+    render_settings_1[c4d.RDATA_ALPHACHANNEL] = False
     render_settings_1[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
 
     # Take A gets its own render settings rendering a different frame, so the

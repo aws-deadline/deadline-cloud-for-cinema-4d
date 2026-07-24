@@ -60,7 +60,7 @@ _DIALOG_VISIBLE_TIMEOUT_S = 60.0
 # differ to exercise path handling and therefore need explicit relative paths.
 _SCENE_RELATIVE_PATHS = {
     "phy_apos_path": Path("it's") / "phy_apos_path.c4d",
-    "redshift_textured_nonascii": Path("rs_test-\u20bf\u0119\u00f1.c4d"),
+    "physical_nonascii": Path("physical-\u20bf\u0119\u00f1.c4d"),
 }
 
 # A per-scene hook to drive the submitter dialog (switch tabs, set parameters,
@@ -624,13 +624,13 @@ def _run_integ_case(
     rmtree(actual_dir, ignore_errors=True)
 
 
-# Redshift render cases fail on GitHub-hosted Windows runners; the root cause
-# is currently under investigation. macOS CI is unaffected because the render
-# step doesn't run on darwin. Run these locally against a reachable license
-# server for coverage.
-_SKIP_REDSHIFT_IN_CI = pytest.mark.skipif(
+# Keep this case running in Windows CI, but do not block the workflow on its
+# known render failure. The other Redshift cases remain required.
+# This is a Cinema 4D issue and we have a ticket with Maxon to add a fix.
+_XFAIL_REDSHIFT_TEXTURED_IN_CI = pytest.mark.xfail(
     sys.platform == "win32" and os.environ.get("CI") == "true",
-    reason="Redshift render cases fail on GitHub-hosted Windows runners",
+    reason="Redshift textured rendering fails on GitHub-hosted Windows runners",
+    strict=False,
 )
 
 # Standard test cases. Each entry is a folder name under test_cases/ with an
@@ -648,15 +648,15 @@ _CASES = [
     "job_specific_task_chunking",
     "job_specific_tile_rendering",
     "physical",
+    "physical_nonascii",
     "physical_textured",
     "physical_custom_fps",
     "physical_multi_takes",
     "physical_tiles_multi_takes",
     "phy_apos_path",
-    pytest.param("redshift", marks=_SKIP_REDSHIFT_IN_CI),
-    pytest.param("redshift_textured", marks=_SKIP_REDSHIFT_IN_CI),
-    pytest.param("redshift_textured_nonascii", marks=_SKIP_REDSHIFT_IN_CI),
-    pytest.param("redshift_tiles", marks=_SKIP_REDSHIFT_IN_CI),
+    "redshift",
+    pytest.param("redshift_textured", marks=_XFAIL_REDSHIFT_TEXTURED_IN_CI),
+    "redshift_tiles",
 ]
 
 _TAKE_SELECTIONS = [

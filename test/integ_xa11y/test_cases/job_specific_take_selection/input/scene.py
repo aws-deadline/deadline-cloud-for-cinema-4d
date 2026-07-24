@@ -24,6 +24,7 @@ def main():
     render_settings_1[c4d.RDATA_FRAMETO] = frame_end
     render_settings_1[c4d.RDATA_RENDERENGINE] = 1023342  # physical
     render_settings_1[c4d.RDATA_FORMAT] = c4d.FILTER_PNG
+    render_settings_1[c4d.RDATA_ALPHACHANNEL] = False
     render_settings_1[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
 
     render_settings_2 = render_settings_1.GetClone()

@@ -1,7 +1,7 @@
 specificationVersion: jobtemplate-2023-09
 extensions:
 - TASK_CHUNKING
-name: "rs_test-\u20BF\u0119\xF1.c4d"
+name: "physical-\u20BF\u0119\xF1.c4d"
 parameterDefinitions:
 - name: Cinema4DFile
   type: PATH

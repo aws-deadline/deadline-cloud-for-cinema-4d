@@ -48,6 +48,9 @@ pre-install-commands = [
   "pip install -r requirements-testing.txt"
 ]
 
+[envs.integ-xa11y.env-vars]
+PYTHONIOENCODING = "utf-8"
+
 [envs.integ-xa11y.scripts]
 test = "pytest --no-cov {args:test/integ_xa11y} -vvv --numprocesses=1"
 
