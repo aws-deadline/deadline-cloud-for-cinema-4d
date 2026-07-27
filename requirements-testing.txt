@@ -4,7 +4,7 @@ mypy == 2.*
 pytest == 9.*
 pytest-cov == 7.*
 pytest-xdist == 3.*
-ruff == 0.15.*
+ruff == 0.16.*
 twine == 7.*
 types-pyyaml == 6.*
 # for integ tests
