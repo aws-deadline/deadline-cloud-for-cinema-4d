@@ -5,7 +5,7 @@ pytest == 9.*
 pytest-cov == 7.*
 pytest-xdist == 3.*
 ruff == 0.15.*
-twine == 6.*
+twine == 7.*
 types-pyyaml == 6.*
 # for integ tests
 numpy == 2.*; python_version >= "3.12"
