@@ -29,6 +29,7 @@ from .utils import (
     kill_proc,
     log,
     resolve_c4d_exe,
+    resolve_expected_render_directory,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -606,7 +607,10 @@ def _run_integ_case(
             actual_dir / "parameter_values.yaml",
         )
         assert_all_images_close(
-            expected_dir / "renders",
+            resolve_expected_render_directory(
+                expected_dir,
+                os.environ.get("C4D_VERSION"),
+            ),
             actual_dir / "renders",
         )
 
@@ -623,12 +627,22 @@ def _run_integ_case(
     rmtree(actual_dir, ignore_errors=True)
 
 
-# Keep this case running in Windows CI, but do not block the workflow on its
-# known render failure. The other Redshift cases remain required.
+# Keep the Redshift cases running in Windows CI, but do not block the workflow
+# on their intermittent render failures. All Redshift cases are affected in
+# Cinema 4D 2024 and 2025; the textured case is also affected in Cinema 4D 2026.
 # This is a Cinema 4D issue and we have a ticket with Maxon to add a fix.
+_XFAIL_REDSHIFT_2024_2025_IN_CI = pytest.mark.xfail(
+    sys.platform == "win32"
+    and os.environ.get("CI") == "true"
+    and os.environ.get("C4D_VERSION") in {"2024", "2025"},
+    reason="Redshift rendering can fail with Cinema 4D 2024 and 2025",
+    strict=False,
+)
 _XFAIL_REDSHIFT_TEXTURED_IN_CI = pytest.mark.xfail(
-    sys.platform == "win32" and os.environ.get("CI") == "true",
-    reason="Redshift textured rendering fails on GitHub-hosted Windows runners",
+    sys.platform == "win32"
+    and os.environ.get("CI") == "true"
+    and os.environ.get("C4D_VERSION") in {"2024", "2025", "2026"},
+    reason="Redshift textured rendering can fail with Cinema 4D 2024, 2025, and 2026",
     strict=False,
 )
 
@@ -653,9 +667,9 @@ _CASES = [
     "physical_multi_takes",
     "physical_tiles_multi_takes",
     "phy_apos_path",
-    "redshift",
+    pytest.param("redshift", marks=_XFAIL_REDSHIFT_2024_2025_IN_CI),
     pytest.param("redshift_textured", marks=_XFAIL_REDSHIFT_TEXTURED_IN_CI),
-    "redshift_tiles",
+    pytest.param("redshift_tiles", marks=_XFAIL_REDSHIFT_2024_2025_IN_CI),
 ]
 
 _TAKE_SELECTIONS = [

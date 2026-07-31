@@ -4,10 +4,18 @@ on:
   push:
     branches:
       - mainline
+      - feature/ci-tests
 
 jobs:
   windows:
+    name: Windows, Cinema 4D ${{ matrix.c4d_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        c4d_version: ["2024", "2025", "2026"]
     uses: ./.github/workflows/integ_windows.yml
+    with:
+      c4d_version: ${{ matrix.c4d_version }}
     secrets:
       AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -21,7 +29,14 @@ jobs:
       contents: read
 
   macos:
+    name: macOS, Cinema 4D ${{ matrix.c4d_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        c4d_version: ["2024", "2025", "2026"]
     uses: ./.github/workflows/integ_macos.yml
+    with:
+      c4d_version: ${{ matrix.c4d_version }}
     secrets:
       AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
       AWS_REGION: ${{ secrets.AWS_REGION }}

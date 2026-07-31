@@ -26,10 +26,12 @@ purpose of this suite is to cover the customer-visible plugin and UI path.
 - Run Windows tests in an interactive desktop session; UI Automation does not
   work in Session 0.
 - Configure renderer licensing for renderer-specific cases.
-- Set `C4D_LOCATION` when Cinema 4D is outside a known default path.
+- Local runs default to Cinema 4D 2026. Set `C4D_VERSION` to run an older
+  version, and set `C4D_LOCATION` when that version is outside its default path.
 
 ```powershell
-$env:C4D_LOCATION = "C:\Program Files\Maxon Cinema 4D 2026\"
+$env:C4D_VERSION = "2025"
+$env:C4D_LOCATION = "D:\Applications\Maxon Cinema 4D 2025\"
 $env:redshift_LICENSE = "<port>@<license-server>"
 ```
 
@@ -48,6 +50,7 @@ test/integ/test_cases/<case>/
 └── expected/
     ├── job_bundle/
     └── renders/
+        └── <C4D_VERSION>/
 ```
 
 Use a dedicated parametrized test when one scene and configurator intentionally
@@ -128,12 +131,28 @@ After the missing-golden failure leaves output in `actual/`:
    ignores it.
 5. Serialize all three documents as block YAML.
 6. On Windows, copy the reviewed files from `actual/renders/` into the matching
-   `expected/renders/` directory.
+   `expected/renders/<C4D_VERSION>/` directory.
 
 Use structured YAML operations rather than text substitutions. Review every
 golden diff before accepting it; generated output is not automatically correct.
 
 Never commit `actual/`.
+
+## Capture Render Outputs in CI
+
+When local Windows rendering is not practical:
+
+1. Push the changes to the repository's `feature/ci-tests` branch.
+2. Wait for the **Cinema 4D xa11y Integration Tests** workflow to finish.
+3. Download the `cinema4d-<C4D_VERSION>-render-outputs` artifact from the run.
+4. Review the extracted `<case>/actual/renders/` images.
+5. Copy approved PNGs into the matching
+   `expected/renders/<C4D_VERSION>/` directory, or the corresponding
+   `expected/<variant>/renders/<C4D_VERSION>/` directory.
+
+Only retained `actual/` files are uploaded. Successful cases clean that
+directory, while missing or mismatched goldens leave output available for
+download. Never commit the extracted `actual/` directories.
 
 ## Verify
 

@@ -45,7 +45,10 @@ def main():
     render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] = False
 
     # Uncheck "Use Project Frame Rate" and set render FPS to 12
-    render_data[c4d.RDATA_FRAMERATE_SYNC_WITH_PROJECT] = False
+    # Cinema 4D 2024 has no sync toggle; setting RDATA_FRAMERATE directly is sufficient.
+    sync_with_project = getattr(c4d, "RDATA_FRAMERATE_SYNC_WITH_PROJECT", None)
+    if sync_with_project is not None:
+        render_data[sync_with_project] = False
     render_data[c4d.RDATA_FRAMERATE] = 12.0
 
     # Render frames 0-12 at 12fps = 0s to 1s of animation

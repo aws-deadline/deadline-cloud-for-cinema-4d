@@ -118,7 +118,8 @@ test_cases/<name>/
 │                          #              before Export (runs in pytest + xa11y)
 ├── expected/              # what we compare against
 │   ├── job_bundle/        #   golden template/parameter_values/asset_references
-│   └── renders/           #   golden render PNGs (Windows-only compare)
+│   └── renders/           #   version-specific golden PNGs (Windows-only compare)
+│       └── <C4D_VERSION>/ #   required baseline for each tested C4D version
 └── actual/                # gitignored — runtime output; kept on failure
 ```
 
@@ -134,7 +135,29 @@ need per-farm regeneration.
 `input/scene.py` runs inside **c4dpy** (Cinema 4D's headless Python) and is saved
 into `actual/` (not `input/`), so render paths under `renders/` resolve into
 `actual/renders/`. Cases may override the output filename, but keep this
-directory stable for render comparison.
+directory stable for render comparison. Render comparison requires a baseline
+under `expected/renders/<C4D_VERSION>/`. Failed Windows CI cases
+retain their generated images and upload them in the
+`cinema4d-<version>-render-outputs` workflow artifact for seven days.
+
+#### Downloading render outputs from CI
+
+Use the versioned Windows CI jobs when render goldens cannot be generated
+locally:
+
+1. Push the changes to the `feature/ci-tests` branch in this repository.
+2. Wait for the **Cinema 4D xa11y Integration Tests** workflow to finish.
+3. Open the workflow run and download the
+   `cinema4d-<C4D_VERSION>-render-outputs` artifact for each required version.
+4. Extract the artifact and review every PNG under
+   `<case>/actual/renders/`.
+5. Copy approved images into
+   `test/integ/test_cases/<case>/expected/renders/<C4D_VERSION>/`, or
+   `expected/<variant>/renders/<C4D_VERSION>/` for a parametrized case.
+
+The artifact step always runs, but successful cases remove their `actual/`
+directory before upload. Missing or mismatched goldens leave render output
+behind for collection. Never commit the extracted `actual/` directories.
 
 #### Focused settings coverage
 
@@ -251,6 +274,11 @@ production.
 ```bash
 hatch run integ:test                              # all xa11y integ tests
 ```
+
+CI runs this suite against Cinema 4D 2024, 2025, and 2026 on Windows and
+macOS. All six jobs run in parallel. Local runs default to Cinema 4D 2026.
+Set `C4D_VERSION` for an older version and set `C4D_LOCATION` only when its
+installation is outside that version's default path.
 
 The `integ:test` script hardcodes the `test/integ` path and
 `--numprocesses=1`. Beware: any args you pass *replace* the path (hatch

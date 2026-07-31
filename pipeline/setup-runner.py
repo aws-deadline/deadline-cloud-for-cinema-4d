@@ -14,11 +14,23 @@ import boto3
 from botocore.config import Config
 
 C4D_INSTALLERS = {
+    "2024": {
+        "windows": {
+            "s3_key": "cinema4d/2024/Cinema4D_2024_2024.5.1_Win.exe",
+            "sha256": "e71f7f103bb783fc5155e1b43e057d20c839052a0fe712ea3f42e447acff46b1",
+            "type": "exe",
+        },
+        "macos": {
+            "s3_key": "cinema4d/2024/Cinema4D_2024_2024.5.1_Mac.dmg",
+            "sha256": "08d3d0efc8dd06f69fae8f86bf50539689b12029a2ac79c0d6c358f7d9d63edc",
+            "type": "dmg",
+        },
+    },
     "2025": {
         "windows": {
-            "s3_key": "cinema4d/2025/Cinema4D_2025_2025.3.3_Win.zip",
-            "sha256": "fcf0ea40af73727f1bc1fb1a47ea0c2f3476f0652824d3b740181dc1a6123e09",
-            "type": "zip",
+            "s3_key": "cinema4d/2025/Cinema4D_2025_2025.3.3_Win.exe",
+            "sha256": "66f5f5b74f93b32490d32386c642d6857aef98629a5b3eaa88fa366b1598a18e",
+            "type": "exe",
         },
         "macos": {
             "s3_key": "cinema4d/2025/Cinema4D_2025_2025.3.3_Mac.dmg",
@@ -41,6 +53,10 @@ C4D_INSTALLERS = {
 }
 
 C4D_INSTALL_PATHS = {
+    "2024": {
+        "windows": Path("C:/Program Files/Maxon Cinema 4D 2024"),
+        "macos": Path("/Applications/Maxon Cinema 4D 2024"),
+    },
     "2025": {
         "windows": Path("C:/Program Files/Maxon Cinema 4D 2025"),
         "macos": Path("/Applications/Maxon Cinema 4D 2025"),
@@ -182,16 +198,16 @@ def setup_windows(versions):
 def setup_macos(versions):
     """Install Cinema 4D on macOS for each version."""
     for version in versions:
+        if "macos" not in C4D_INSTALLERS.get(version, {}):
+            print(f"ERROR: No macOS installer configured for version {version}")
+            sys.exit(1)
+
         install_dir = C4D_INSTALL_PATHS[version]["macos"]
         marker = install_dir / ".installed"
 
         if marker.exists():
             print(f"Cinema 4D {version} already installed at {install_dir}")
             continue
-
-        if "macos" not in C4D_INSTALLERS.get(version, {}):
-            print(f"ERROR: No macOS installer configured for version {version}")
-            sys.exit(1)
 
         print(f"Installing Cinema 4D {version}...")
         installer_info = C4D_INSTALLERS[version]["macos"]
@@ -333,7 +349,7 @@ if __name__ == "__main__":
         "--versions",
         nargs="+",
         required=True,
-        help="Cinema 4D versions to install (e.g., 2025 2026)",
+        help="Cinema 4D versions to install (e.g., 2024 2025 2026)",
     )
     args = parser.parse_args()
 

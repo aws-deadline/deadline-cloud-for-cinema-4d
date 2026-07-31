@@ -2,6 +2,11 @@ name: "Integ Tests - macOS"
 
 on:
   workflow_call:
+    inputs:
+      c4d_version:
+        description: Cinema 4D major version to test
+        required: true
+        type: string
     secrets:
       AWS_OIDC_ROLE_ARN:
         required: true
@@ -22,8 +27,9 @@ jobs:
   IntegMacOS:
     if: >-
       github.repository == 'aws-deadline/deadline-cloud-for-cinema-4d' &&
-      github.ref == 'refs/heads/mainline'
-    name: Integration Tests (macOS)
+      (github.ref == 'refs/heads/mainline' ||
+      github.ref == 'refs/heads/feature/ci-tests')
+    name: Integration Tests (macOS, Cinema 4D ${{ inputs.c4d_version }})
     runs-on: macos-latest
     timeout-minutes: 60
     permissions:
@@ -35,7 +41,7 @@ jobs:
       redshift_LICENSE: "${{ secrets.RLM_PORT }}@127.0.0.1"
       g_licenseServerRLM: "127.0.0.1:${{ secrets.RLM_PORT }}"
       g_licenseModel: "LICENSEMODEL::RLM"
-      C4D_VERSION: "2026"
+      C4D_VERSION: ${{ inputs.c4d_version }}
       INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
       INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
     steps:
@@ -82,8 +88,8 @@ jobs:
 
       - name: Grant accessibility to Cinema 4D
         run: |
-          C4D_BIN="/Applications/Maxon Cinema 4D 2026/Cinema 4D.app/Contents/MacOS/Cinema 4D"
-          C4DPY_BIN="/Applications/Maxon Cinema 4D 2026/c4dpy.app/Contents/MacOS/c4dpy"
+          C4D_BIN="/Applications/Maxon Cinema 4D $C4D_VERSION/Cinema 4D.app/Contents/MacOS/Cinema 4D"
+          C4DPY_BIN="/Applications/Maxon Cinema 4D $C4D_VERSION/c4dpy.app/Contents/MacOS/c4dpy"
           for BIN_PATH in "$C4D_BIN" "$C4DPY_BIN"; do
             if [ -f "$BIN_PATH" ]; then
               sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
