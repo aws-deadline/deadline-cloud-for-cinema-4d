@@ -17,9 +17,7 @@ from deadline_test_fixtures.deadline_mock import (
 from .utils import c4d_extra_python_paths
 
 # Default install paths per version and platform.
-# Order matters: when scanning for an installed C4D without C4D_LOCATION /
-# C4D_VERSION set, the first match wins. Newest version first so dev boxes
-# with both installed get 2026.
+_DEFAULT_C4D_VERSION = "2026"
 _C4D_DEFAULT_PATHS = {
     "2026": {
         "win32": Path(r"C:\Program Files\Maxon Cinema 4D 2026"),
@@ -29,6 +27,10 @@ _C4D_DEFAULT_PATHS = {
         "win32": Path(r"C:\Program Files\Maxon Cinema 4D 2025"),
         "darwin": Path("/Applications/Maxon Cinema 4D 2025"),
     },
+    "2024": {
+        "win32": Path(r"C:\Program Files\Maxon Cinema 4D 2024"),
+        "darwin": Path("/Applications/Maxon Cinema 4D 2024"),
+    },
 }
 
 
@@ -36,38 +38,35 @@ _C4D_DEFAULT_PATHS = {
 def cinema4d_location() -> Path:
     """Resolve the Cinema 4D install location.
 
-    Checks in order:
-    1. C4D_LOCATION env var (explicit path set by the engineer)
-    2. C4D_VERSION env var (CI-only — derives path from version + platform)
-    3. Scan known default paths (fallback for local dev without any env vars)
+    C4D_VERSION selects both the executable version and render baseline, and
+    defaults to 2026. C4D_LOCATION optionally overrides that version's default
+    install path.
 
     Only Windows and macOS are supported (sys.platform "win32"/"darwin").
     Any other platform has no entry in _C4D_DEFAULT_PATHS and falls through
     to the EnvironmentError below.
     """
+    version = os.environ.setdefault("C4D_VERSION", _DEFAULT_C4D_VERSION)
+    if version not in _C4D_DEFAULT_PATHS:
+        supported_versions = ", ".join(_C4D_DEFAULT_PATHS)
+        raise EnvironmentError(
+            f"Unsupported Cinema 4D version {version!r}. "
+            f"Supported versions: {supported_versions}."
+        )
+
     if "C4D_LOCATION" in os.environ:
         return Path(os.environ["C4D_LOCATION"])
 
-    version = os.environ.get("C4D_VERSION")
-    if version and version in _C4D_DEFAULT_PATHS:
-        default_path = _C4D_DEFAULT_PATHS[version].get(sys.platform)
-        if default_path and default_path.exists():
-            print(f"Using Cinema 4D {version} at: {default_path}")
-            os.environ["C4D_LOCATION"] = str(default_path)
-            return default_path
-
-    # Fallback: scan all known default paths for local dev without env vars
-    for v in _C4D_DEFAULT_PATHS:
-        default_path = _C4D_DEFAULT_PATHS[v].get(sys.platform)
-        if default_path and default_path.exists():
-            print(f"Found Cinema 4D at default path: {default_path}")
-            os.environ["C4D_LOCATION"] = str(default_path)
-            return default_path
+    default_path = _C4D_DEFAULT_PATHS[version].get(sys.platform)
+    if default_path and default_path.exists():
+        print(f"Using Cinema 4D {version} at: {default_path}")
+        os.environ["C4D_LOCATION"] = str(default_path)
+        return default_path
 
     raise EnvironmentError(
-        "Cinema 4D location not found. This test runs on Windows and macOS only. "
-        "Set C4D_LOCATION to the Cinema 4D install directory, "
-        "or set C4D_VERSION to a supported version (e.g., 2025, 2026)."
+        f"Cinema 4D {version} location not found. "
+        "This test runs on Windows and macOS only. "
+        "Set C4D_LOCATION to override the install directory."
     )
 
 

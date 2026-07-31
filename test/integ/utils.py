@@ -115,13 +115,14 @@ def build_cinema4d_scene(
     scene_name: str,
     scene_args: tuple[str, ...] = (),
 ) -> Path:
+    command = [
+        str(c4dpy_location),
+        str(scene_script_location),
+        str(scene_dir),
+        *scene_args,
+    ]
     result = subprocess.run(
-        [
-            str(c4dpy_location),
-            str(scene_script_location),
-            str(scene_dir),
-            *scene_args,
-        ],
+        command,
         capture_output=True,
         text=True,
         check=False,
@@ -129,6 +130,11 @@ def build_cinema4d_scene(
     # c4dpy can exit nonzero during shutdown after successfully running the script.
     # The generated scene is the reliable success signal.
     scene = scene_dir / scene_name
+    if not scene.is_file():
+        log(f"c4dpy scene generation failed: command={command!r}")
+        log(f"c4dpy exit code: {result.returncode}")
+        print(f"c4dpy stdout:\n{result.stdout}", flush=True)
+        print(f"c4dpy stderr:\n{result.stderr}", flush=True)
     assert scene.is_file(), (
         f"scene.py did not save expected file at {scene} " f"(c4dpy exit code {result.returncode})"
     )
@@ -195,3 +201,13 @@ def assert_all_images_close(
         collapse_underscores=True,
         allow_extra=True,
     )
+
+
+def resolve_expected_render_directory(
+    expected_directory: Path,
+    cinema4d_version: str | None,
+) -> Path:
+    """Resolve the render baseline for the selected Cinema 4D version."""
+    if not cinema4d_version:
+        raise ValueError("Cinema 4D version is required to resolve render baselines")
+    return expected_directory / "renders" / cinema4d_version
