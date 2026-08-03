@@ -509,3 +509,67 @@ def assemble_tiles(
         )
 
     print("Finished Rendering")
+
+
+def bake_full_frame_beauty(
+    bm: Any,
+    rd: Any,
+    render_data: Any,
+    pre_existing: set,
+) -> None:
+    """Bake the OCIO view transform into a NON-tiled full-frame beauty render.
+
+    Works around a Cinema 4D SDK bug: ``RenderDocument``'s internal save does not
+    apply the OCIO View Transform, so the beauty image is written un-tone-mapped
+    (dark/"Raw"). The tile path already handles this; this does the same for
+    ordinary (non-tile) renders. Requires the render to have run with
+    ``RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER`` disabled so ``bm`` holds render-space
+    data. No-op on pre-2025.2 Cinema 4D or non-8-bit output (float EXR etc. must
+    stay scene-linear).
+
+    Overwrites ONLY the beauty file(s) C4D just wrote — the ``A_`` alpha file and
+    any multi-pass files are left untouched.
+
+    Args:
+        bm: The rendered MultipassBitmap (render-space).
+        rd: The live render data instance (from GetDataInstance).
+        render_data: The render data object (for output path / format).
+        pre_existing: Set of absolute file paths present before the render.
+    """
+    if not (
+        hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
+        and hasattr(c4d.documents, "BakeOcioViewToBitmap")
+    ):
+        return
+    if rd[c4d.RDATA_FORMATDEPTH] != c4d.RDATA_FORMATDEPTH_8:
+        return  # only display-referred 8-bit output needs the view transform baked in
+
+    baked = c4d.documents.BakeOcioViewToBitmap(bm, rd, c4d.SAVEBIT_NONE)
+    bm = baked or bm
+    if c4d.GetC4DVersion() >= C4D_VERSION_2025_2:
+        bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE)
+        bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM)
+
+    beauty_path = render_data[c4d.RDATA_PATH] or ""
+    if not beauty_path:
+        return
+    beauty_dir = os.path.dirname(beauty_path) or "."
+    ext, save_filter = get_format_info(render_data[c4d.RDATA_FORMAT])
+
+    # Names to exclude: the C4D alpha file ("A_" prefix) and multi-pass files.
+    mp_base = ""
+    if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] and render_data[c4d.RDATA_MULTIPASS_FILENAME]:
+        mp_base = os.path.basename(os.path.splitext(render_data[c4d.RDATA_MULTIPASS_FILENAME])[0])
+
+    for fn in os.listdir(beauty_dir):
+        full = os.path.join(beauty_dir, fn)
+        if full in pre_existing:
+            continue
+        if not fn.lower().endswith(ext.lower()):
+            continue
+        if fn.startswith("A_"):
+            continue  # alpha channel file — leave as-is
+        if mp_base and fn.startswith(mp_base):
+            continue  # multi-pass file — leave as-is
+        bm.Save(full, save_filter)
+        print(f"OCIO view transform baked into beauty output: {fn}")

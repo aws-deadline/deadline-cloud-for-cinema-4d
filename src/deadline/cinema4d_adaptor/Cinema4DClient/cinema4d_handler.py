@@ -309,6 +309,20 @@ class Cinema4DHandler:
             bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
         rd = self.render_data.GetDataInstance()
 
+        # Non-tile OCIO workaround: RenderDocument's internal save does not bake the
+        # OCIO View Transform (Cinema 4D SDK bug), so ordinary renders are written
+        # un-tone-mapped. Disable the render-time bake so the rendered bitmap holds
+        # render-space data we can bake manually after the render, and snapshot the
+        # output directory so we only overwrite the beauty image THIS render produces.
+        pre_existing_outputs: set = set()
+        if not is_tile_render and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER"):
+            rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
+            beauty_dir = os.path.dirname(self.render_data[c4d.RDATA_PATH] or "")
+            if beauty_dir and os.path.isdir(beauty_dir):
+                pre_existing_outputs = {
+                    os.path.join(beauty_dir, f) for f in os.listdir(beauty_dir)
+                }
+
         self.cached_text_was_used_in_previous_frame = self._cache_text_if_needed(
             c4d.BaseTime(start_frame, fps)
         )
@@ -330,6 +344,13 @@ class Cinema4DHandler:
         # Post-render tile processing: OCIO bake, crop, save tile, restore paths
         if is_tile_render and tile_ctx is not None:
             tile_rendering.finalize_tile_render(bm, rd, tile_ctx, self.render_data, start_frame)
+        else:
+            # Non-tile: bake the OCIO View Transform into the beauty image, working
+            # around the RenderDocument internal-save bug (leaves alpha / multi-pass
+            # files and float/EXR output untouched).
+            tile_rendering.bake_full_frame_beauty(
+                bm, rd, self.render_data, pre_existing_outputs
+            )
 
         print("Finished Rendering")
 
