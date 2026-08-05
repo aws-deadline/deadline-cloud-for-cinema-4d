@@ -96,7 +96,12 @@ class TestBakeFullFrameBeauty:
         _touch(tmp_path / "render0005.jpg", start + 10)
         bm = MagicMock()
         bake_full_frame_beauty(
-            bm, _rd(depth=c4d.RDATA_FORMATDEPTH_32), _render_data(self._base(tmp_path)), MagicMock(), 5, start
+            bm,
+            _rd(depth=c4d.RDATA_FORMATDEPTH_32),
+            _render_data(self._base(tmp_path)),
+            MagicMock(),
+            5,
+            start,
         )
         bm.Save.assert_not_called()
         c4d.documents.BakeOcioViewToBitmap.assert_not_called()

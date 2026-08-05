@@ -7,6 +7,7 @@ written un-tone-mapped (dark/"Raw"). This bakes the view transform into the beau
 image after the render -- the tile path (tile_rendering.finalize_tile_render) already
 does the equivalent for tiles.
 """
+
 from __future__ import annotations
 
 import os
