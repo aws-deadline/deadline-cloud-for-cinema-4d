@@ -339,23 +339,30 @@ class Cinema4DHandler:
             and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_8
         )
         if bake_ocio:
+            # Disable the render-time bake, restoring it afterwards (the document is
+            # reused across renders in a session) -- mirrors the tile path, which saves
+            # and restores this flag in finalize_tile_render.
+            orig_bake_flag = self.render_data[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER]
             self.render_data[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
-            for frame in range(start_frame, end_frame + 1):
-                self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
-                self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(frame, fps)
-                frame_rd = self.render_data.GetDataInstance()
-                # Render into a float bitmap so the OCIO view transform is baked from
-                # full-precision render-space data (baking 8-bit data would band the
-                # gradients) -- same rationale as the tile path's create_tile_bitmap.
-                frame_bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGBf)
-                render_start = time.time()
-                result = c4d.documents.RenderDocument(
-                    self.doc, frame_rd, frame_bm, render_flags, prog=progress_callback
-                )
-                self._raise_on_render_error(result)
-                ocio_bake.bake_full_frame_beauty(
-                    frame_bm, frame_rd, self.render_data, self.doc, frame, render_start
-                )
+            try:
+                for frame in range(start_frame, end_frame + 1):
+                    self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
+                    self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(frame, fps)
+                    frame_rd = self.render_data.GetDataInstance()
+                    # Render into a float bitmap so the OCIO view transform is baked from
+                    # full-precision render-space data (baking 8-bit data would band the
+                    # gradients) -- same rationale as the tile path's create_tile_bitmap.
+                    frame_bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGBf)
+                    render_start = time.time()
+                    result = c4d.documents.RenderDocument(
+                        self.doc, frame_rd, frame_bm, render_flags, prog=progress_callback
+                    )
+                    self._raise_on_render_error(result)
+                    ocio_bake.bake_full_frame_beauty(
+                        frame_bm, frame_rd, self.render_data, self.doc, frame, render_start
+                    )
+            finally:
+                self.render_data[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
         else:
             if is_tile_render:
                 bm = tile_rendering.create_tile_bitmap(width, height)

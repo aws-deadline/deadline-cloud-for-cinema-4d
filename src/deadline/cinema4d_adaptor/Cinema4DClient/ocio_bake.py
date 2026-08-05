@@ -110,8 +110,9 @@ def bake_full_frame_beauty(
     ext, save_filter = get_format_info(render_data[c4d.RDATA_FORMAT])
 
     # Multi-pass files can share the beauty prefix (e.g. "beauty" vs "beauty_mp"), so
-    # exclude them by their own resolved base. The "A_" alpha file needs no explicit
-    # exclusion -- it does not start with the beauty base.
+    # exclude them by their own resolved base -- but only when that base is a MORE
+    # specific (longer) match than the beauty base (see the loop below). The "A_" alpha
+    # file needs no explicit exclusion -- it does not start with the beauty base.
     mp_prefix = ""
     if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] and render_data[c4d.RDATA_MULTIPASS_FILENAME]:
         mp_resolved = _resolve_render_path(
@@ -129,7 +130,13 @@ def bake_full_frame_beauty(
             continue
         if not fn.lower().endswith(ext.lower()):
             continue
-        if mp_prefix and mp_prefix != beauty_prefix and fn.startswith(mp_prefix):
+        # A file is multi-pass only when the multi-pass base is a longer (more
+        # specific) prefix than the beauty base. Guarding on length -- not just
+        # inequality -- keeps a beauty file whose base merely starts with a shorter
+        # multi-pass base (e.g. beauty "render_beauty", mp "render") from being
+        # wrongly skipped, and still excludes real multi-pass files whose base
+        # extends the beauty base (e.g. beauty "render", mp "render_mp").
+        if mp_prefix and len(mp_prefix) > len(beauty_prefix) and fn.startswith(mp_prefix):
             continue  # multi-pass file -- leave as-is
         full = os.path.join(beauty_dir, fn)
         try:

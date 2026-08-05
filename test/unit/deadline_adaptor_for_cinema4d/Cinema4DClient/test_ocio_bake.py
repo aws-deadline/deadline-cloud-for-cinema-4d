@@ -83,6 +83,20 @@ class TestBakeFullFrameBeauty:
         bm.Save.assert_called_once()
         assert bm.Save.call_args.args[0] == str(tmp_path / "render0005.jpg")
 
+    def test_bakes_beauty_when_base_extends_multipass_base(self, tmp_path):
+        # Beauty base "render_beauty" starts with the shorter multi-pass base "render".
+        # The beauty file must still be baked (longest-prefix wins), not mistaken for a
+        # multi-pass file and skipped.
+        start = time.time()
+        _touch(tmp_path / "render_beauty0005.jpg", start + 10)
+        bm = MagicMock()
+        rdata = _render_data(
+            str(tmp_path / "render_beauty"), mp_save=True, mp_name=str(tmp_path / "render")
+        )
+        bake_full_frame_beauty(bm, _rd(), rdata, MagicMock(), 5, start)
+        bm.Save.assert_called_once()
+        assert bm.Save.call_args.args[0] == str(tmp_path / "render_beauty0005.jpg")
+
     def test_stale_file_not_baked(self, tmp_path):
         start = time.time()
         _touch(tmp_path / "render0005.jpg", start - 30)  # older than this render
