@@ -9,18 +9,12 @@ test/
 ├── unit/                    # Unit tests (always runnable, no Cinema 4D required)
 │   ├── deadline_adaptor_for_cinema4d/
 │   └── deadline_submitter_for_cinema4d/
-├── integ/                   # Integration tests (Windows only, requires Cinema 4D)
-│   ├── test_scenes/         # Test scene definitions
-│   ├── test_cinema4d.py     # Parametrized test runner
-│   ├── conftest.py          # Test fixtures
-│   └── utils.py             # Test utilities
-├── integ_xa11y/             # xa11y-driven submitter test, offline mock backend
+├── integ/                   # xa11y-driven submitter test, offline mock backend
 │   ├── test_cases/          # Self-contained cases: input/ expected/ actual/
 │   ├── test_cinema4d.py     # Drives the real submitter dialog via xa11y
-│   ├── submitter_ui.py      # Page-object for driving the dialog from configure.py
+│   ├── submitter_ui.py      # C4D-specific controls; re-exports shared controls
 │   ├── conftest.py          # Fixtures, incl. deadline_farm (starts the mock)
 │   ├── utils.py             # Test utilities
-│   ├── mock_aws/            # Hand-rolled offline mock Deadline Cloud backend
 │   └── fixtures/            # Test-only sidecar plugin (auto-opens submitter)
 └── installer/               # Installer tests
 ```
@@ -34,7 +28,7 @@ hatch run test                                    # All unit tests
 hatch run test test/unit/<path>                   # One test file or directory
 hatch run test -k "test_name"                     # One test by name
 hatch run all:test                                # All supported Python versions
-hatch run integ:test                              # Integration tests (Windows only)
+hatch run integ:test                              # xa11y integration tests
 hatch run test-installer                          # Installer tests
 ```
 
@@ -44,76 +38,13 @@ Unit tests do NOT require Cinema 4D installed. They should use mocks for the `c4
 
 When adding new features or fixing bugs, always add unit tests.
 
-## Integration Tests (Windows Only)
-
-Integration tests are currently only supported on Windows. They require Cinema 4D installed with licensing configured.
-
-### Test flow
-
-1. **Scene generation**: Each test case uses scene generation scripts (`scene.py`) to create test scenes with specific configurations
-2. **Job bundle generation**: Generated scenes are processed through the submitter code, exporting job bundles to a temporary location
-3. **Job bundle validation**: Exported bundles are compared against expected bundles in `expected_job_bundle/`
-4. **Scene rendering**: Job bundles are run using OpenJD `run` command with Cinema 4D Commandline
-5. **Output validation**: Generated output files are compared with expected output files
-
-### Test scene structure
-
-```
-test/integ/test_scenes/<scene_name>/
-├── expected_job_bundle/      # Reference job bundle for validation
-│   ├── asset_references.yaml
-│   ├── parameter_values.yaml
-│   └── template.yaml
-├── expected_job_output/      # Expected render output
-│   └── renders/
-└── scene/
-    └── scene.py              # Scene generation script
-```
-
-### Existing test scenes
-
-| Scene | Renderer | Description |
-|-------|----------|-------------|
-| `physical` | Physical | Basic physical renderer test |
-| `phy_apos_path` | Physical | Path with special characters (apostrophes) |
-| `physical_chunking` | Physical | Frame chunking across tasks |
-| `physical_multi_takes` | Physical | Multiple takes rendering |
-| `physical_textured` | Physical | Scene with textures |
-| `physical_tiles` | Physical | Tile rendering |
-| `redshift` | Redshift | Basic Redshift render |
-| `redshift_takes` | Redshift | Redshift with multiple takes |
-| `redshift_textured` | Redshift | Redshift with textures |
-| `redshift_textured_with_nonascii_characters` | Redshift | Non-ASCII path handling |
-| `redshift_tiles` | Redshift | Redshift tile rendering |
-
-### Adding a new test scene
-
-1. Create a new directory under `test/integ/test_scenes/<scene_name>/`
-2. Add a `scene/scene.py` script that generates the test scene programmatically
-3. Add `expected_job_bundle/` with the expected template, parameter values, and asset references
-4. Add `expected_job_output/` with expected render output files
-5. Add `<scene_name>` to the `@pytest.mark.parametrize("test_name", [...])` list in `test_cinema4d.py` so the runner picks it up
-
-### Running specific integration tests
-
-```bash
-hatch run integ:test -k "physical"
-hatch run integ:test -k "redshift"
-hatch run integ:test -k "redshift_tiles"
-```
-
-### xa11y-driven integration test (`test/integ_xa11y/`)
+## xa11y Integration Tests (`test/integ/`)
 
 Drives the **real Deadline Cloud submitter dialog** with
-[xa11y](https://xa11y.dev) instead of calling `internal_create_job_bundle()`
-directly. The existing `test/integ/` test calls `internal_create_job_bundle()`,
-which validates bundle generation but **skips the entire UI layer** (the Qt
-dialog, queue-environment loading, the Export button, the plugin entry point a
-user clicks). This test closes that gap: it launches the real Cinema 4D GUI with
+[xa11y](https://xa11y.dev). It launches the real Cinema 4D GUI with
 the real, unmodified plugin, opens the submitter as a user does, drives it via
 the OS accessibility tree, clicks **Export bundle**, and runs the same bundle/
-render assertions as the old test. Once we're confident in it, the plan is to
-delete `test/integ/` and rename this folder to `test/integ/`.
+render assertions as the previous suite.
 
 This file is the single source of truth for the suite — there is no separate
 README.
@@ -130,7 +61,7 @@ pytest (parent process)
   │     └─ builds the subprocess env overlay (endpoint override, dummy creds,
   │           telemetry opt-out, isolated HOME, DEADLINE_CLOUD_MOCK_MODE=1)
   │
-  ├─ build_cinema4d_scene()  ── runs c4dpy input/scene.py ──▶ cube.c4d (in actual/)
+  ├─ build_cinema4d_scene()  ── runs c4dpy input/scene.py ──▶ <case>.c4d (in actual/)
   │
   └─ launches Cinema 4D GUI (child process)
          │   env: overlay above + two plugin dirs + python path
@@ -140,7 +71,7 @@ pytest (parent process)
          │      on C4DPL_PROGRAM_STARTED (mock mode):
          │        1. patch socket.getaddrinfo (management.* → 127.0.0.1)
          │        2. patch os.startfile → no-op (no Explorer popup)
-         │        3. LoadDocument(cube.c4d)
+         │        3. LoadDocument(<case>.c4d)
          │        4. CallCommand(SUBMITTER_PLUGIN_ID)  ◀─ opens real submitter
          │
          └─ Qt submitter dialog appears ──── AWS_ENDPOINT_URL_DEADLINE ───▶ mock
@@ -167,12 +98,11 @@ pytest (parent process)
 |------|------|
 | `test_cinema4d.py` | The test. Orchestrates scene build → launch → UI drive → assertions. Holds the `_CASES` registry. |
 | `conftest.py` | Fixtures: locate Cinema 4D, set `C4DPYTHONPATH`, and `deadline_farm` (starts the mock + builds the subprocess env). |
-| `submitter_ui.py` | Page-object for driving the dialog (tabs, fields, checkboxes) from a case's `configure.py`. |
-| `utils.py` | Helpers: exe resolution, scene build, bundle waiting, golden-bundle + image comparison. |
-| `mock_aws/deadline.py` | In-memory mock Deadline backend (rest-json) + HTTP server, with observability (`call_counts`, `request_log`, `unmatched_requests`). |
-| `mock_aws/server_process.py` | Runs the mock in a separate process; `RemoteBackend` reads observability over a `GET /__admin__/calls` admin endpoint. |
-| `mock_aws/wiring.py` | Builds the temp deadline config + subprocess env overlay pointing C4D at the mock. |
-| `mock_aws/fixtures_data.py` | Sanitized real response bodies (fake farm/queue IDs) the mock serves. |
+| `submitter_ui.py` | C4D-specific controls plus re-exports of shared controls from `deadline_test_fixtures.xa11y.controls`. |
+| `utils.py` | C4D executable/scene/render helpers and C4D's bundle normalization policy. Generic assertions come from `deadline-cloud-test-fixtures`. |
+| `deadline_test_fixtures.deadline_mock` | Scenario-driven Deadline REST-JSON mock, out-of-process lifecycle, observability, config, and environment wiring. |
+| `deadline_test_fixtures.job_bundle` | Shared case layout, bundle discovery, validation, and structural comparison. |
+| `deadline_test_fixtures.images` | Shared render-image comparison. |
 | `fixtures/auto_open_submitter/AutoOpenSubmitter.pyp` | Test-only C4D plugin: auto-opens the real submitter and (mock mode) applies the getaddrinfo / `os.startfile` patches. Never shipped. |
 | `test_cases/<name>/` | A self-contained case (see *Anatomy of a test case*). |
 
@@ -192,17 +122,45 @@ test_cases/<name>/
 └── actual/                # gitignored — runtime output; kept on failure
 ```
 
-Cases are **registered explicitly** in the `_CASES` list in `test_cinema4d.py`
-— adding the folder is not enough, you add its name to the list. The expected
-bundle works on every platform and is **not** farm-specific (the mock provides
-fake, stable farm/queue IDs and no queue environments), so the expected files
-are portable and don't need per-farm regeneration.
+Cases are **registered explicitly** in `test_cinema4d.py`, either in `_CASES` or
+in a dedicated parametrized test — adding the folder is not enough. Most cases
+use `expected/{job_bundle,renders}/`; a parametrized case can keep one scene and
+configurator while storing each variant under
+`expected/<variant>/{job_bundle,renders}/`. The expected bundle works on every
+platform and is **not** farm-specific (the mock provides fake, stable farm/queue
+IDs and no queue environments), so the expected files are portable and don't
+need per-farm regeneration.
 
 `input/scene.py` runs inside **c4dpy** (Cinema 4D's headless Python) and is saved
-into `actual/` (not `input/`), so the render path `renders/$prj` resolves into
-`actual/renders/`. The render comparison derives its directory from the bundle's
-`OutputPath` param, so a `configure.py` that overrides the output path is
-followed automatically.
+into `actual/` (not `input/`), so render paths under `renders/` resolve into
+`actual/renders/`. Cases may override the output filename, but keep this
+directory stable for render comparison.
+
+#### Focused settings coverage
+
+Each settings case changes only the named setting group before exporting:
+
+| Case | Covered controls |
+|------|------------------|
+| `shared_job_settings` | Job name, priority, maximum failed tasks, maximum retries |
+| `job_specific_output_path` | Override Output Path and path value |
+| `job_specific_multi_pass_path` | Override Multi-Pass Path and path value |
+| `job_specific_take_selection` | Current, Main, Marked, and All Takes modes and their generated steps |
+| `physical_multi_takes` | All Takes naming, truncation, and deduplication edge cases |
+| `job_specific_frame_range` | Override Frame Range and frame expression |
+| `job_specific_detailed_logging` | Detailed logging |
+| `job_specific_timeouts` | Task Run, Cinema 4D launch, and Cinema 4D shutdown timeouts |
+| `job_specific_save_project_with_assets` | Save project with assets |
+| `job_specific_task_chunking` | Frames per chunk and target chunk duration |
+| `job_specific_tile_rendering` | Tile rendering, columns, and rows |
+
+Unit tests in
+`test/unit/deadline_submitter_for_cinema4d/test_cinema4d_render_submitter.py`
+also cover take-name truncation, OpenJD parameter-name collisions, and `$take`
+path sanitization.
+
+The environment-gated **Include Adaptor Wheels** developer option is excluded
+because it is not present in the customer-facing dialog.
 
 #### Finding selectors (harvesting locators for a `configure.py`)
 
@@ -214,21 +172,44 @@ dump mode, which prints both settings tabs' accessibility trees and then stops
 (no Export):
 
 ```bash
-# macOS / Linux
-DIALOG_DUMP=1 hatch -e integ-xa11y run pytest --no-cov \
-    test/integ_xa11y/test_cinema4d.py --numprocesses=0 -s -k <case>
+# macOS
+DIALOG_DUMP=1 hatch -e integ run pytest --no-cov \
+    test/integ/test_cinema4d.py --numprocesses=0 -s -k <case>
 ```
 ```powershell
 # Windows PowerShell
-$env:DIALOG_DUMP=1; hatch -e integ-xa11y run pytest --no-cov `
-    test/integ_xa11y/test_cinema4d.py --numprocesses=0 -s -k <case>; $env:DIALOG_DUMP=$null
+$env:DIALOG_DUMP=1; hatch -e integ run pytest --no-cov `
+    test/integ/test_cinema4d.py --numprocesses=0 -s -k <case>; $env:DIALOG_DUMP=$null
 ```
 
-Each line is `<role> "<name>" value="<value>"`. Match on role + name. Gotchas
-that the live tree reveals (and which differ by platform) are documented in
-`submitter_ui.py` — read them before writing a selector. The reusable page-object
-helpers there (`set_priority`, `toggle_checkbox`, `set_spin_button`, …) already
-encode the harvested selectors, so prefer them over raw `descendant(...)` calls.
+Each line is `<role> "<name>" value="<value>"`. Match on role + name. Shared
+cross-platform widget behavior and selector gotchas are documented in
+`deadline_test_fixtures.xa11y.controls`; Cinema 4D-specific selectors remain in
+`submitter_ui.py`. Prefer the reusable helpers exposed by `submitter_ui.py` over
+raw `descendant(...)` calls.
+
+#### Watching a run manually (observation delays)
+
+Two env vars slow a run down so a human can follow it. Both default to `0`
+(off) — never leave them set for normal runs:
+
+- `DIALOG_CONFIG_OBSERVE_DELAY_S=<seconds>` — pause after **every dialog
+  interaction** (tab switch, checkbox, text field, each spin-button step).
+  Implemented by `_observe_pause()` in `deadline_test_fixtures.xa11y.controls`,
+  so every `submitter_ui.py` helper inherits it.
+- `ARTIFACT_REVIEW_DELAY_S=<seconds>` — pause in `_run_integ_case` after all
+  assertions pass but **before `actual/` is cleaned up**, so the exported
+  bundle and renders can be inspected. The log prints the directory to look in.
+
+```powershell
+# Windows PowerShell: 5s per interaction, 60s artifact review
+$env:DIALOG_CONFIG_OBSERVE_DELAY_S=5; $env:ARTIFACT_REVIEW_DELAY_S=60
+hatch -e integ run python -m pytest --no-cov test/integ/test_cinema4d.py --numprocesses=0 -s -k <case>
+$env:DIALOG_CONFIG_OBSERVE_DELAY_S=$null; $env:ARTIFACT_REVIEW_DELAY_S=$null
+```
+
+Related: `MOCK_DEADLINE_RESPONSE_DELAY_S` (default `0.3`) sets the mock
+backend's per-response latency to approximate the real farm.
 
 #### Offline mock architecture
 
@@ -237,20 +218,19 @@ lives in the **sidecar** plugin, not the shipped `DeadlineCloud.pyp`, so the rea
 plugin is exercised exactly as a customer would and no test-only code reaches
 production.
 
-- **Mock backend** (`mock_aws/deadline.py`): an in-memory Deadline Cloud
-  simulator serving only the four operations the Export-bundle flow calls with
-  an empty queue-environment list — `ListFarms`, `GetFarm`, `GetQueue`,
-  `ListQueueEnvironments` (no `GetQueueEnvironment`, since the env list is
-  empty). It records `call_counts` / `request_log` / `unmatched_requests` so the
+- **Mock backend** (`deadline_test_fixtures.deadline_mock`): an in-memory
+  Deadline Cloud simulator serving the resource-read operations used by
+  submitters, with an empty queue-environment list by default. It records
+  `call_counts` / `request_log` / `unmatched_requests` so the
   test can assert exactly which calls reached it and that nothing hit an unmocked
-  route. Seeded from sanitized real response data in `mock_aws/fixtures_data.py`.
-- **Separate process** (`mock_aws/server_process.py`): the mock runs in its own
+  route. Its default scenario provides stable fake farm and queue resources.
+- **Separate process** (`MockDeadlineServerProcess`): the mock runs in its own
   process, NOT a thread. xa11y's native `wait_*` calls hold the CPython GIL for
   most of their duration, which would starve an in-process server thread and
   hang the test for the full 60s timeout. The out-of-process server keeps
-  serving; the test reads its observability over a `GET /__admin__/calls` admin
-  endpoint via a `RemoteBackend` proxy.
-- **Subprocess wiring** (`mock_aws/wiring.py` + the `deadline_farm` fixture):
+  serving; the test reads its observability over the package's admin endpoint
+  via a `RemoteDeadlineBackend` proxy.
+- **Subprocess wiring** (`build_mock_environment` + the `deadline_farm` fixture):
   a temp `deadline config` names the mock's farm/queue, and the C4D subprocess
   env gets `AWS_ENDPOINT_URL_DEADLINE` → mock, dummy AWS creds, telemetry
   opt-out (so no STS call fires), an isolated `HOME`, and
@@ -269,20 +249,20 @@ production.
   omit them too.
 
 ```bash
-hatch run integ-xa11y:test                        # all xa11y integ tests
+hatch run integ:test                              # all xa11y integ tests
 ```
 
-The `integ-xa11y:test` script hardcodes the `test/integ_xa11y` path and
+The `integ:test` script hardcodes the `test/integ` path and
 `--numprocesses=1`. Beware: any args you pass *replace* the path (hatch
-`{args:test/integ_xa11y}` falls back to the global `testpaths = ["test"]`), so
-`hatch run integ-xa11y:test -k cube` would scan the whole `test/` tree. To
+`{args:test/integ}` falls back to the global `testpaths = ["test"]`), so
+`hatch run integ:test -k physical` would scan the whole `test/` tree. To
 filter or run in-process (e.g. to see C4D/xa11y stdout, which xdist hides), call
 pytest directly with an explicit path — the test spawns its own subprocesses
 regardless of `--numprocesses`:
 
 ```bash
-hatch -e integ-xa11y run pytest --no-cov test/integ_xa11y/test_cinema4d.py \
-    --numprocesses=0 -s -k cube
+hatch -e integ run pytest --no-cov test/integ/test_cinema4d.py \
+    --numprocesses=0 -s -k physical
 ```
 
 #### Platform support matrix
@@ -307,7 +287,7 @@ Caveats:
 #### Golden-bundle comparison
 
 Direct byte comparison would be too brittle, so before comparing, the helper
-(`assert_expected_job_bundle_and_generated_job_bundle_are_equal`) normalizes a
+(`BundleNormalization` through the local comparison wrapper) normalizes a
 fixed set of moving parts: `PATH_TO_BE_REPLACED` → the local repo prefix;
 backslashes → forward slashes (preserving unicode escapes);
 `SubmitterIntegrationVersion` (changes every build) → a fixed placeholder; and
@@ -318,50 +298,51 @@ exactly the three files (`template.yaml`, `parameter_values.yaml`,
 #### Adding / changing a case
 
 **Plain case (no UI interaction):**
-1. Create `test_cases/<name>/input/scene.py` (model it on `cube`'s).
-2. Add `"<name>"` to the `_CASES` list in `test_cinema4d.py`.
-3. Run it once (it fails — `expected/` is empty), capture the golden (below), re-run.
+1. Create `test/integ/test_cases/<name>/input/scene.py`, using the nearest
+   existing case as the model. The script receives the `actual/` directory as
+   `sys.argv[1]` and must save `<name>.c4d` there.
+2. Add `"<name>"` to `_CASES` in `test/integ/test_cinema4d.py`.
+3. Run the focused case. The missing expected bundle should fail after leaving
+   generated files in `actual/`.
+4. Capture the golden bundle, then rerun the focused case.
 
 **Configured case (drive the dialog before Export):** same, plus an
 `input/configure.py` with a top-level `configure(dialog)` using the
 `submitter_ui` page-object:
 
 ```python
-from test.integ_xa11y import submitter_ui as ui
+from test.integ import submitter_ui as ui
 
 def configure(dialog):
     ui.set_priority(dialog, 51)
     ui.set_detailed_logging(dialog, True)
 ```
 
-It runs after the dialog settles and before Export. See `submitter_ui.py` for
-the helpers and gotchas, and `cube`'s `input/configure.py` for a worked example.
+It runs after the dialog settles and before Export. Reuse helpers from
+`submitter_ui.py`; add a C4D-specific helper there, plus a focused unit test in
+`test_submitter_ui.py`, when no helper exists. Do not guess accessibility
+selectors. Use `DIALOG_DUMP=1`, then verify new selectors on Windows and macOS.
+See `shared_job_settings/input/configure.py` for a worked example.
 
-**Capturing the golden bundle (manual):** after a run, the generated bundle is in
-the case's `actual/`. Copy the three files into `expected/job_bundle/`, replacing
-the absolute prefix up to (not including) `deadline-cloud-for-cinema-4d` with
-`PATH_TO_BE_REPLACED`:
+**Capturing the golden bundle:** after a run, the generated bundle is in the
+case's `actual/`. Parse the three bundle files as YAML, recursively replace the
+machine-specific path preceding `deadline-cloud-for-cinema-4d` with
+`PATH_TO_BE_REPLACED`, normalize path separators to `/`, and remove
+`jobEnvironments` from `template.yaml`. Serialize the result as block YAML
+under `expected/job_bundle/`, or `expected/<variant>/job_bundle/` for a
+parametrized case. On Windows, copy reviewed render PNGs from `actual/renders/`
+to the matching expected directory.
 
-```bash
-case=<name>
-parent="$(dirname "$(pwd)")"   # run from the repo root
-for f in template.yaml parameter_values.yaml asset_references.yaml; do
-  perl -pe "s{\Q$parent\E}{PATH_TO_BE_REPLACED}g" \
-    test/integ_xa11y/test_cases/$case/actual/$f \
-    > test/integ_xa11y/test_cases/$case/expected/job_bundle/$f
-done
-```
-
-The submitter sometimes emits `parameter_values.yaml` as single-line JSON; the
-comparison parses both, but commit block YAML (re-serialize with
-`deadline.client.job_bundle._yaml.deadline_yaml_dump`). The render PNGs
-(`expected/renders/`) are captured the same way and only compared on Windows.
+Use structured YAML operations rather than text substitutions. Review every
+golden diff; do not accept generated output without checking that it represents
+the intended behavior.
 
 **New mocked operation:** if a submitter change calls a Deadline operation the
 mock doesn't implement, the test fails its `unmatched_requests` assertion (and
 the mock logs `404 NO ROUTE`). Add a `@route`-decorated handler in
-`mock_aws/deadline.py` and, if it returns resource data, seed
-`mock_aws/fixtures_data.py`.
+`deadline_test_fixtures.deadline_mock.MockDeadlineBackend`. If it returns
+resource data, extend `MockDeadlineScenario` there. Keep DCC-specific launch
+behavior in this repository.
 
 ## Installer Tests
 

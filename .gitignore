@@ -11,13 +11,7 @@ __pycache__/
 
 /dependency_bundle/
 /dev_install/
-/job_bundle_output_tests/*/scene/renders
-/job_bundle_output_tests/*/scene/*.c4d
-/job_bundle_output_tests/*/scene/*.deadline_render_settings.json
-/job_bundle_output_tests/*/scene/tex
-/job_bundle_output_tests/*/*.psd
-/test/integ/**/generated_bundle/*
-/test/integ_xa11y/**/actual/
+/test/integ/**/actual/
 /scripts/dependency_bundle/
 /wheels/
 **/otls/backup

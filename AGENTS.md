@@ -50,7 +50,7 @@ hatch run test -k "test_name"                     # One test by name
 hatch run all:test                                # All supported Python versions
 ```
 
-**Integration Tests (Windows Only):** See [`test/AGENTS.md`](test/AGENTS.md).
+**Integration Tests:** See [`test/AGENTS.md`](test/AGENTS.md).
 
 ## Linting
 

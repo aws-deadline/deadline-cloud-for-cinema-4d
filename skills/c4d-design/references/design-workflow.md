@@ -165,8 +165,11 @@ def test_feature_x_configuration(self):
     # Verify expected behavior
 ```
 
-### Integration Tests (Windows Only)
-Consider adding a new test scene under `test/integ/test_scenes/` if the feature affects rendering output. Integration tests currently only run on Windows.
+### Integration Tests
+Consider adding a new case under `test/integ/test_cases/` if the feature
+affects the submitter UI, job bundle, or rendering output. Bundle validation
+runs on Windows and macOS; rendering assertions run on Windows. Follow
+`test/AGENTS.md` and the `c4d-dev` skill's xa11y authoring workflow.
 
 ## Step 8: Document Files to Modify
 

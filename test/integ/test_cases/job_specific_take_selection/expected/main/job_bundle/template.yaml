@@ -1,0 +1,183 @@
+specificationVersion: jobtemplate-2023-09
+extensions:
+- TASK_CHUNKING
+name: job_specific_take_selection.c4d
+parameterDefinitions:
+- name: Cinema4DFile
+  type: PATH
+  objectType: FILE
+  dataFlow: IN
+  userInterface:
+    control: CHOOSE_INPUT_FILE
+    label: Cinema4D Document File
+    groupLabel: Cinema4D Settings
+    fileFilters:
+    - label: Cinema4D document files
+      patterns:
+      - '*.c4d'
+    - label: All Files
+      patterns:
+      - '*'
+  description: The Cinema4D document file to render.
+- name: SubmitterIntegrationVersion
+  type: STRING
+  userInterface:
+    control: HIDDEN
+    label: Submitter Integration Version
+    groupLabel: Cinema4D Settings
+  description: The Cinema 4D submitter integration version.
+- name: Frames
+  type: STRING
+  userInterface:
+    control: LINE_EDIT
+    label: Frames
+    groupLabel: Cinema4D Settings
+  description: The frames to render. E.g. 1-3,8,11-15
+  minLength: 1
+- name: ChunkSize
+  type: INT
+  default: 1
+  minValue: 1
+  description: |
+    Number of frames per chunk. Use 1 for one frame per task (default). Higher values group frames into chunks to reduce per-task overhead.
+  userInterface:
+    control: SPIN_BOX
+    label: Frames Per Chunk
+    groupLabel: Cinema4D Settings
+- name: TargetChunkDuration
+  type: INT
+  default: 0
+  minValue: 0
+  description: |
+    Target render time per chunk in seconds. Deadline Cloud will automatically adjust how many frames are grouped together to hit this target. Set to 0 to always use the fixed frames-per-chunk value.
+  userInterface:
+    control: SPIN_BOX
+    label: Target Chunk Duration (Seconds)
+    groupLabel: Cinema4D Settings
+- name: OutputPath
+  type: PATH
+  objectType: FILE
+  dataFlow: OUT
+  userInterface:
+    control: CHOOSE_OUTPUT_FILE
+    label: Default image output
+    groupLabel: Cinema4D Settings
+  description: Image output path
+- name: MultiPassPath
+  type: PATH
+  objectType: FILE
+  dataFlow: OUT
+  userInterface:
+    control: CHOOSE_OUTPUT_FILE
+    label: Multi-pass output path
+    groupLabel: Cinema4D Settings
+  description: Multi-pass image output
+- name: ActivateErrorChecking
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Activate automatic error checking
+    groupLabel: Cinema4D Settings
+  description: Fail when errors occur.
+  default: '1'
+  allowedValues:
+  - '1'
+  - '0'
+- name: DetailedLogging
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Enable Detailed Logging
+    groupLabel: Cinema4D Settings
+  description: Enable detailed Cinema 4D + Redshift renderer logging for debugging.
+  default: '0'
+  allowedValues:
+  - '1'
+  - '0'
+- name: UseCachedText
+  type: STRING
+  userInterface:
+    control: CHECK_BOX
+    label: Use cached text during render
+    groupLabel: Cinema4D Settings
+  description: Prevents incorrect or missing text by using cached fonts. If there
+    are no fonts in the scene, this is ignored. If there are fonts in the scene, this
+    will increase rendering time.
+  default: '0'
+  allowedValues:
+  - '1'
+  - '0'
+steps:
+- name: Main
+  parameterSpace:
+    taskParameterDefinitions:
+    - name: Frame
+      type: CHUNK[INT]
+      range: '{{Param.Frames}}'
+      chunks:
+        defaultTaskCount: '{{Param.ChunkSize}}'
+        targetRuntimeSeconds: '{{Param.TargetChunkDuration}}'
+        rangeConstraint: CONTIGUOUS
+  stepEnvironments:
+  - name: Cinema4D
+    description: Runs Cinema4D in the background.
+    variables:
+      PYTHONUNBUFFERED: '1'
+      SUBMITTER_INTEGRATION_VERSION: '{{Param.SubmitterIntegrationVersion}}'
+    script:
+      embeddedFiles:
+      - name: initData
+        filename: init-data.yaml
+        type: TEXT
+        data: |
+          take: Main
+          activate_error_checking: '{{Param.ActivateErrorChecking}}'
+          use_cached_text: '{{Param.UseCachedText}}'
+          scene_file: {{Param.Cinema4DFile}}
+          output_path: PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/job_specific_take_selection/actual/renders/job_specific_take_selection_Main
+          multi_pass_path: ''
+      actions:
+        onEnter:
+          command: cinema4d-openjd
+          args:
+          - daemon
+          - start
+          - --path-mapping-rules
+          - file://{{Session.PathMappingRulesFile}}
+          - --connection-file
+          - '{{Session.WorkingDirectory}}/connection.json'
+          - --init-data
+          - file://{{Env.File.initData}}
+          cancelation:
+            mode: NOTIFY_THEN_TERMINATE
+          timeout: 600
+        onExit:
+          command: cinema4d-openjd
+          args:
+          - daemon
+          - stop
+          - --connection-file
+          - '{{ Session.WorkingDirectory }}/connection.json'
+          cancelation:
+            mode: NOTIFY_THEN_TERMINATE
+          timeout: 300
+  script:
+    embeddedFiles:
+    - name: runData
+      filename: run-data.yaml
+      type: TEXT
+      data: |
+        frame: '{{Task.Param.Frame}}'
+    actions:
+      onRun:
+        command: cinema4d-openjd
+        args:
+        - daemon
+        - run
+        - --connection-file
+        - '{{ Session.WorkingDirectory }}/connection.json'
+        - --run-data
+        - file://{{ Task.File.runData }}
+        cancelation:
+          mode: NOTIFY_THEN_TERMINATE
+        timeout: 172800

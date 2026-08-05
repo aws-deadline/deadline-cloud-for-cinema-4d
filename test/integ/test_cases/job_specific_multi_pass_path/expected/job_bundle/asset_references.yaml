@@ -1,0 +1,9 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/job_specific_multi_pass_path/actual/job_specific_multi_pass_path.c4d
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/job_specific_multi_pass_path/actual/renders
+  referencedPaths: []

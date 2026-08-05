@@ -92,7 +92,8 @@ Write each approved section to disk.
 
 #### Step 4: Testing Plan
 
-Define unit tests and, if applicable, integration tests (Windows only).
+Define unit tests and, if applicable, integration tests. Bundle validation runs
+on Windows and macOS; rendering assertions run on Windows.
 
 #### Step 5: Create the Appendix
 

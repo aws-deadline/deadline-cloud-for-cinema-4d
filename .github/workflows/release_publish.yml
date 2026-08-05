@@ -29,20 +29,45 @@ jobs:
 
   UnitTests:
     needs: [TagRelease]
-    name: Unit and Integration Tests
+    name: Unit Tests
     uses: ./.github/workflows/code_quality.yml
     with:
       tag: ${{ needs.TagRelease.outputs.tag }}
 
-  ManualTestGate:
-    needs: [TagRelease, BuildInstaller]
-    runs-on: ubuntu-latest
-    environment: release-gate
-    steps:
-      - run: echo "Manual testing approved for ${{ needs.TagRelease.outputs.tag }}"
+  Xa11yWindows:
+    needs: [TagRelease, UnitTests]
+    name: xa11y Integration Tests (Windows)
+    uses: ./.github/workflows/integ_windows.yml
+    secrets:
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      RLM_PORT: ${{ secrets.RLM_PORT }}
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+      LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+      BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+    permissions:
+      id-token: write
+      contents: read
+
+  Xa11yMacOS:
+    needs: [TagRelease, UnitTests]
+    name: xa11y Integration Tests (macOS)
+    uses: ./.github/workflows/integ_macos.yml
+    secrets:
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      RLM_PORT: ${{ secrets.RLM_PORT }}
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+      LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+      BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+    permissions:
+      id-token: write
+      contents: read
 
   PreRelease:
-      needs: [TagRelease, UnitTests]
+      needs: [TagRelease, UnitTests, Xa11yWindows, Xa11yMacOS]
       uses: aws-deadline/.github/.github/workflows/reusable_prerelease.yml@mainline
       permissions:
         id-token: write
@@ -84,7 +109,7 @@ jobs:
          :
   
   ReleaseInstaller:
-    needs: [TagRelease, IsCondaReady, ManualTestGate]
+    needs: [TagRelease, IsCondaReady]
     uses: aws-deadline/.github/.github/workflows/reusable_release_installers.yml@mainline
     secrets: inherit
     permissions:
@@ -115,12 +140,12 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.TagRelease.outputs.tag }}
           fetch-depth: 0
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ needs.TagRelease.outputs.build-python-version }}
       - name: Install dependencies
@@ -130,4 +155,4 @@ jobs:
         run: hatch -v build
       # # See https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-pypi
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

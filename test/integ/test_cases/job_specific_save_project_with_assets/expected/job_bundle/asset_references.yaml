@@ -1,0 +1,10 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/job_specific_save_project_with_assets/actual/scene_with_assets_NORMALIZED/job_specific_save_project_with_assets.c4d/job_specific_save_project_with_assets.c4d
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/job_specific_save_project_with_assets/actual/scene_with_assets_NORMALIZED/job_specific_save_project_with_assets.c4d/tex/checkerboard.bmp
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/job_specific_save_project_with_assets/actual/renders
+  referencedPaths: []
