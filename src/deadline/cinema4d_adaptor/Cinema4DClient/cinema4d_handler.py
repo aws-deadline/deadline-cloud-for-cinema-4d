@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 import os
+import time
 import traceback
 from typing import Any, Callable, Dict
 
 # The Cinema4D Adaptor adds the `deadline` namespace directory to PYTHONPATH,
 # so that importing just the cinema4d_adaptor should work.
 try:
-    from cinema4d_adaptor.Cinema4DClient import tile_rendering  # type: ignore[import]
+    from cinema4d_adaptor.Cinema4DClient import ocio_bake, tile_rendering  # type: ignore[import]
 except (ImportError, ModuleNotFoundError):
-    from deadline.cinema4d_adaptor.Cinema4DClient import tile_rendering  # type: ignore[import]
+    from deadline.cinema4d_adaptor.Cinema4DClient import (  # type: ignore[import]
+        ocio_bake,
+        tile_rendering,
+    )
 
 try:
     import c4d  # type: ignore
@@ -265,6 +269,14 @@ class Cinema4DHandler:
         frame = int(frame_str)
         return frame, frame
 
+    def _raise_on_render_error(self, result: int) -> None:
+        """Raise if a RenderDocument result is an error (or unrecognized)."""
+        result_description = _RENDERRESULT.get(result)
+        if result_description is None:
+            raise RuntimeError("Error: unhandled render result: %s" % result)
+        if result != c4d.RENDERRESULT_OK:
+            raise RuntimeError("Error: render result: %s" % result_description)
+
     def start_render(self, data: dict) -> None:
         if self.cached_text_was_used_in_previous_frame:
             # Close and then reload document since we collapsed some text in the previous frame
@@ -303,54 +315,59 @@ class Cinema4DHandler:
 
         width = int(self.render_data[c4d.RDATA_XRES])
         height = int(self.render_data[c4d.RDATA_YRES])
-        if is_tile_render:
-            bm = tile_rendering.create_tile_bitmap(width, height)
-        else:
-            bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
         rd = self.render_data.GetDataInstance()
-
-        # Non-tile OCIO workaround: RenderDocument's internal save does not bake the
-        # OCIO View Transform (Cinema 4D SDK bug), so ordinary renders are written
-        # un-tone-mapped. Disable the render-time bake so the rendered bitmap holds
-        # render-space data we can bake manually after the render, and snapshot the
-        # output directory so we only overwrite the beauty image THIS render produces.
-        pre_existing_outputs: set = set()
-        if not is_tile_render and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER"):
-            rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
-            beauty_dir = os.path.dirname(self.render_data[c4d.RDATA_PATH] or "")
-            if beauty_dir and os.path.isdir(beauty_dir):
-                pre_existing_outputs = {
-                    os.path.join(beauty_dir, f) for f in os.listdir(beauty_dir)
-                }
 
         self.cached_text_was_used_in_previous_frame = self._cache_text_if_needed(
             c4d.BaseTime(start_frame, fps)
         )
 
-        result = c4d.documents.RenderDocument(
-            self.doc,
-            rd,
-            bm,
-            c4d.RENDERFLAGS_EXTERNAL | c4d.RENDERFLAGS_SHOWERRORS,
-            prog=progress_callback,
+        render_flags = c4d.RENDERFLAGS_EXTERNAL | c4d.RENDERFLAGS_SHOWERRORS
+
+        # Non-tile OCIO workaround: RenderDocument's internal save does not bake the
+        # OCIO View Transform (a Cinema 4D SDK bug), so ordinary renders are written
+        # un-tone-mapped (dark/"Raw"). We disable the render-time bake and render ONE
+        # frame per RenderDocument call, so each frame's render-space bitmap can be
+        # OCIO-baked into its beauty file afterwards. (A single RenderDocument over a
+        # frame range leaves only the last frame in the bitmap, so the earlier frames
+        # could not be baked.) See tile_rendering.bake_full_frame_beauty.
+        # Only 8-bit display output needs the view transform baked (float/EXR stays
+        # scene-linear), so restrict the per-frame path to that case -- other outputs
+        # keep the original single range render.
+        bake_ocio = (
+            not is_tile_render
+            and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
+            and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_8
         )
-
-        result_description = _RENDERRESULT.get(result)
-        if result_description is None:
-            raise RuntimeError("Error: unhandled render result: %s" % result)
-        if result != c4d.RENDERRESULT_OK:
-            raise RuntimeError("Error: render result: %s" % result_description)
-
-        # Post-render tile processing: OCIO bake, crop, save tile, restore paths
-        if is_tile_render and tile_ctx is not None:
-            tile_rendering.finalize_tile_render(bm, rd, tile_ctx, self.render_data, start_frame)
+        if bake_ocio:
+            self.render_data[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
+            for frame in range(start_frame, end_frame + 1):
+                self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
+                self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(frame, fps)
+                frame_rd = self.render_data.GetDataInstance()
+                # Render into a float bitmap so the OCIO view transform is baked from
+                # full-precision render-space data (baking 8-bit data would band the
+                # gradients) -- same rationale as the tile path's create_tile_bitmap.
+                frame_bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGBf)
+                render_start = time.time()
+                result = c4d.documents.RenderDocument(
+                    self.doc, frame_rd, frame_bm, render_flags, prog=progress_callback
+                )
+                self._raise_on_render_error(result)
+                ocio_bake.bake_full_frame_beauty(
+                    frame_bm, frame_rd, self.render_data, self.doc, frame, render_start
+                )
         else:
-            # Non-tile: bake the OCIO View Transform into the beauty image, working
-            # around the RenderDocument internal-save bug (leaves alpha / multi-pass
-            # files and float/EXR output untouched).
-            tile_rendering.bake_full_frame_beauty(
-                bm, rd, self.render_data, pre_existing_outputs
+            if is_tile_render:
+                bm = tile_rendering.create_tile_bitmap(width, height)
+            else:
+                bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
+            result = c4d.documents.RenderDocument(
+                self.doc, rd, bm, render_flags, prog=progress_callback
             )
+            self._raise_on_render_error(result)
+            # Post-render tile processing: OCIO bake, crop, save tile, restore paths
+            if is_tile_render and tile_ctx is not None:
+                tile_rendering.finalize_tile_render(bm, rd, tile_ctx, self.render_data, start_frame)
 
         print("Finished Rendering")
 
