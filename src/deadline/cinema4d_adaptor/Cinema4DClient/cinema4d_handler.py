@@ -420,7 +420,7 @@ class Cinema4DHandler:
                     all_takes.extend(get_child_takes(child_take))
             return all_takes
 
-        main_take = take_data.GetCurrentTake()
+        main_take = take_data.GetMainTake()
         all_takes = [main_take] + get_child_takes(main_take)
 
         matched_take = None
