@@ -16,4 +16,4 @@ fonttools >= 4.0.0
 deadline-cloud-test-fixtures >= 0.18.17
 # Drives the real submitter dialog via the OS accessibility tree.
 # Used by test/integ/.
-xa11y >= 0.11.0
+xa11y >= 0.13.0
