@@ -342,8 +342,8 @@ class Cinema4DHandler:
             # Disable the render-time bake, restoring it afterwards (the document is
             # reused across renders in a session) -- mirrors the tile path, which saves
             # and restores this flag in finalize_tile_render.
-            orig_bake_flag = self.render_data[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER]
-            self.render_data[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
+            orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
+            rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
             try:
                 for frame in range(start_frame, end_frame + 1):
                     self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
@@ -362,7 +362,7 @@ class Cinema4DHandler:
                         frame_bm, frame_rd, self.render_data, self.doc, frame, render_start
                     )
             finally:
-                self.render_data[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
+                rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
         else:
             if is_tile_render:
                 bm = tile_rendering.create_tile_bitmap(width, height)
