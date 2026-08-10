@@ -13,7 +13,7 @@ numpy >= 2.2.6, < 2.5; python_version < "3.12"
 pillow == 12.*
 openjd-cli == 0.7.*
 fonttools >= 4.0.0
-deadline-cloud-test-fixtures >= 0.18.17
+deadline-cloud-test-fixtures >= 0.18.18
 # Drives the real submitter dialog via the OS accessibility tree.
 # Used by test/integ/.
 xa11y >= 0.13.0
