@@ -82,7 +82,7 @@ class TestCinema4DHandler:
         mock_take_a.GetChildren.return_value = []
 
         mock_take_data = Mock()
-        mock_take_data.GetCurrentTake.return_value = mock_main_take
+        mock_take_data.GetMainTake.return_value = mock_main_take
         mock_main_take.GetChildren.return_value = [mock_take_a]
 
         mock_doc = Mock()
@@ -109,7 +109,7 @@ class TestCinema4DHandler:
         mock_take_a.GetChildren.return_value = []
 
         mock_take_data = Mock()
-        mock_take_data.GetCurrentTake.return_value = mock_main_take
+        mock_take_data.GetMainTake.return_value = mock_main_take
         mock_main_take.GetChildren.return_value = [mock_take_a]
 
         mock_doc = Mock()
@@ -118,6 +118,50 @@ class TestCinema4DHandler:
 
         handler.set_take({"take": "A"})
         mock_take_data.SetCurrentTake.assert_called_once_with(mock_take_a)
+
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_set_take_from_non_parent_current_take(self, mock_get_doc: Mock):
+        """Verify that set_take finds and sets a take even if the active take is not an ancestor of the target take."""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Hierarchy:
+        #           Main
+        #          /    \
+        #     Take A   Take B
+        #       |
+        #    Take A1 (current active take)
+        mock_main_take = Mock()
+        mock_main_take.GetName.return_value = "Main"
+
+        mock_take_a = Mock()
+        mock_take_a.GetName.return_value = "Take A"
+
+        mock_take_a1 = Mock()
+        mock_take_a1.GetName.return_value = "Take A1"
+        mock_take_a1.GetChildren.return_value = []
+
+        mock_take_b = Mock()
+        mock_take_b.GetName.return_value = "Take B"
+        mock_take_b.GetChildren.return_value = []
+
+        mock_main_take.GetChildren.return_value = [mock_take_a, mock_take_b]
+        mock_take_a.GetChildren.return_value = [mock_take_a1]
+
+        mock_take_data = Mock()
+        # Current active take is Take A1 (which has no children)
+        mock_take_data.GetCurrentTake.return_value = mock_take_a1
+        # GetMainTake returns Main take, which roots the entire hierarchy
+        mock_take_data.GetMainTake.return_value = mock_main_take
+
+        mock_doc = Mock()
+        mock_doc.GetTakeData.return_value = mock_take_data
+        mock_get_doc.return_value = mock_doc
+
+        # Setting take to "Take B" should succeed because search starts from GetMainTake()
+        handler.set_take({"take": "Take B"})
+        mock_take_data.SetCurrentTake.assert_called_once_with(mock_take_b)
 
 
 class TestShouldCacheText:
