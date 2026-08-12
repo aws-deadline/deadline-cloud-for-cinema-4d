@@ -372,6 +372,28 @@ the mock logs `404 NO ROUTE`). Add a `@route`-decorated handler in
 resource data, extend `MockDeadlineScenario` there. Keep DCC-specific launch
 behavior in this repository.
 
+**Pre-GUI hook case (`test_pre_gui_hook`):** this one does *not* use the `_CASES`
+/ golden-bundle model — it's a standalone test asserting only the fields a
+pre-GUI hook owns. The hook script `fixtures/pregui_hooks/pregui_hook.py` reads
+the job metadata on stdin and emits `name` / `description` / `parameters` as JSON
+on stdout. Its `hooks.yaml` (version `"1.0"`) is *not* committed: the test
+generates it per-run (`_materialize_pregui_hooks_dir`) with `command` set to
+`sys.executable`, because deadline-cloud resolves a hook `command` via absolute
+path / hooks-dir / `shutil.which` with no env-var expansion, so a static `python`
+isn't a portable interpreter (absent on macOS; PATH-dependent everywhere) and the
+hook would silently not run. The test enables `settings.allow_environment_hooks`
+(so the submitter sources `DEADLINE_HOOKS_DIR`) and `settings.auto_accept` (so
+hooks run without the Qt confirmation prompt) in the config the `deadline_farm`
+fixture wrote, points `DEADLINE_HOOKS_DIR` at that generated dir via the launch
+env, Exports, then asserts a marker file proves the hook actually ran before
+asserting the emitted `name`/`description` reached `template.yaml` and
+`deadline:priority` reached `parameter_values.yaml` (the marker separates "hook
+never launched" from "hook ran but output wasn't wired in"). To change what the
+hook injects, edit `pregui_hook.py` and the `_HOOK_*` constants in
+`test_cinema4d.py` together (they're the paired source of truth). It has no
+`expected/job_bundle/` and never renders, so it needs no golden capture and runs
+on macOS too.
+
 ## Installer Tests
 
 Test the built installer. Requires having run `hatch run installer:build-installer` first.

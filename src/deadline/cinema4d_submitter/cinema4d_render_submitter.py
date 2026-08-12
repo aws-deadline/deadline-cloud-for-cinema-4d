@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import tempfile
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,14 +15,21 @@ import yaml  # type: ignore[import]
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 
+from deadline.client.config import get_setting, str2bool
 from deadline.client.dataclasses import SubmitterInfo
-from deadline.client.exceptions import DeadlineOperationError
+from deadline.client.exceptions import DeadlineOperationCanceled, DeadlineOperationError
 from deadline.client.job_bundle._yaml import deadline_yaml_dump
 from deadline.client.job_bundle.parameters import JobParameter
 from deadline.client.job_bundle.submission import AssetReferences
 from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import (  # pylint: disable=import-error
     JobBundlePurpose,
     SubmitJobToDeadlineDialog,
+)
+from deadline.client.ui.pre_gui_hooks import (
+    PreGuiHookContext,
+    apply_pre_gui_output,
+    qt_hook_confirmation,
+    run_pre_gui_hooks,
 )
 
 from ._version import version_tuple as adaptor_version_tuple
@@ -110,6 +118,10 @@ def show_submitter():
                 )
             else:
                 w = _show_submitter(temp_dir, None)
+            # _show_submitter returns None when the user declines the pre-GUI hook confirmation
+            # prompt; treat that as a normal cancellation and skip showing the dialog.
+            if w is None:
+                return
             w.setStyleSheet(C4D_STYLE)
             w.exec_()
     except Exception:  # noqa: BLE001 - prevent UI failures from escaping into Cinema 4D
@@ -574,6 +586,106 @@ def save_job_bundle_files(
         deadline_yaml_dump(asset_references.to_dict(), f, indent=1)
 
 
+def _restore_pre_gui_hook_sticky_settings(
+    settings: RenderSubmitterUISettings,
+    pre_gui_hook_sticky_reset: dict[str, tuple[Any, Any]] | None,
+) -> dict[str, Any]:
+    """Restore pre-hook baseline values for sticky fields a pre-GUI hook overwrote.
+
+    ``pre_gui_hook_sticky_reset`` maps each sticky field a pre-GUI hook overwrote to
+    ``(pre_hook_value, hook_value)``. For each, restore the pre-hook value unless the user changed
+    the field in the dialog -- in that case the current value differs from what the hook applied,
+    so we keep the user's value. Hook output therefore stays scoped to the session: it never
+    persists as a stale default after the hook is disabled, nor feeds back as ``jobName`` on the
+    next launch.
+
+    Returns the ``{field_name: hook_value}`` it reset to baseline, so the caller can reapply the
+    hook values after the sticky write and avoid leaving the live ``settings`` object mutated (see
+    :func:`_pre_gui_hook_sticky_baseline`).
+    """
+    if not pre_gui_hook_sticky_reset:
+        return {}
+    restored: dict[str, Any] = {}
+    for field_name, (baseline_value, hook_value) in pre_gui_hook_sticky_reset.items():
+        if getattr(settings, field_name) == hook_value:
+            setattr(settings, field_name, baseline_value)
+            restored[field_name] = hook_value
+    return restored
+
+
+# deadline-cloud's shared-settings tab (SharedJobPropertiesWidget) writes these "deadline:*" job
+# properties onto the matching sticky RenderSubmitterUISettings fields when it gathers settings on
+# Export/Submit. A pre-GUI hook only ever puts them in the shared parameter values (not directly on
+# the settings object), so a hook emitting e.g. deadline:priority would otherwise persist into the
+# scene's sticky settings exactly as an unscoped name/description would. This maps each such shared
+# key to its sticky field so both are scoped out of the sticky write together.
+_HOOK_STICKY_SHARED_PARAM_FIELDS = {
+    "deadline:priority": "priority",
+    "deadline:targetTaskRunStatus": "initial_status",
+    "deadline:maxFailedTasksCount": "max_failed_tasks_count",
+    "deadline:maxRetriesPerTask": "max_retries_per_task",
+    "deadline:maxWorkerCount": "max_worker_count",
+}
+
+
+def _compute_pre_gui_hook_sticky_reset(
+    settings: RenderSubmitterUISettings,
+    name_description_baseline: dict[str, Any],
+    shared_before: dict[str, Any],
+    shared_after: dict[str, Any],
+) -> dict[str, tuple[Any, Any]]:
+    """Build the ``{sticky_field: (pre_hook_value, hook_value)}`` map of every sticky field a
+    pre-GUI hook changed, so create_job_bundle can keep the hook's values out of the sticky write.
+
+    Two routes a hook reaches a sticky field:
+
+    * ``name`` / ``description`` are set directly on ``settings`` by ``apply_pre_gui_output`` —
+      detected by diffing ``name_description_baseline`` (snapshotted before the hook) against the
+      current value.
+    * ``deadline:*`` job properties are routed into the shared parameter values instead; the shared
+      settings tab later writes them onto the matching sticky field (see
+      ``_HOOK_STICKY_SHARED_PARAM_FIELDS``). Each such key the hook added or changed
+      (``shared_before`` -> ``shared_after``) is recorded against its field, with the hook's value
+      so a later user edit in the dialog (current value != hook value) is still kept.
+
+    The baseline for a shared-param field is the field's current value on ``settings``, which
+    ``apply_pre_gui_output`` does not touch — so it is still the pre-hook (scene/sticky) value.
+    """
+    reset: dict[str, tuple[Any, Any]] = {}
+    for attr, baseline in name_description_baseline.items():
+        current = getattr(settings, attr)
+        if current != baseline:
+            reset[attr] = (baseline, current)
+    for shared_key, field_name in _HOOK_STICKY_SHARED_PARAM_FIELDS.items():
+        if shared_key in shared_after and shared_after[shared_key] != shared_before.get(shared_key):
+            reset[field_name] = (getattr(settings, field_name), shared_after[shared_key])
+    return reset
+
+
+@contextmanager
+def _pre_gui_hook_sticky_baseline(
+    settings: RenderSubmitterUISettings,
+    pre_gui_hook_sticky_reset: dict[str, tuple[Any, Any]] | None,
+):
+    """Scope the pre-GUI hook sticky-settings reset to the ``save_sticky_settings`` call only.
+
+    Restores pre-hook baselines for the sticky write, then reapplies the hook values so the live
+    ``settings`` object is unchanged on exit. ``on_create_job_bundle_callback`` runs once per
+    Export/Submit against the dialog's *live* settings object (not a per-call copy), so permanently
+    resetting ``name``/``description`` to baseline would make a second action in the same session
+    build its job from the scene-derived value instead of the hook's -- two different job names for
+    two identical clicks, with the dialog still showing the first. Keeping the reset scoped to the
+    sticky write leaves the in-memory settings exactly as the user saw them, while the persisted
+    sticky settings still exclude the hook output.
+    """
+    restored = _restore_pre_gui_hook_sticky_settings(settings, pre_gui_hook_sticky_reset)
+    try:
+        yield
+    finally:
+        for field_name, hook_value in restored.items():
+            setattr(settings, field_name, hook_value)
+
+
 def create_job_bundle(
     settings: RenderSubmitterUISettings,
     takes: dict[str, list[TakeData]],
@@ -583,6 +695,7 @@ def create_job_bundle(
     attachments: AssetReferences,
     temp_dir: str | None = None,
     host_requirements: dict | None = None,
+    pre_gui_hook_sticky_reset: dict[str, tuple[Any, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     Creates a job bundle and saves sticky settings for rendering.
@@ -671,7 +784,11 @@ def create_job_bundle(
     settings.input_filenames = sorted(attachments.input_filenames)
     settings.input_directories = sorted(attachments.input_directories)
 
-    settings.save_sticky_settings(Scene.name())
+    # Keep pre-GUI hook output out of the persisted sticky settings (the job template above already
+    # captured the effective name/description). Scope the reset to the sticky write only, so the
+    # live settings object keeps the hook values for any later action in the same dialog session.
+    with _pre_gui_hook_sticky_baseline(settings, pre_gui_hook_sticky_reset):
+        settings.save_sticky_settings(Scene.name())
 
     return {
         "known_asset_paths": [
@@ -943,6 +1060,19 @@ def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> N
     asset_references.input_filenames = temp_assets
 
 
+def _pre_gui_hook_confirm_callback(parent):
+    """Choose the confirmation callback for pre-GUI hooks based on the auto_accept setting.
+
+    Returns ``None`` (run hooks without prompting) when ``settings.auto_accept`` is enabled,
+    otherwise the standard Qt confirmation dialog from ``qt_hook_confirmation``. Kept as a small
+    helper so the auto_accept branch can be unit-tested headlessly.
+    """
+    if str2bool(get_setting("settings.auto_accept")):
+        return None
+
+    return qt_hook_confirmation(parent)
+
+
 def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: ignore[call-overload]
     """
     Creates and returns a submission dialog for rendering jobs.
@@ -991,6 +1121,11 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: 
         additional_info=additional_info,
     )
 
+    # Maps each sticky field a pre-GUI hook overwrites -> (pre-hook value, hook value). Populated
+    # after the hooks run below and passed to create_job_bundle, which uses it to keep hook output
+    # out of the persisted sticky settings. See the block near apply_pre_gui_output.
+    pre_gui_hook_sticky_reset: dict[str, tuple[Any, Any]] = {}
+
     def on_create_job_bundle_callback(
         widget: SubmitJobToDeadlineDialog,
         job_bundle_dir: str,
@@ -1026,14 +1161,61 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: 
             widget.job_attachments.attachments,
             temp_dir,
             host_requirements,
+            pre_gui_hook_sticky_reset=pre_gui_hook_sticky_reset,
         )
+
+    shared_parameter_values = {
+        "CondaPackages": conda_packages,
+    }
+
+    # Run pre-GUI hooks so studios can pre-populate dialog fields before it opens. Cinema 4D has
+    # no on-disk job bundle at this point, so hooks are sourced from DEADLINE_HOOKS_DIR only
+    # (bundle_dir=None), gated by settings.allow_environment_hooks. The confirmation prompt is
+    # skipped when auto_accept is set; otherwise the standard dialog is shown.
+    try:
+        pre_gui_output = run_pre_gui_hooks(
+            PreGuiHookContext(
+                bundle_dir=None,
+                job_name=render_settings.name,
+                submitter_name="cinema4d",
+                parameters=dict(shared_parameter_values),
+            ),
+            confirm_callback=_pre_gui_hook_confirm_callback(parent),
+        )
+    except DeadlineOperationCanceled:
+        # The user declined the hook confirmation prompt. This is a normal cancellation, not an
+        # error, so abort opening the submitter silently by returning None; show_submitter skips
+        # the dialog. Without this, the exception would surface as a spurious "Deadline UI launch
+        # failed" error for what is a deliberate "No" click.
+        return None
+    # RenderSubmitterUISettings has no `.parameters` list, so apply_pre_gui_output routes
+    # name/description onto it and every hook parameter into shared_parameter_values.
+    # run_pre_gui_hooks returns {} when no hooks run (and raises DeadlineOperationCanceled, handled
+    # above, if the user declines); `or {}` is defensive against any future contract change so the
+    # common no-hooks path can never pass a falsy value into apply_pre_gui_output.
+    #
+    # name/description (and deadline:* job properties routed through shared_parameter_values) are
+    # sticky settings (data_classes.py). Snapshot the pre-hook (scene/sticky) state first, then
+    # record what the hook actually changed so create_job_bundle can scope those to this session
+    # (keep them out of the sticky write). This stops hook output from persisting as a stale default
+    # once the hook is disabled and from feeding back on the next launch, while any edit the user
+    # makes in the dialog still persists. See _compute_pre_gui_hook_sticky_reset.
+    name_description_baseline = {
+        attr: getattr(render_settings, attr) for attr in ("name", "description")
+    }
+    shared_values_before_hook = dict(shared_parameter_values)
+    apply_pre_gui_output(pre_gui_output or {}, render_settings, shared_parameter_values)
+    pre_gui_hook_sticky_reset = _compute_pre_gui_hook_sticky_reset(
+        render_settings,
+        name_description_baseline,
+        shared_values_before_hook,
+        shared_parameter_values,
+    )
 
     submitter_dialog = SubmitJobToDeadlineDialog(
         job_setup_widget_type=SceneSettingsWidget,
         initial_job_settings=render_settings,
-        initial_shared_parameter_values={
-            "CondaPackages": conda_packages,
-        },
+        initial_shared_parameter_values=shared_parameter_values,
         auto_detected_attachments=auto_detected_attachments,
         attachments=attachments,
         on_create_job_bundle_callback=on_create_job_bundle_callback,

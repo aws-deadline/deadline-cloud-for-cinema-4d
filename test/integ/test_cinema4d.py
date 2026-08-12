@@ -20,6 +20,7 @@ from deadline_test_fixtures.xa11y import (
     SharedSubmitterDialog,
     find_accessibility_app,
 )
+from yaml import safe_dump, safe_load
 
 from .utils import (
     assert_all_images_close,
@@ -142,6 +143,7 @@ def _build_launch_env(
     scene_path: Path,
     plugin_diag_log: Path,
     mock_env_overlay: dict,
+    extra_env: dict | None = None,
 ) -> dict:
     """Build the environment for the Cinema 4D subprocess.
 
@@ -151,8 +153,12 @@ def _build_launch_env(
     opt-out, isolated HOME, the temp deadline config path, and the mock-mode flag
     that switches on the sidecar's ``management.`` getaddrinfo redirect. So the
     submitter talks to the local mock, never real AWS.
+
+    ``extra_env`` overlays case-specific variables (e.g. ``DEADLINE_HOOKS_DIR`` for
+    the pre-GUI hook case) last, so a case can add to — or deliberately override —
+    the base launch env.
     """
-    return {
+    env = {
         **mock_env_overlay,
         # Point C4D at two plugin dirs: the real submitter plugin checked into
         # this repo, and the test-only sidecar that auto-opens the submitter.
@@ -187,6 +193,43 @@ def _build_launch_env(
         # opens.
         "DEADLINE_CLOUD_SCENE_PATH": str(scene_path),
     }
+    if extra_env:
+        env.update(extra_env)
+    return env
+
+
+def _enable_environment_hooks(env_overlay: dict) -> None:
+    """Turn on the two settings the pre-GUI hook path needs, in the deadline config
+    the ``deadline_farm`` fixture wrote.
+
+    ``run_pre_gui_hooks`` only sources ``DEADLINE_HOOKS_DIR`` when
+    ``settings.allow_environment_hooks`` is ``true``; both default to ``false``.
+    ``settings.auto_accept`` = ``true`` makes ``_pre_gui_hook_confirm_callback``
+    return ``None`` so hooks run without the Qt confirmation prompt — the prompt's
+    behaviour is covered by the unit tests, and skipping it keeps this UI test
+    focused on the export-output contract.
+
+    We write through ``deadline.client.config.set_setting`` rather than editing the
+    INI by hand: it resolves the correct (possibly profile-scoped) section for each
+    setting, validates the setting name against the installed deadline-cloud, and
+    avoids ``ConfigParser``'s default ``%`` interpolation mangling unrelated values
+    on rewrite. ``set_setting`` targets the file named by ``DEADLINE_CONFIG_FILE_PATH``,
+    so we point that at the overlay's config for the duration of the writes.
+    """
+    from deadline.client import config
+
+    config_path = env_overlay["DEADLINE_CONFIG_FILE_PATH"]
+    prev = os.environ.get("DEADLINE_CONFIG_FILE_PATH")
+    os.environ["DEADLINE_CONFIG_FILE_PATH"] = str(config_path)
+    try:
+        config.set_setting("settings.allow_environment_hooks", "true")
+        config.set_setting("settings.auto_accept", "true")
+    finally:
+        if prev is None:
+            os.environ.pop("DEADLINE_CONFIG_FILE_PATH", None)
+        else:
+            os.environ["DEADLINE_CONFIG_FILE_PATH"] = prev
+    log(f"enabled allow_environment_hooks + auto_accept in {config_path}")
 
 
 def _launch_cinema4d(cinema4d_gui_exe: Path, scene_path: Path, env: dict) -> subprocess.Popen:
@@ -472,9 +515,14 @@ def _export_job_bundle_via_submitter(
     job_bundle_generated: Path,
     deadline_farm: dict,
     configure: DialogConfigurator | None = None,
+    extra_env: dict | None = None,
 ) -> None:
     """Launch Cinema 4D, drive the real submitter UI to export a job bundle,
     and copy the bundle files flat into `job_bundle_generated`.
+
+    ``extra_env`` is overlaid onto the C4D launch environment (see
+    ``_build_launch_env``); the pre-GUI hook case uses it to set
+    ``DEADLINE_HOOKS_DIR``.
 
     The submitter exports via create_job_history_bundle_dir, which always
     writes under <history_dir>/<YYYY-mm>/<bundle-name>/. The history dir is set
@@ -492,7 +540,9 @@ def _export_job_bundle_via_submitter(
     plugin_diag_log = bundle_staging / "plugin-diag.log"
     log(f"bundle staging dir: {bundle_staging}; job history dir: {history_dir}")
     try:
-        env = _build_launch_env(scene_path, plugin_diag_log, deadline_farm["env_overlay"])
+        env = _build_launch_env(
+            scene_path, plugin_diag_log, deadline_farm["env_overlay"], extra_env=extra_env
+        )
         proc = _launch_cinema4d(cinema4d_gui_exe, scene_path, env)
         try:
             staged_bundle = _drive_submitter_ui(proc, history_dir, configure=configure)
@@ -715,3 +765,151 @@ def test_job_specific_take_selection(
         configure_kwargs={"selection": selection},
         scene_args=(expected_variant,),
     )
+
+
+# The committed pre-GUI hook script. Its hooks.yaml is NOT committed: it is generated per-run by
+# _materialize_pregui_hooks_dir so the hook's `command` can be this interpreter's absolute path
+# (see that helper for why a static `command` is not portable). DEADLINE_HOOKS_DIR points at the
+# generated dir; the run is gated by settings.allow_environment_hooks.
+_PREGUI_HOOK_SCRIPT = Path(__file__).parent / "fixtures" / "pregui_hooks" / "pregui_hook.py"
+
+# The values pregui_hook.py emits. Kept next to the test as the single source of truth for the
+# assertions; must match that script.
+_HOOK_JOB_NAME = "PREGUI RAN"
+_HOOK_DESCRIPTION = "populated by pre-GUI hook"
+_HOOK_PRIORITY = 88
+
+
+def _materialize_pregui_hooks_dir(dest: Path) -> None:
+    """Write a ``hooks.yaml`` under ``dest`` that runs the committed ``pregui_hook.py`` with the
+    interpreter currently running the tests (``sys.executable``).
+
+    The manifest cannot be a static committed file with a portable ``command``. deadline-cloud
+    resolves a hook ``command`` as an absolute path, then relative to the hooks dir, then via
+    ``shutil.which`` on PATH (``deadline.client.job_bundle._hooks._executor``) — it does not expand
+    environment variables. A bare ``python`` is not a reliable interpreter name: on macOS only
+    ``python3`` exists (the system ``python`` went away with Python 2), and on every platform
+    whether it resolves depends on the PATH Cinema 4D happened to inherit, not on this fixture. When
+    it fails to resolve, the hook silently never runs and the failure surfaces as the value
+    assertions below failing rather than a clear "hook could not be launched".
+
+    Writing ``sys.executable`` (an absolute path that exists on this machine — and ``pregui_hook.py``
+    needs only the stdlib, so any interpreter works) makes the hook resolve on every platform.
+    ``args`` references the committed script by absolute path, so only ``hooks.yaml`` lives here.
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "version": "1.0",
+        "preGUI": [
+            {
+                "command": sys.executable,
+                "args": [str(_PREGUI_HOOK_SCRIPT)],
+                "timeout": 60,
+            }
+        ],
+    }
+    (dest / "hooks.yaml").write_text(safe_dump(manifest, sort_keys=False), encoding="utf-8")
+
+
+def _bundle_parameter_values(actual_dir: Path) -> dict:
+    """Read the exported bundle's parameter_values.yaml into a {name: value} dict."""
+    params_file = actual_dir / "parameter_values.yaml"
+    values = safe_load(params_file.read_text(encoding="utf-8"))["parameterValues"]
+    return {v["name"]: v["value"] for v in values}
+
+
+def test_pre_gui_hook(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """A pre-GUI hook pre-populates the submitter dialog before it opens (PR #480).
+
+    This is the GUI counterpart to the headless ``test_pre_gui_hooks`` unit tests: those check the
+    ``apply_pre_gui_output`` mapping in isolation, whereas this drives the *real* submitter end to
+    end and proves the wiring holds through an actual export. It launches Cinema 4D with
+    ``DEADLINE_HOOKS_DIR`` pointing at a per-run hooks dir (see ``_materialize_pregui_hooks_dir``)
+    and ``allow_environment_hooks`` / ``auto_accept`` enabled, so the shipped submitter runs the
+    hook (``run_pre_gui_hooks``) before building the dialog and applies its output
+    (``apply_pre_gui_output``). A marker file proves the hook actually ran. The hook emits a fixed
+    name, description, and ``deadline:priority``; the same Export path the render cases use then
+    writes a job bundle, and we assert those three values survived into it:
+
+      * ``name`` / ``description`` -> template.yaml (they land on the settings object, which the
+        submitter writes to the job template).
+      * ``deadline:priority`` -> parameter_values.yaml (hook parameters flow into the dialog's
+        shared parameter values).
+
+    Unlike the standard cases this one never renders and does no golden-bundle diff: the hook path
+    is orthogonal to render output, and asserting just the three hook-owned fields keeps the test
+    robust to unrelated bundle changes. It runs on Windows and macOS (submitter-only; no openjd).
+    """
+    case = "pregui_hook"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+
+    scene_path = _build_cinema4d_scene(cinema4d_location, case_folder, actual_dir, case)
+
+    # Enable the env-hook path in the config the fixture wrote.
+    _enable_environment_hooks(deadline_farm["env_overlay"])
+
+    # Generate the hooks dir (so `command` is sys.executable, resolvable on every platform) and
+    # give the hook a marker path so we can prove it actually ran. The dir is temporary and always
+    # cleaned up; on failure `actual_dir` (below) is what stays behind for inspection.
+    hooks_dir = Path(tempfile.mkdtemp(prefix="c4d-pregui-hooks-"))
+    marker_path = hooks_dir / "hook_ran.marker"
+    try:
+        _materialize_pregui_hooks_dir(hooks_dir)
+
+        _export_job_bundle_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            job_bundle_generated=actual_dir,
+            deadline_farm=deadline_farm,
+            configure=None,
+            extra_env={
+                "DEADLINE_HOOKS_DIR": str(hooks_dir),
+                "DEADLINE_CLOUD_PREGUI_MARKER": str(marker_path),
+            },
+        )
+
+        # The submitter reached the mock, not real AWS. The hook itself is a local subprocess that
+        # runs before any AWS call, so no new mock routes are needed; still confirm nothing hit an
+        # unmocked route (a hook misfire that changed the submit path would surface here).
+        backend = deadline_farm["backend"]
+        log(f"mock backend call_counts: {dict(backend.call_counts)}")
+        assert (
+            backend.unmatched_requests == []
+        ), f"submitter hit routes the mock doesn't implement: {backend.unmatched_requests}"
+
+        # Prove the hook subprocess ran at all before trusting the exported values. This separates
+        # "the hook never launched" (discovery / interpreter resolution failure) from "the hook ran
+        # but its output wasn't wired into the bundle" — the value assertions below can't tell those
+        # two apart on their own.
+        assert marker_path.is_file(), (
+            f"pre-GUI hook never ran: no marker at {marker_path} (DEADLINE_HOOKS_DIR={hooks_dir}). "
+            "The submitter didn't execute the hook subprocess — look at hook discovery / "
+            "interpreter resolution, not the output-mapping wiring."
+        )
+
+        # The exported bundle must carry the hook's output.
+        assert_valid_job_bundle(actual_dir / "template.yaml")
+        template = safe_load((actual_dir / "template.yaml").read_text(encoding="utf-8"))
+        params = _bundle_parameter_values(actual_dir)
+
+        assert template.get("name") == _HOOK_JOB_NAME, (
+            f"pre-GUI hook ran but its name did not reach the bundle: template name is "
+            f"{template.get('name')!r}, expected {_HOOK_JOB_NAME!r}"
+        )
+        assert template.get("description") == _HOOK_DESCRIPTION, (
+            f"pre-GUI hook ran but its description did not reach the bundle: template description is "
+            f"{template.get('description')!r}, expected {_HOOK_DESCRIPTION!r}"
+        )
+        assert params.get("deadline:priority") == _HOOK_PRIORITY, (
+            f"pre-GUI hook ran but its priority did not reach the bundle: parameter_values has "
+            f"{params.get('deadline:priority')!r}, expected {_HOOK_PRIORITY}"
+        )
+
+        # Clean up if the test was successful
+        rmtree(actual_dir, ignore_errors=True)
+    finally:
+        rmtree(hooks_dir, ignore_errors=True)
