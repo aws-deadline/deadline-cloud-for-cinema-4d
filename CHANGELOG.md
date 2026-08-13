@@ -1,4 +1,4 @@
-## 0.12.0 (2026-08-12)
+## 0.12.1 (2026-08-13)
 
 ### BREAKING CHANGES
 * Fixed OCIO color management in the adaptor during baking. This is a breaking change to adaptor behavior—renders that previously produced incorrect color output when baking will now apply OCIO correctly. (#517)
@@ -7,9 +7,11 @@
 * The Cinema 4D render submitter now runs pre-GUI submission hooks before opening the submit dialog, allowing studios to pre-populate job name, description, queue parameters, and deadline job properties automatically. (#480)
 
 ### Bug Fixes
+* Fixed an issue on macOS where opening the submitter for the first time would permanently replace Cinema 4D's application menu bar with Qt's default menu, causing the host menus to be lost for the rest of the session. (#523)
 * Fixed an issue where the OCIO view transform was not applied to non-tile renders of 8-bit display formats, causing images to appear dark/un-tone-mapped instead of using the scene's configured view (e.g. ACES 1.0 SDR-video). (#508)
 * Fixed an issue where submitting a render with a specific take required the Main take to be active first. The submitter now correctly traverses from the main take when locating sub-takes for rendering. (#509)
 * Fixed an issue where marked takes did not use the correct frame range. (#498)
+
 ## 0.11.4 (2026-06-18)
 
 ### Bug Fixes
