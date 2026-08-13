@@ -24,20 +24,6 @@ SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
 # working on 2026.
 NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt"]
 
-# awscrt is a submitter-only dependency, declared in the `gui` extra rather than the base
-# dependencies so it stays out of the adaptor package (see pyproject.toml). It still has to
-# be bundled for the submitter installer, so it is installed explicitly here, in the same
-# spirit as PySide6 below.
-#
-# The floor matches pyproject.toml: botocore binds its EC symbol only when
-# has_minimum_crt_version((0, 28, 4)) passes, and console sign-in is disabled below that.
-#
-# It has to be stated here rather than inherited. A normal install gets the floor
-# transitively, because deadline[console] requires botocore[crt], whose crt extra pins
-# awscrt to an exact version. This install resolves awscrt on its own, so nothing else
-# constrains it.
-AWSCRT_REQUIREMENT = "awscrt >= 0.28.4"
-
 PYSIDE6_VERSION = "6.8.3"
 PYSIDE6_PACKAGES = [f"PySide6-Essentials=={PYSIDE6_VERSION}", f"shiboken6=={PYSIDE6_VERSION}"]
 
@@ -174,10 +160,32 @@ def _get_package_version(package: str, install_path: Path) -> str:
     raise RuntimeError(f"Could not find version for package {package}")
 
 
+def _add_console_extra(requirement: str) -> str:
+    """Add deadline's `console` extra to a requirement string, preserving its specifier."""
+    match = re.fullmatch(
+        r"(?P<name>[A-Za-z0-9._-]+)(?:\[(?P<extras>[^\]]*)\])?(?P<spec>.*)", requirement
+    )
+    if not match or match.group("name").lower() != "deadline":
+        return requirement
+    extras = [extra for extra in (match.group("extras") or "").split(",") if extra]
+    if "console" not in extras:
+        extras.append("console")
+    return f"{match.group('name')}[{','.join(extras)}]{match.group('spec')}"
+
+
 def _build_base_environment(working_directory: Path, dependencies: list[Dependency]) -> Path:
     (working_directory / "base_env").mkdir()
     base_env_path = working_directory / "base_env"
-    dependencies_for_pip = [d.for_pip() for d in dependencies]
+    # The bundle is the submitter, which needs AWS Console sign-in. The console extra is
+    # requested here rather than declared in project.dependencies, because those are also
+    # resolved into the adaptor package, where a compiled awscrt wheel is both unusable and
+    # unavailable for one of the platform tags that build targets (see pyproject.toml).
+    #
+    # Requesting the extra rather than installing awscrt directly means the bundle tracks
+    # whatever the extra actually requires -- notably a botocore floor, since the console
+    # login provider lives in botocore, not in deadline -- and takes awscrt from the exact
+    # version botocore's crt extra pins, rather than resolving it independently and drifting.
+    dependencies_for_pip = [_add_console_extra(d.for_pip()) for d in dependencies]
     base_env_pip_args = [
         "pip",
         "install",
@@ -251,23 +259,6 @@ def _copy_zip_to_destination(zip_path: Path) -> Path:
     return zip_destination
 
 
-def _install_awscrt(install_path: Path) -> None:
-    """Install awscrt into the base environment.
-
-    Must run before _download_native_dependencies, which pins each native package to the
-    version resolved in the base environment -- awscrt has to be present there first.
-    """
-    pip_args = [
-        "pip",
-        "install",
-        "--target",
-        str(install_path),
-        "--only-binary=:all:",
-        AWSCRT_REQUIREMENT,
-    ]
-    subprocess.run(pip_args, check=True)
-
-
 def _install_pyside6(install_path: Path) -> None:
     """Install PySide6 and shiboken6, then strip to only the files in PYSIDE6_ALLOWLIST."""
     pip_args = [
@@ -314,9 +305,6 @@ def build_deps_bundle() -> None:
             lambda dep: not dep.name.startswith("openjd"), dependencies
         )
         base_env = _build_base_environment(working_directory, deps_noopenjd)
-        # Before _download_native_dependencies, which pins native packages to the versions
-        # resolved in the base environment.
-        _install_awscrt(base_env)
         native_dependency_paths = _download_native_dependencies(working_directory, base_env)
         _copy_native_to_base_env(base_env, native_dependency_paths)
         _install_pyside6(base_env)

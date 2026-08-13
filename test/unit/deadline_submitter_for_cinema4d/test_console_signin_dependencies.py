@@ -39,12 +39,6 @@ PYPROJECT = Path(__file__).parents[3] / "pyproject.toml"
 # `console` extra at all. 0.60.3 is the highest version that must be excluded.
 HIGHEST_DEADLINE_WITHOUT_CONSOLE_SIGNIN = "0.60.3"
 
-# awscrt.crypto.EC exists from 0.28.3, but botocore binds its own EC symbol only when
-# has_minimum_crt_version((0, 28, 4)) passes. So on 0.28.3 the import succeeds while
-# botocore still reports CRT as unavailable and console sign-in stays broken -- the
-# version, not the symbol, is what has to be guarded.
-HIGHEST_AWSCRT_WITHOUT_BOTOCORE_CRT = "0.28.3"
-
 
 def _requirements(*table_path: str) -> list[Requirement]:
     """Parse a requirement list out of pyproject.toml by table path."""
@@ -91,6 +85,11 @@ def test_base_dependencies_do_not_request_the_console_extra(base_dependencies):
             "console" not in req.extras
         ), f"console extra leaks into the adaptor's dependency closure via: {req}"
 
+    # Copying the requirement in directly is the likelier mistake, and has the same effect.
+    assert not _named(
+        base_dependencies, "awscrt"
+    ), "awscrt must not be a base dependency; it would be resolved into the adaptor package"
+
 
 @pytest.mark.parametrize("table", ["base_dependencies", "gui_dependencies"])
 def test_deadline_floor_excludes_releases_without_console_signin(table, request):
@@ -104,23 +103,6 @@ def test_deadline_floor_excludes_releases_without_console_signin(table, request)
         assert not req.specifier.contains(HIGHEST_DEADLINE_WITHOUT_CONSOLE_SIGNIN), (
             f"allows deadline {HIGHEST_DEADLINE_WITHOUT_CONSOLE_SIGNIN}, which has no "
             f"console sign-in support: {req}"
-        )
-
-
-def test_awscrt_floor_is_declared_and_high_enough(gui_dependencies):
-    """The floor that the bundled submitter relies on.
-
-    A normal install satisfies it transitively -- deadline[console] requires
-    botocore[crt] >= 1.42.89, whose crt extra pins awscrt exactly (1.42.89 pins 0.31.2).
-    scripts/deps_bundle.py installs awscrt directly instead, so the bundle has no such
-    guarantee and the declaration here is what keeps the two paths in agreement.
-    """
-    awscrt_reqs = _named(gui_dependencies, "awscrt")
-    assert awscrt_reqs, "the gui extra does not declare awscrt directly"
-    for req in awscrt_reqs:
-        assert not req.specifier.contains(HIGHEST_AWSCRT_WITHOUT_BOTOCORE_CRT), (
-            f"allows awscrt {HIGHEST_AWSCRT_WITHOUT_BOTOCORE_CRT}, below the version "
-            f"botocore requires before it will use CRT: {req}"
         )
 
 

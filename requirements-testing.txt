@@ -17,4 +17,6 @@ deadline-cloud-test-fixtures >= 0.18.18
 # Drives the real submitter dialog via the OS accessibility tree.
 # Used by test/integ/.
 xa11y >= 0.13.0
+# Both are used by test_console_signin_dependencies.py, which parses pyproject.toml.
+packaging >= 22
 tomli == 2.*; python_version < "3.11"

@@ -92,6 +92,9 @@ def _validate_files(installation_path: Path) -> None:
     assert "qtpy" in top_level_dir
     assert "xxhash" in top_level_dir
     assert "psutil" in top_level_dir
+    # awscrt reaches the bundle via deadline's console extra, requested by deps_bundle.py.
+    # Without it botocore reports CRT as unavailable and AWS Console sign-in fails.
+    assert "awscrt" in top_level_dir
 
     # Verify PySide6/shiboken6 are bundled and stripped correctly
     assert "PySide6" in top_level_dir
