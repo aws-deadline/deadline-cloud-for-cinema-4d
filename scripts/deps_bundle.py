@@ -31,6 +31,11 @@ NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt"]
 #
 # The floor matches pyproject.toml: botocore binds its EC symbol only when
 # has_minimum_crt_version((0, 28, 4)) passes, and console sign-in is disabled below that.
+#
+# It has to be stated here rather than inherited. A normal install gets the floor
+# transitively, because deadline[console] requires botocore[crt], whose crt extra pins
+# awscrt to an exact version. This install resolves awscrt on its own, so nothing else
+# constrains it.
 AWSCRT_REQUIREMENT = "awscrt >= 0.28.4"
 
 PYSIDE6_VERSION = "6.8.3"

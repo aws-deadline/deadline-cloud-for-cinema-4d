@@ -108,7 +108,13 @@ def test_deadline_floor_excludes_releases_without_console_signin(table, request)
 
 
 def test_awscrt_floor_is_declared_and_high_enough(gui_dependencies):
-    """Left to deadline[console]'s own pin, awscrt could resolve too low to work."""
+    """The floor that the bundled submitter relies on.
+
+    A normal install satisfies it transitively -- deadline[console] requires
+    botocore[crt] >= 1.42.89, whose crt extra pins awscrt exactly (1.42.89 pins 0.31.2).
+    scripts/deps_bundle.py installs awscrt directly instead, so the bundle has no such
+    guarantee and the declaration here is what keeps the two paths in agreement.
+    """
     awscrt_reqs = _named(gui_dependencies, "awscrt")
     assert awscrt_reqs, "the gui extra does not declare awscrt directly"
     for req in awscrt_reqs:

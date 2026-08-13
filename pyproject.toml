@@ -56,8 +56,16 @@ gui = [
     "deadline[gui,console] >= 0.60.4, < 0.61",
     # botocore binds its EC symbol only when has_minimum_crt_version((0, 28, 4)) passes,
     # so anything below 0.28.4 leaves it None and disables console sign-in even though
-    # awscrt.crypto.EC imports fine from 0.28.3 onward. Declared directly so the floor is
-    # enforced rather than left to whatever deadline[console] happens to permit.
+    # awscrt.crypto.EC itself imports fine from 0.28.3 onward.
+    #
+    # Installing via deadline[console] already satisfies that floor transitively: it
+    # requires botocore[crt] >= 1.42.89, and botocore's crt extra pins awscrt to an exact
+    # version per release -- 1.42.89 pins 0.31.2, and later releases pin newer. So this
+    # line is not what enforces the floor for a normal install.
+    #
+    # It is declared because scripts/deps_bundle.py installs awscrt directly rather than
+    # through botocore[crt], so the bundled submitter has no transitive guarantee. Keeping
+    # the same constraint in both places means the floor is stated once per install path.
     "awscrt >= 0.28.4",
     "PySide6-Essentials == 6.8.3",  # Use 6.8 to align with VFXP 2026: https://vfxplatform.com/#reference-platform
 ]
