@@ -24,6 +24,15 @@ SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
 # working on 2026.
 NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt"]
 
+# awscrt is a submitter-only dependency, declared in the `gui` extra rather than the base
+# dependencies so it stays out of the adaptor package (see pyproject.toml). It still has to
+# be bundled for the submitter installer, so it is installed explicitly here, in the same
+# spirit as PySide6 below.
+#
+# The floor matches pyproject.toml: botocore binds its EC symbol only when
+# has_minimum_crt_version((0, 28, 4)) passes, and console sign-in is disabled below that.
+AWSCRT_REQUIREMENT = "awscrt >= 0.28.4"
+
 PYSIDE6_VERSION = "6.8.3"
 PYSIDE6_PACKAGES = [f"PySide6-Essentials=={PYSIDE6_VERSION}", f"shiboken6=={PYSIDE6_VERSION}"]
 
@@ -237,6 +246,23 @@ def _copy_zip_to_destination(zip_path: Path) -> Path:
     return zip_destination
 
 
+def _install_awscrt(install_path: Path) -> None:
+    """Install awscrt into the base environment.
+
+    Must run before _download_native_dependencies, which pins each native package to the
+    version resolved in the base environment -- awscrt has to be present there first.
+    """
+    pip_args = [
+        "pip",
+        "install",
+        "--target",
+        str(install_path),
+        "--only-binary=:all:",
+        AWSCRT_REQUIREMENT,
+    ]
+    subprocess.run(pip_args, check=True)
+
+
 def _install_pyside6(install_path: Path) -> None:
     """Install PySide6 and shiboken6, then strip to only the files in PYSIDE6_ALLOWLIST."""
     pip_args = [
@@ -283,6 +309,9 @@ def build_deps_bundle() -> None:
             lambda dep: not dep.name.startswith("openjd"), dependencies
         )
         base_env = _build_base_environment(working_directory, deps_noopenjd)
+        # Before _download_native_dependencies, which pins native packages to the versions
+        # resolved in the base environment.
+        _install_awscrt(base_env)
         native_dependency_paths = _download_native_dependencies(working_directory, base_env)
         _copy_native_to_base_env(base_env, native_dependency_paths)
         _install_pyside6(base_env)

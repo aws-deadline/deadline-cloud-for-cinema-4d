@@ -1,4 +1,8 @@
 [envs.default]
+# The unit tests exercise the submitter, which resolves through the gui extra -- that is
+# where the console extra and awscrt are declared, so the console sign-in dependency
+# tests need them present.
+features = ["gui"]
 pre-install-commands = [
   "pip install -r requirements-testing.txt"
 ]

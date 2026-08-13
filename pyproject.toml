@@ -30,14 +30,19 @@ classifiers = [
 ]
 
 dependencies = [
-    # The console extra pulls awscrt, which AWS Console sign-in requires: botocore's
-    # LoginProvider refreshes the DPoP-bound cached token in-process, and signing those
-    # proofs needs awscrt. Without it, sign-in fails on a pre-flight dependency check.
-    #
-    # 0.60.4 is the floor because console sign-in landed there and nowhere earlier:
+    # 0.60.4 is the floor because AWS Console sign-in landed there and nowhere earlier:
     # 0.60.1 through 0.60.3 have no AWS_CONSOLE_LOGIN credentials source, and do not
     # declare a `console` extra at all.
-    "deadline[gui,console] >= 0.60.4, < 0.61",
+    #
+    # The console extra is deliberately NOT requested here. It is only needed by the
+    # submitter, and it pulls awscrt, a compiled wheel. These base dependencies are
+    # resolved into the adaptor package by scripts/create_adaptor_packaging_artifact.sh
+    # with --only-binary=:all: --platform <tag>, and no awscrt wheel satisfying the
+    # 0.28.4 floor exists for the macosx_10_9_x86_64 tag that script uses -- pip walks
+    # back to 0.25.7, which has no usable crypto support, so console sign-in would
+    # appear installed and silently not work. The adaptor never takes the console
+    # path anyway: it runs on a worker with host-provided credentials.
+    "deadline[gui] >= 0.60.4, < 0.61",
     "openjd-adaptor-runtime >= 0.7,< 0.10",
     # fonttools is Windows-only due to Cinema 4D technical limitations
     "fonttools >=4.59.2, <4.64; sys_platform == 'win32'",
@@ -45,7 +50,15 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = [
+    # The console extra pulls awscrt, which AWS Console sign-in requires: botocore's
+    # LoginProvider refreshes the DPoP-bound cached token in-process, and signing those
+    # proofs needs awscrt. Without it, sign-in fails on a pre-flight dependency check.
     "deadline[gui,console] >= 0.60.4, < 0.61",
+    # botocore binds its EC symbol only when has_minimum_crt_version((0, 28, 4)) passes,
+    # so anything below 0.28.4 leaves it None and disables console sign-in even though
+    # awscrt.crypto.EC imports fine from 0.28.3 onward. Declared directly so the floor is
+    # enforced rather than left to whatever deadline[console] happens to permit.
+    "awscrt >= 0.28.4",
     "PySide6-Essentials == 6.8.3",  # Use 6.8 to align with VFXP 2026: https://vfxplatform.com/#reference-platform
 ]
 
