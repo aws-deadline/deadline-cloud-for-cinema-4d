@@ -40,7 +40,7 @@ from .data_classes import (
 )
 from .detailed_logging_utils import get_detailed_logging_environment
 from .font_utils import FONTS_DIR, get_font_manager_environment, scene_has_fonts
-from .platform_utils import is_windows
+from .platform_utils import is_macos, is_windows
 from .scene import Animation, Scene, get_renderer_warning
 from .style import C4D_STYLE
 from .takes import TakeSelection
@@ -93,6 +93,37 @@ def show_submitter():
     try:
         app = QtWidgets.QApplication.instance()
         if not app:
+            # Cinema 4D is not a Qt application, so there is no QApplication to reuse and we
+            # construct one inside the host process. On macOS that makes Qt load its own nib
+            # for the main menu and take possession of the native menu bar, replacing Cinema
+            # 4D's menus for the rest of the session.
+            #
+            # AA_PluginApplication tells Qt it is being used to author a plugin, which is
+            # exactly our situation, and suppresses that initialisation. Per the Qt
+            # documentation it avoids "loading our nib for the main menu and not taking
+            # possession of the native menu bar", and implies AA_DontUseNativeMenuBar. It
+            # must be set before the QApplication is constructed; setting it afterwards has
+            # no effect.
+            #
+            # Scoped only to macOS because Windows does not exhibit the problem, and the
+            # attribute also disables native event filters -- a behaviour change not worth
+            # taking on a platform that works.
+            #
+            # DCCs that are themselves Qt applications (Maya, Nuke) never reach this branch,
+            # which is why the problem is specific to Cinema 4D.
+            if is_macos():
+                try:
+                    QtWidgets.QApplication.setAttribute(
+                        Qt.ApplicationAttribute.AA_PluginApplication, True
+                    )
+                except Exception:
+                    # Losing the host's menu bar is a cosmetic problem; failing to open the
+                    # submitter is not. Never let this be fatal.
+                    logger.warning(
+                        "Could not set AA_PluginApplication; Cinema 4D's menu bar may be "
+                        "replaced for this session.",
+                        exc_info=True,
+                    )
             app = QtWidgets.QApplication([])
             app.setQuitOnLastWindowClosed(False)
             app.aboutToQuit.connect(app.deleteLater)
