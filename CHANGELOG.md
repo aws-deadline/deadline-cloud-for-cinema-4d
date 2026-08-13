@@ -1,3 +1,7 @@
+## 0.12.1 (2026-08-13)
+
+### Bug Fixes
+* Fixed an issue on macOS where opening the submitter for the first time would permanently replace Cinema 4D's application menu bar with Qt's default menu, causing the host menus to be lost for the rest of the session. (#523)
 ## 0.12.0 (2026-08-12)
 
 ### BREAKING CHANGES
