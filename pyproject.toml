@@ -30,7 +30,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "deadline[gui] >= 0.60.1, < 0.61",
+    # The console extra pulls awscrt, which AWS Console sign-in requires: botocore's
+    # LoginProvider refreshes the DPoP-bound cached token in-process, and signing those
+    # proofs needs awscrt. Without it, sign-in fails on a pre-flight dependency check.
+    #
+    # 0.60.4 is the floor because console sign-in landed there and nowhere earlier:
+    # 0.60.1 through 0.60.3 have no AWS_CONSOLE_LOGIN credentials source, and do not
+    # declare a `console` extra at all.
+    "deadline[gui,console] >= 0.60.4, < 0.61",
     "openjd-adaptor-runtime >= 0.7,< 0.10",
     # fonttools is Windows-only due to Cinema 4D technical limitations
     "fonttools >=4.59.2, <4.64; sys_platform == 'win32'",
@@ -38,7 +45,7 @@ dependencies = [
 
 [project.optional-dependencies]
 gui = [
-    "deadline[gui] >= 0.60.1, < 0.61",
+    "deadline[gui,console] >= 0.60.4, < 0.61",
     "PySide6-Essentials == 6.8.3",  # Use 6.8 to align with VFXP 2026: https://vfxplatform.com/#reference-platform
 ]
 

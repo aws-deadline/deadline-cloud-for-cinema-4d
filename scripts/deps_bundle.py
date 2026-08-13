@@ -14,7 +14,15 @@ from _project import Dependency, get_dependencies, get_project_dict
 
 SUPPORTED_PYTHON_VERSIONS = ["3.10", "3.11", "3.12", "3.13"]
 SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
-NATIVE_DEPENDENCIES = ["xxhash", "psutil"]
+# Packages with compiled extension modules, fetched once per supported Python version so the
+# bundle carries a loadable artifact for each interpreter.
+#
+# awscrt is here because its wheels are not uniformly abi3: Python 3.10 gets
+# _awscrt.cpython-310-<platform>.so while 3.11+ get _awscrt.abi3.so. Resolving it only in
+# the base environment would ship whichever the build host produced, so Cinema 4D 2024-2025
+# (Python 3.10) would fail to import awscrt and AWS Console sign-in would break there while
+# working on 2026.
+NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt"]
 
 PYSIDE6_VERSION = "6.8.3"
 PYSIDE6_PACKAGES = [f"PySide6-Essentials=={PYSIDE6_VERSION}", f"shiboken6=={PYSIDE6_VERSION}"]
