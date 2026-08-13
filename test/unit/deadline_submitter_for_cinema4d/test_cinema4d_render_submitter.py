@@ -3,7 +3,9 @@
 from unittest import mock
 
 import yaml
+from qtpy.QtCore import Qt
 
+from deadline.cinema4d_submitter import cinema4d_render_submitter
 from deadline.cinema4d_submitter._yaml_utils import _build_embedded_yaml
 from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     TakeData,
@@ -533,3 +535,67 @@ class TestBuildEmbeddedYaml:
         assert parsed["use_cached_text"] == "0"
         assert isinstance(parsed["activate_error_checking"], str)
         assert isinstance(parsed["use_cached_text"], str)
+
+
+class TestShowSubmitterNativeMenuBar:
+    """Cinema 4D is not a Qt application, so show_submitter constructs the QApplication
+    itself. On macOS that makes Qt take possession of the native menu bar, so
+    AA_PluginApplication has to be set first."""
+
+    @staticmethod
+    def _run(mock_qtwidgets, existing_app=None, macos=True):
+        mock_qtwidgets.QApplication.instance.return_value = existing_app
+        with (
+            mock.patch.object(
+                cinema4d_render_submitter, "_prompt_save_current_document", return_value=True
+            ),
+            mock.patch.object(
+                cinema4d_render_submitter, "check_and_show_update_dialog", return_value=True
+            ),
+            mock.patch.object(cinema4d_render_submitter, "is_macos", return_value=macos),
+        ):
+            cinema4d_render_submitter.show_submitter()
+
+    def test_sets_plugin_application_on_macos(self):
+        with mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets:
+            self._run(mock_qtwidgets)
+
+        mock_qtwidgets.QApplication.setAttribute.assert_called_once_with(
+            Qt.ApplicationAttribute.AA_PluginApplication, True
+        )
+
+    def test_set_before_the_application_is_constructed(self):
+        """Qt only honours the attribute if it is set before construction."""
+        with mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets:
+            self._run(mock_qtwidgets)
+
+        names = [c[0] for c in mock_qtwidgets.QApplication.mock_calls]
+        # The construction itself is recorded as a call on the mock with an empty name.
+        assert "setAttribute" in names, names
+        assert "" in names, names
+        assert names.index("setAttribute") < names.index(""), names
+
+    def test_not_set_off_macos(self):
+        """Windows does not exhibit the problem, and the attribute disables native event
+        filters, so it is not worth the behaviour change there."""
+        with mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets:
+            self._run(mock_qtwidgets, macos=False)
+
+        mock_qtwidgets.QApplication.setAttribute.assert_not_called()
+
+    def test_leaves_an_existing_application_alone(self):
+        """A host that already owns a QApplication must not be reconfigured."""
+        with mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets:
+            self._run(mock_qtwidgets, existing_app=mock.Mock())
+
+        mock_qtwidgets.QApplication.setAttribute.assert_not_called()
+
+    def test_failure_to_set_the_attribute_is_not_fatal(self):
+        """A cosmetic menu-bar fix must never stop the submitter opening."""
+        with mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets:
+            mock_qtwidgets.QApplication.setAttribute.side_effect = RuntimeError("nope")
+            self._run(mock_qtwidgets)
+
+        # The QApplication is still constructed despite setAttribute raising.
+        names = [c[0] for c in mock_qtwidgets.QApplication.mock_calls]
+        assert "" in names, names
