@@ -33,7 +33,7 @@ if [ "$CONDA_PLATFORM" = "linux-64" ]; then
 elif [ "$CONDA_PLATFORM" = "win-64" ]; then
     PYPI_PLATFORM=win_amd64
 elif [ "$CONDA_PLATFORM" = "osx-64" ]; then
-    PYPI_PLATFORM=macosx_10_9_x86_64
+    PYPI_PLATFORM=macosx_10_15_x86_64
 else
     echo "Unknown Conda operating system option --platform $CONDA_PLATFORM"
     exit 1
