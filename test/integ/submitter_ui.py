@@ -10,7 +10,9 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
+from functools import partial
 
 import xa11y
 from deadline_test_fixtures.xa11y.controls import (
@@ -18,12 +20,16 @@ from deadline_test_fixtures.xa11y.controls import (
     TAB_SHARED,
     set_checkbox,
     set_job_name,
-    set_max_failed_tasks,
-    set_max_retries,
-    set_priority,
-    set_spin_button_in_group,
     switch_to_tab,
     transform_text_field,
+)
+from deadline_test_fixtures.xa11y.controls import (
+    set_max_failed_tasks as _shared_set_max_failed_tasks,
+)
+from deadline_test_fixtures.xa11y.controls import set_max_retries as _shared_set_max_retries
+from deadline_test_fixtures.xa11y.controls import set_priority as _shared_set_priority
+from deadline_test_fixtures.xa11y.controls import (
+    set_spin_button_in_group as _shared_set_spin_button_in_group,
 )
 
 __all__ = [
@@ -52,6 +58,95 @@ _TIMEOUT_SPIN_START = {
     "Cinema 4D shutdown": 7,
 }
 _TAKE_OPTIONS = ("Main Take", "All Takes", "Marked Takes", "Current Take")
+
+
+def _spin_value(element: xa11y.Element | None) -> int | None:
+    if element is None or element.value is None:
+        return None
+    try:
+        return int(element.value)
+    except ValueError:
+        return None
+
+
+def _spin_has_value(element: xa11y.Element | None, *, expected: int) -> bool:
+    return _spin_value(element) == expected
+
+
+def _set_spin_button_value(spin: xa11y.Locator, target: int) -> None:
+    """Set a Qt spin box without relying on macOS's broken AXIncrement action."""
+    current = _spin_value(spin.element())
+    if current is None:
+        raise AssertionError("Spin button does not expose an integer value")
+    if current == target:
+        return
+
+    step = 1 if current < target else -1
+    key = "ArrowUp" if step > 0 else "ArrowDown"
+    spin.focus()
+    spin.wait_focused(timeout=5.0)
+    input_sim = xa11y.input_sim()
+    for expected in range(current + step, target + step, step):
+        input_sim.press(key)
+        try:
+            spin.wait_until(
+                partial(_spin_has_value, expected=expected),
+                timeout=5.0,
+            )
+        except xa11y.TimeoutError:
+            observed = _spin_value(spin.element())
+            raise AssertionError(
+                f"Spin button did not reach {expected} after {key}; stopped at {observed}"
+            ) from None
+
+
+def _set_spin_button(
+    dialog: xa11y.Locator,
+    name: str,
+    nth: int,
+    target: int,
+) -> None:
+    spin = dialog.descendant(f'spin_button[name="{name}"]').nth(nth)
+    spin.wait_visible(timeout=60.0)
+    _set_spin_button_value(spin, target)
+
+
+def set_spin_button_in_group(
+    dialog: xa11y.Locator,
+    group: str,
+    nth: int,
+    target: int,
+) -> None:
+    if sys.platform != "darwin":
+        _shared_set_spin_button_in_group(dialog, group, nth, target)
+        return
+    spin = dialog.descendant(f'group[name="{group}"]').descendant("spin_button").nth(nth)
+    spin.wait_visible(timeout=60.0)
+    _set_spin_button_value(spin, target)
+
+
+def set_priority(dialog: xa11y.Locator, value: int) -> None:
+    if sys.platform != "darwin":
+        _shared_set_priority(dialog, value)
+        return
+    switch_to_tab(dialog, TAB_SHARED)
+    _set_spin_button(dialog, "Job Properties", 1, value)
+
+
+def set_max_failed_tasks(dialog: xa11y.Locator, value: int) -> None:
+    if sys.platform != "darwin":
+        _shared_set_max_failed_tasks(dialog, value)
+        return
+    switch_to_tab(dialog, TAB_SHARED)
+    _set_spin_button(dialog, "Job Properties", 2, value)
+
+
+def set_max_retries(dialog: xa11y.Locator, value: int) -> None:
+    if sys.platform != "darwin":
+        _shared_set_max_retries(dialog, value)
+        return
+    switch_to_tab(dialog, TAB_SHARED)
+    _set_spin_button(dialog, "Job Properties", 3, value)
 
 
 def _take_selection(element: xa11y.Element) -> str:
