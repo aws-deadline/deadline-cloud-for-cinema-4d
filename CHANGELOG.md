@@ -1,3 +1,7 @@
+## 0.12.2 (2026-08-17)
+
+### Features
+* AWS Console sign-in now works correctly from the Cinema 4D submitter. The required dependencies for Console sign-in are now included, and the deadline library has been updated to version 0.60.4. (#525)
 ## 0.12.1 (2026-08-13)
 
 ### BREAKING CHANGES
