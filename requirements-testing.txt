@@ -18,5 +18,5 @@ deadline-cloud-test-fixtures >= 0.18.18
 # Used by test/integ/.
 xa11y >= 0.13.0
 # Both are used by test_console_signin_dependencies.py, which parses pyproject.toml.
-packaging >= 22
+packaging >= 26.3
 tomli == 2.*; python_version < "3.11"
