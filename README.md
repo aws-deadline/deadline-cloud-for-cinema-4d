@@ -13,6 +13,7 @@ For instructions on installing and using this integration, visit the [user guide
 [cmf-ubl]: https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/cmf-ubl.html
 [deadline-cloud]: https://docs.aws.amazon.com/deadline-cloud/latest/userguide/what-is-deadline-cloud.html
 [deadline-cloud-client]: https://github.com/aws-deadline/deadline-cloud
+[submission-hooks]: https://github.com/aws-deadline/deadline-cloud#submission-hooks
 [openjd-template]: https://github.com/OpenJobDescription/openjd-specifications/wiki/2023-09-Template-Schemas
 [openjd-adaptor-runtime]: https://github.com/OpenJobDescription/openjd-adaptor-runtime-for-python
 [openjd-adaptor-runtime-lifecycle]: https://github.com/OpenJobDescription/openjd-adaptor-runtime-for-python/blob/release/README.md#adaptor-lifecycle
@@ -138,6 +139,98 @@ chmod +x ~/Desktop/Cinema4D.command
 ```
 
 To open Cinema 4D on Mac, click `Cinema4D.command` on your desktop. After you load a scene, click on `Extensions` > `AWS Deadline Cloud Submitter` to view the submitter.
+
+## Pre-GUI Submission Hooks
+
+The Cinema 4D submitter supports **pre-GUI hooks** — studio-provided scripts that run *before* the
+`Submit to AWS Deadline Cloud` dialog opens, so you can pre-populate the job name, description, and
+shared job properties (priority, maximum failed tasks, maximum retries, Conda packages, etc.). This
+is useful for enforcing studio defaults or pulling values from a pipeline / asset-management system
+before an artist sees the dialog.
+
+Pre-GUI hooks are provided by the [AWS Deadline Cloud client library][deadline-cloud-client] and are
+shared across DCC submitters. For Cinema 4D, hooks are sourced only from the directory named by the
+`DEADLINE_HOOKS_DIR` environment variable — the Cinema 4D submitter has no on-disk job bundle at
+pre-GUI time, so bundle-sourced hooks do not apply. They complement the `preSubmission` /
+`postSubmission` hooks that run at submit time (see [Submission Hooks][submission-hooks]).
+
+Pre-GUI hook support requires the `deadline` client library that ships with
+`deadline-cloud-for-cinema-4d[gui]` (`deadline[gui] >= 0.60.4`), which is installed for you when you
+install the submitter as described above.
+
+### Enabling pre-GUI hooks
+
+1. Allow environment-sourced hooks in your Deadline Cloud configuration (off by default):
+   ```
+   deadline config set settings.allow_environment_hooks true
+   ```
+2. Point `DEADLINE_HOOKS_DIR` at a directory that holds your hook script(s) and a `hooks.yaml`.
+
+   On Windows (`cmd`):
+   ```cmd
+   setx DEADLINE_HOOKS_DIR "C:\deadline-hooks"
+   ```
+   On macOS/Linux:
+   ```
+   export DEADLINE_HOOKS_DIR="$HOME/deadline-hooks"
+   ```
+   Restart Cinema 4D (or log out/in on Windows) so the running Cinema 4D process picks up the
+   environment variable before you open the submitter.
+3. Create `hooks.yaml` in that directory with a `preGUI` entry:
+   ```yaml
+   preGUI:
+     - command: C:/Program Files/Python311/python.exe
+       args:
+         - C:/deadline-hooks/pregui_hook.py
+       timeout: 60
+   ```
+   **Tip:** point `command` at a clean, standalone Python interpreter rather than Cinema 4D's
+   bundled interpreter — a bundled interpreter can print a startup banner to stdout that corrupts
+   the hook's JSON output.
+
+### Writing a pre-GUI hook
+
+A pre-GUI hook receives the current submission metadata as JSON on **stdin** and returns the fields
+it wants to override as JSON on **stdout**. Recognized keys are `name`, `description`, and
+`parameters` (a map of parameter name → value). `deadline:`-prefixed keys map to shared job
+properties — for example `deadline:priority`, `deadline:maxFailedTasksCount`, and
+`deadline:maxRetriesPerTask` — and `CondaPackages` overrides the Conda packages queue parameter.
+
+```python
+# pregui_hook.py
+import json, sys
+
+metadata = json.load(sys.stdin)  # jobName, submitterName ("cinema4d"), parameters, farmId, queueId, ...
+
+print(json.dumps({
+    "name": "MyStudio Shot 010",
+    "description": "Submitted via MyStudio pipeline",
+    "parameters": {
+        "deadline:priority": 75,
+        "deadline:maxFailedTasksCount": 5,
+    },
+}))
+```
+
+When the submitter opens, its **Name** / **Description** and **Priority** / **Maximum failed tasks
+count** / **Maximum retries per task** fields on the shared job settings tab (plus any other
+returned shared parameters, such as `CondaPackages`) are pre-populated from the hook's output.
+
+> **Note:** pre-GUI hooks set the shared job properties above; they do **not** set the Cinema
+> 4D-specific render options (take selection, frame range, output path, multi-pass path, tile
+> rendering, chunk size, error checking, detailed logging, etc.). Those are initialized from the
+> Cinema 4D scene's render settings and the per-scene sticky settings, and remain editable in the
+> submitter UI.
+
+### Confirmation prompt
+
+Before running any hooks, the submitter shows a **Job Submission Confirmation** dialog listing the
+hook scripts that will execute. Click **Yes** to run them, or **No** to cancel — clicking **No**
+aborts opening the submitter cleanly (no error). To skip the prompt on non-interactive or
+studio-locked workstations, enable auto-accept:
+```
+deadline config set settings.auto_accept true
+```
 
 ## Adaptor
 
