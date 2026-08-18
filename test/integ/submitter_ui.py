@@ -10,6 +10,7 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
+import re
 import sys
 from collections.abc import Callable
 from functools import partial
@@ -58,19 +59,20 @@ _TIMEOUT_SPIN_START = {
     "Cinema 4D shutdown": 7,
 }
 _TAKE_OPTIONS = ("Main Take", "All Takes", "Marked Takes", "Current Take")
+_MAX_SPIN_KEY_PRESSES = 100
+_SPIN_VALUE_PATTERN = re.compile(r"-?\d+")
 
 
 def _spin_value(element: xa11y.Element | None) -> int | None:
     if element is None or element.value is None:
         return None
-    try:
-        return int(element.value)
-    except ValueError:
-        return None
+    match = _SPIN_VALUE_PATTERN.search(element.value)
+    return int(match.group()) if match else None
 
 
-def _spin_has_value(element: xa11y.Element | None, *, expected: int) -> bool:
-    return _spin_value(element) == expected
+def _spin_value_changed(element: xa11y.Element | None, *, previous: int) -> bool:
+    current = _spin_value(element)
+    return current is not None and current != previous
 
 
 def _set_spin_button_value(spin: xa11y.Locator, target: int) -> None:
@@ -81,23 +83,38 @@ def _set_spin_button_value(spin: xa11y.Locator, target: int) -> None:
     if current == target:
         return
 
-    step = 1 if current < target else -1
-    key = "ArrowUp" if step > 0 else "ArrowDown"
-    spin.focus()
-    spin.wait_focused(timeout=5.0)
     input_sim = xa11y.input_sim()
-    for expected in range(current + step, target + step, step):
+    observed_values = {current}
+    for _ in range(_MAX_SPIN_KEY_PRESSES):
+        key = "ArrowUp" if current < target else "ArrowDown"
+        spin.focus()
+        spin.wait_focused(timeout=5.0)
         input_sim.press(key)
         try:
             spin.wait_until(
-                partial(_spin_has_value, expected=expected),
+                partial(_spin_value_changed, previous=current),
                 timeout=5.0,
             )
         except xa11y.TimeoutError:
             observed = _spin_value(spin.element())
             raise AssertionError(
-                f"Spin button did not reach {expected} after {key}; stopped at {observed}"
+                f"Spin button did not change from {current} after {key}; stopped at {observed}"
             ) from None
+        current = _spin_value(spin.element())
+        if current is None:
+            raise AssertionError("Spin button stopped exposing an integer value")
+        if current == target:
+            return
+        if current in observed_values:
+            raise AssertionError(
+                f"Spin button cannot reach {target}; observed a value cycle at {current}"
+            )
+        observed_values.add(current)
+
+    raise AssertionError(
+        f"Spin button did not reach {target} after {_MAX_SPIN_KEY_PRESSES} key presses; "
+        f"stopped at {current}"
+    )
 
 
 def _set_spin_button(
