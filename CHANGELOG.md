@@ -1,3 +1,12 @@
+## 0.12.2 (2026-08-24)
+
+### Features
+* AWS Console sign-in is now supported in the submitter. Previously, attempting to use AWS Console sign-in would fail with a missing dependency error. The required `awscrt` dependency is now included automatically. (#525)
+* Adaptor wheel overrides are now supported on Windows and Linux, in addition to macOS. (#531)
+
+### Bug Fixes
+* Fixed incorrect color tone when using tile rendering. (#535)
+* The adaptor now fails fast when Cinema 4D license failures are detected, providing clearer error messages instead of hanging or producing confusing output. (#530)
 ## 0.12.1 (2026-08-13)
 
 ### BREAKING CHANGES
