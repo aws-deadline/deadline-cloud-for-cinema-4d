@@ -631,23 +631,14 @@ def _run_integ_case(
     rmtree(actual_dir, ignore_errors=True)
 
 
-# Keep the Redshift cases running in Windows CI, but do not block the workflow
-# on their intermittent render failures. All Redshift cases are affected in
-# Cinema 4D 2024 and 2025; the textured case is also affected in Cinema 4D 2026.
-# This is a Cinema 4D issue and we have a ticket with Maxon to add a fix.
-_XFAIL_REDSHIFT_2024_2025_IN_CI = pytest.mark.xfail(
+# Reliable Redshift rendering requires a GPU. Unlike standard runners, GPU
+# runners are billed, so Windows CI runs Redshift only for the latest supported
+# Cinema 4D version, 2026, and skips the 2024 and 2025 cases.
+_SKIP_REDSHIFT_2024_2025_IN_CI = pytest.mark.skipif(
     sys.platform == "win32"
     and os.environ.get("CI") == "true"
     and os.environ.get("C4D_VERSION") in {"2024", "2025"},
-    reason="Redshift rendering can fail with Cinema 4D 2024 and 2025",
-    strict=False,
-)
-_XFAIL_REDSHIFT_TEXTURED_IN_CI = pytest.mark.xfail(
-    sys.platform == "win32"
-    and os.environ.get("CI") == "true"
-    and os.environ.get("C4D_VERSION") in {"2024", "2025", "2026"},
-    reason="Redshift textured rendering can fail with Cinema 4D 2024, 2025, and 2026",
-    strict=False,
+    reason="Redshift requires a billed GPU runner, so CI runs it only for the latest Cinema 4D version (2026)",
 )
 _SKIP_OCIO_2024 = pytest.mark.skipif(
     os.environ.get("C4D_VERSION", "2026") == "2024",
@@ -683,9 +674,9 @@ _CASES = [
     "physical_multi_takes",
     "physical_tiles_multi_takes",
     "phy_apos_path",
-    pytest.param("redshift", marks=_XFAIL_REDSHIFT_2024_2025_IN_CI),
-    pytest.param("redshift_textured", marks=_XFAIL_REDSHIFT_TEXTURED_IN_CI),
-    pytest.param("redshift_tiles", marks=_XFAIL_REDSHIFT_2024_2025_IN_CI),
+    pytest.param("redshift", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
+    pytest.param("redshift_textured", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
+    pytest.param("redshift_tiles", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
 ]
 
 _TAKE_SELECTIONS = [

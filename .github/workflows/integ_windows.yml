@@ -30,7 +30,7 @@ jobs:
       (github.ref == 'refs/heads/mainline' ||
       github.ref == 'refs/heads/feature/ci-tests')
     name: Integration Tests (Windows, Cinema 4D ${{ inputs.c4d_version }})
-    runs-on: windows-latest
+    runs-on: ${{ inputs.c4d_version == '2026' && 'aws-deadline_windows-2025_gpu-t4-4-core' || 'windows-latest' }}
     timeout-minutes: 60
     permissions:
       id-token: write
