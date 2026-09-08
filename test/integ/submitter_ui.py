@@ -434,7 +434,14 @@ def _activate_take_option(
         option_scope=option_scope,
     )
 
-    if "select" in option_actions:
+    if sys.platform == "darwin":
+        if "press" not in option_actions:
+            raise AssertionError(
+                f"Take option {selection!r} has no press action: {sorted(option_actions)}"
+            )
+        option.press()
+        semantic_action = "option.press"
+    elif "select" in option_actions:
         option.select()
         semantic_action = "option.select"
     elif option_row is not None and "select" in option_row.actions:
@@ -455,8 +462,11 @@ def _activate_take_option(
         option_scope=option_scope,
     )
 
-    # Selecting a UIA row or pressing an AX static text does not consistently
-    # commit a Qt combo choice. A pointer click emits the activation event.
+    if sys.platform == "darwin":
+        return option_element
+
+    # Selecting a UIA row does not consistently commit a Qt combo choice.
+    # A pointer click emits the activation event on Windows.
     xa11y.input_sim().click(option_element)
     _log_take_diagnostics(
         "after-pointer-click",
@@ -484,7 +494,7 @@ def _wait_for_take_selection(
     try:
         combo.wait_until(is_selected, timeout=1.0)
         _log_take_diagnostics(
-            "selection-committed-after-click",
+            "selection-committed-after-activation",
             combo=combo,
             option=option,
             captured_option=captured_option,
