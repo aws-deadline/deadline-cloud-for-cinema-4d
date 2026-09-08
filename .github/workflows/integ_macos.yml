@@ -157,7 +157,10 @@ jobs:
           echo "SSM_SESSION_ID=$ssmSessionId" >> "$GITHUB_ENV"
           echo "SSM session id: ${ssmSessionId:-<not captured>}"
 
-          hatch run integ:test
+          TAKE_DIAGNOSTICS=1 hatch -e integ run pytest --no-cov --numprocesses=0 -s -vv \
+            "test/integ/test_cinema4d.py::test_integ[physical_multi_takes]" \
+            "test/integ/test_cinema4d.py::test_integ[physical_tiles_multi_takes]" \
+            "test/integ/test_cinema4d.py::test_job_specific_take_selection"
 
       - name: Tear down
         if: always()

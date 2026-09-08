@@ -10,6 +10,7 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from collections.abc import Callable
@@ -59,6 +60,12 @@ _TIMEOUT_SPIN_START = {
     "Cinema 4D shutdown": 7,
 }
 _TAKE_OPTIONS = ("Main Take", "All Takes", "Marked Takes", "Current Take")
+_TAKE_OPTION_ROLES = ("list_item", "table_row", "static_text")
+_TAKE_OPTION_SELECTOR = ", ".join(
+    f"{role}[name='{name}']" for role in _TAKE_OPTION_ROLES for name in _TAKE_OPTIONS
+)
+_TAKE_DIAGNOSTICS = os.environ.get("TAKE_DIAGNOSTICS") == "1"
+_TAKE_DIAGNOSTIC_PREFIX = "[take-diag]"
 _MAX_SPIN_KEY_PRESSES = 100
 _SPIN_VALUE_PATTERN = re.compile(r"-?\d+")
 
@@ -202,27 +209,273 @@ def _take_combo(dialog: xa11y.Locator) -> xa11y.Locator:
     return combo
 
 
-def _activate_take_option(option: xa11y.Locator, selection: str) -> None:
+def _diagnostic_value(getter: Callable[[], object]) -> object:
+    try:
+        return getter()
+    except Exception as exc:  # noqa: BLE001 - diagnostics must not replace the test failure
+        return f"<{type(exc).__name__}: {exc}>"
+
+
+def _element_attribute(element: xa11y.Element, name: str) -> object:
+    return getattr(element, name)
+
+
+def _element_diagnostics(element: xa11y.Element | None) -> str:
+    if element is None:
+        return "<none>"
+
+    properties = (
+        "role",
+        "name",
+        "value",
+        "description",
+        "pid",
+        "stable_id",
+        "visible",
+        "enabled",
+        "focused",
+        "active",
+        "selected",
+        "expanded",
+        "focusable",
+        "actions",
+        "bounds",
+        "raw",
+    )
+    return " ".join(
+        f"{name}={_diagnostic_value(partial(_element_attribute, element, name))!r}"
+        for name in properties
+    )
+
+
+def _locator_element(locator: xa11y.Locator | None) -> xa11y.Element | None:
+    if locator is None:
+        return None
+    try:
+        return locator.element()
+    except Exception as exc:  # noqa: BLE001 - diagnostics must survive stale AX handles
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} locator-resolution-error "
+            f"selector={locator.selector!r} error={type(exc).__name__}: {exc}",
+            flush=True,
+        )
+        return None
+
+
+def _element_pid(*elements: xa11y.Element | None) -> int | None:
+    for element in elements:
+        if element is None:
+            continue
+        pid = _diagnostic_value(partial(_element_attribute, element, "pid"))
+        if isinstance(pid, int):
+            return pid
+    return None
+
+
+def _element_parent_diagnostics(element: xa11y.Element | None) -> str:
+    if element is None:
+        return "<none>"
+    parent = _diagnostic_value(element.parent)
+    if isinstance(parent, xa11y.Element):
+        return _element_diagnostics(parent)
+    return repr(parent)
+
+
+def _element_center(element: xa11y.Element | None) -> tuple[float, float] | object:
+    if element is None:
+        return "<none>"
+    bounds = _diagnostic_value(partial(_element_attribute, element, "bounds"))
+    if isinstance(bounds, xa11y.Rect):
+        return (bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    return bounds
+
+
+def _log_take_diagnostics(
+    stage: str,
+    *,
+    combo: xa11y.Locator | None = None,
+    option: xa11y.Locator | None = None,
+    captured_option: xa11y.Element | None = None,
+    option_scope: str | None = None,
+    dump_tree: bool = False,
+) -> None:
+    if not _TAKE_DIAGNOSTICS:
+        return
+
+    combo_element = _locator_element(combo)
+    option_element = _locator_element(option)
+    print(
+        f"{_TAKE_DIAGNOSTIC_PREFIX} stage={stage!r} option_scope={option_scope!r}",
+        flush=True,
+    )
+
+    foreground = _diagnostic_value(lambda: xa11y.App.foreground(timeout=0.0))
+    if isinstance(foreground, xa11y.App):
+        foreground_summary = (
+            f"name={foreground.name!r} pid={foreground.pid!r} "
+            f"is_foreground={foreground.is_foreground!r}"
+        )
+    else:
+        foreground_summary = repr(foreground)
+    print(
+        f"{_TAKE_DIAGNOSTIC_PREFIX} foreground-app {foreground_summary}",
+        flush=True,
+    )
+
+    if combo is not None:
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} combo selector={combo.selector!r} "
+            f"{_element_diagnostics(combo_element)}",
+            flush=True,
+        )
+    if option is not None:
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} fresh-option selector={option.selector!r} "
+            f"{_element_diagnostics(option_element)}",
+            flush=True,
+        )
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} fresh-option-parent "
+            f"{_element_parent_diagnostics(option_element)}",
+            flush=True,
+        )
+    if captured_option is not None:
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} captured-option "
+            f"click_center={_element_center(captured_option)!r} "
+            f"{_element_diagnostics(captured_option)}",
+            flush=True,
+        )
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} captured-option-parent "
+            f"{_element_parent_diagnostics(captured_option)}",
+            flush=True,
+        )
+
+    pid = _element_pid(combo_element, option_element, captured_option)
+    if pid is None:
+        print(f"{_TAKE_DIAGNOSTIC_PREFIX} target-pid=<unavailable>", flush=True)
+        return
+
+    matching_apps = _diagnostic_value(
+        lambda: [
+            (app.name, app.pid, app.is_foreground) for app in xa11y.App.list() if app.pid == pid
+        ]
+    )
+    print(
+        f"{_TAKE_DIAGNOSTIC_PREFIX} target-apps pid={pid} apps={matching_apps!r}",
+        flush=True,
+    )
+
+    app = _diagnostic_value(lambda: xa11y.App.by_pid(pid, timeout=0.0))
+    if not isinstance(app, xa11y.App):
+        print(f"{_TAKE_DIAGNOSTIC_PREFIX} target-app-error {app!r}", flush=True)
+        return
+
+    windows = _diagnostic_value(lambda: app.locator("window, dialog").elements())
+    if isinstance(windows, list):
+        print(f"{_TAKE_DIAGNOSTIC_PREFIX} target-window-count={len(windows)}", flush=True)
+        for index, window in enumerate(windows, start=1):
+            print(
+                f"{_TAKE_DIAGNOSTIC_PREFIX} target-window[{index}] "
+                f"{_element_diagnostics(window)}",
+                flush=True,
+            )
+    else:
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} target-window-query-error {windows!r}",
+            flush=True,
+        )
+
+    take_options = _diagnostic_value(lambda: app.locator(_TAKE_OPTION_SELECTOR).elements())
+    if isinstance(take_options, list):
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} take-option-count={len(take_options)}",
+            flush=True,
+        )
+        for index, take_option in enumerate(take_options, start=1):
+            print(
+                f"{_TAKE_DIAGNOSTIC_PREFIX} take-option[{index}] "
+                f"{_element_diagnostics(take_option)}",
+                flush=True,
+            )
+    else:
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} take-option-query-error {take_options!r}",
+            flush=True,
+        )
+
+    if dump_tree:
+        tree_dump = _diagnostic_value(lambda: app.dump(max_depth=8))
+        print(
+            f"{_TAKE_DIAGNOSTIC_PREFIX} target-app-tree-begin\n"
+            f"{tree_dump}\n"
+            f"{_TAKE_DIAGNOSTIC_PREFIX} target-app-tree-end",
+            flush=True,
+        )
+
+
+def _activate_take_option(
+    combo: xa11y.Locator,
+    option: xa11y.Locator,
+    selection: str,
+    *,
+    option_scope: str,
+) -> xa11y.Element:
     """Select and activate a take option across AX and UIA."""
     option_element = option.element()
     option_actions = set(option_element.actions)
     option_row = option_element.parent()
+    _log_take_diagnostics(
+        "before-option-activation",
+        combo=combo,
+        option=option,
+        captured_option=option_element,
+        option_scope=option_scope,
+    )
 
     if "select" in option_actions:
         option.select()
+        semantic_action = "option.select"
     elif option_row is not None and "select" in option_row.actions:
         option_row.select()
+        semantic_action = "option-parent.select"
     elif "press" not in option_actions:
         raise AssertionError(
             f"Take option {selection!r} has no selectable action: {sorted(option_actions)}"
         )
+    else:
+        semantic_action = "none-option-has-press"
+
+    _log_take_diagnostics(
+        f"after-semantic-action:{semantic_action}",
+        combo=combo,
+        option=option,
+        captured_option=option_element,
+        option_scope=option_scope,
+    )
 
     # Selecting a UIA row or pressing an AX static text does not consistently
     # commit a Qt combo choice. A pointer click emits the activation event.
     xa11y.input_sim().click(option_element)
+    _log_take_diagnostics(
+        "after-pointer-click",
+        combo=combo,
+        option=option,
+        captured_option=option_element,
+        option_scope=option_scope,
+    )
+    return option_element
 
 
-def _wait_for_take_selection(combo: xa11y.Locator, selection: str) -> None:
+def _wait_for_take_selection(
+    combo: xa11y.Locator,
+    selection: str,
+    *,
+    option: xa11y.Locator,
+    captured_option: xa11y.Element,
+    option_scope: str,
+) -> None:
     """Confirm a highlighted Qt combo row when activation did not commit it."""
 
     def is_selected(element):
@@ -230,10 +483,49 @@ def _wait_for_take_selection(combo: xa11y.Locator, selection: str) -> None:
 
     try:
         combo.wait_until(is_selected, timeout=1.0)
+        _log_take_diagnostics(
+            "selection-committed-after-click",
+            combo=combo,
+            option=option,
+            captured_option=captured_option,
+            option_scope=option_scope,
+        )
         return
     except xa11y.TimeoutError:
+        _log_take_diagnostics(
+            "selection-not-committed-before-enter",
+            combo=combo,
+            option=option,
+            captured_option=captured_option,
+            option_scope=option_scope,
+        )
         xa11y.input_sim().press("Enter")
-    combo.wait_until(is_selected, timeout=10.0)
+        _log_take_diagnostics(
+            "after-enter",
+            combo=combo,
+            option=option,
+            captured_option=captured_option,
+            option_scope=option_scope,
+        )
+    try:
+        combo.wait_until(is_selected, timeout=10.0)
+    except xa11y.TimeoutError:
+        _log_take_diagnostics(
+            "selection-final-timeout",
+            combo=combo,
+            option=option,
+            captured_option=captured_option,
+            option_scope=option_scope,
+            dump_tree=True,
+        )
+        raise
+    _log_take_diagnostics(
+        "selection-committed-after-enter",
+        combo=combo,
+        option=option,
+        captured_option=captured_option,
+        option_scope=option_scope,
+    )
 
 
 def _job_specific_text_field(dialog: xa11y.Locator, nth: int) -> xa11y.Locator:
@@ -341,15 +633,21 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
     if not current:
         raise AssertionError(f"Unexpected current take selection {current!r}")
     if current == selection:
+        _log_take_diagnostics("selection-already-current", combo=combo)
         return
 
     combo_actions = set(combo.element().actions)
+    _log_take_diagnostics("before-combo-open", combo=combo)
     if "show_menu" in combo_actions:
         combo.show_menu()
+        combo_action = "show_menu"
     elif "expand" in combo_actions:
         combo.expand()
+        combo_action = "expand"
     else:
         combo.press()
+        combo_action = "press"
+    _log_take_diagnostics(f"after-combo-open:{combo_action}", combo=combo)
 
     option_selector = (
         f"list_item[name='{selection}'], "
@@ -357,6 +655,7 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         f"static_text[name='{selection}']"
     )
     option = combo.descendant(option_selector).first()
+    option_scope = "combo-descendant"
     try:
         option.wait_visible(timeout=3.0)
     except xa11y.TimeoutError:
@@ -364,10 +663,28 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         if pid is None:
             raise AssertionError("Take combo does not expose its application PID") from None
         option = xa11y.App.by_pid(pid).locator(option_selector).first()
+        option_scope = "application"
         option.wait_visible(timeout=10.0)
 
-    _activate_take_option(option, selection)
-    _wait_for_take_selection(combo, selection)
+    _log_take_diagnostics(
+        "option-visible",
+        combo=combo,
+        option=option,
+        option_scope=option_scope,
+    )
+    captured_option = _activate_take_option(
+        combo,
+        option,
+        selection,
+        option_scope=option_scope,
+    )
+    _wait_for_take_selection(
+        combo,
+        selection,
+        option=option,
+        captured_option=captured_option,
+        option_scope=option_scope,
+    )
 
 
 def set_tile_rendering(
