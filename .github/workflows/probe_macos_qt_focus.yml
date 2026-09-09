@@ -1,16 +1,20 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
-# Isolates the macOS take-selection failure from Cinema 4D entirely.
+# Checks, without Cinema 4D, whether the proposed fix for the macOS take-selection
+# failures actually works on the runner.
 #
-# The integ suite's take tests fail because no window in the hosted macOS session
-# becomes key, so nothing Qt can act on ever reaches the combo popup. This probe
-# drives a bare PySide6 QComboBox with xa11y -- no Cinema 4D, no licence tunnel, no
-# AWS -- and reports which input mechanisms commit the selection. If it fails here
-# too, the cause is the runner session rather than anything in this repo.
+# The take tests fail because the submitter sets Qt's AA_PluginApplication (to stop Qt
+# replacing Cinema 4D's menu bar) and, since macOS 26.6.2, that attribute also stops
+# QComboBox popups committing a synthesised click. The proposed fix is the narrower
+# AA_DontUseNativeMenuBar.
 #
-# The same probe passes on a real logged-in desktop running the identical OS build
-# (macOS 26.6.2 / 25G83), where windows do become key, so a pass/fail split between
-# that desktop and this runner localises the problem to the session.
+# This drives a bare PySide6 QComboBox with xa11y -- no Cinema 4D, no licence tunnel,
+# no AWS, a couple of minutes -- in three configurations that differ only by that
+# attribute, and asserts: plain commits, AA_PluginApplication does not, and
+# AA_DontUseNativeMenuBar does. A green job means the swap will fix the take tests on
+# this runner. A red job means the evidence does not support the change.
+#
+# Confirmed locally on macOS 26.6.2 / 25G83, the same build the runner uses.
 name: "Probe - macOS Qt combo focus"
 
 on:
@@ -70,9 +74,8 @@ jobs:
           sw_vers
           echo "ImageOS=${ImageOS:-<unset>} ImageVersion=${ImageVersion:-<unset>}"
 
-      - name: Probe Qt combo focus
-        # The probe exits non-zero when no mechanism commits the selection. That is
-        # the signal we are looking for, so let the step fail and keep going to the
-        # summary below rather than masking it.
+      - name: Check the AA_DontUseNativeMenuBar hypothesis
+        # Exits non-zero if any configuration behaves unexpectedly, so the job is
+        # green only when the evidence supports swapping the attribute.
         run: |
           hatch -e integ run python test/probes/qt_combo_focus/drive_combo.py

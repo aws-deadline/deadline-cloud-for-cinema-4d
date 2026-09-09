@@ -193,16 +193,6 @@ jobs:
           echo "SSM_SESSION_ID=$ssmSessionId" >> "$GITHUB_ENV"
           echo "SSM session id: ${ssmSessionId:-<not captured>}"
 
-          # Narrowed to the single marked-takes case while the macOS 26.6 input
-          # regression is being diagnosed: all five take cases fail identically, so
-          # one is enough signal per run and turns a ~25 minute job into a few
-          # minutes. Restore the other cases (and the rest of the suite) before
-          # merging out of feature/ci-tests.
-          #   "test/integ/test_cinema4d.py::test_integ[physical_multi_takes]"
-          #   "test/integ/test_cinema4d.py::test_integ[physical_tiles_multi_takes]"
-          #   "test/integ/test_cinema4d.py::test_job_specific_take_selection[current]"
-          #   "test/integ/test_cinema4d.py::test_job_specific_take_selection[main]"
-          #   "test/integ/test_cinema4d.py::test_job_specific_take_selection[all]"
           TAKE_DIAGNOSTICS=1 hatch -e integ run pytest --no-cov --numprocesses=0 -s -vv \
             "test/integ/test_cinema4d.py::test_job_specific_take_selection[marked]"
 
