@@ -193,7 +193,11 @@ jobs:
           echo "SSM_SESSION_ID=$ssmSessionId" >> "$GITHUB_ENV"
           echo "SSM session id: ${ssmSessionId:-<not captured>}"
 
-          TAKE_DIAGNOSTICS=1 hatch -e integ run pytest --no-cov --numprocesses=0 -s -vv \
+          # See the submitter's show_submitter: Qt's AA_PluginApplication stops the
+          # dialog's combo popups acting on synthesised clicks on macOS 26.6.2, so the
+          # tests opt out of it. Users keep the shipped behaviour.
+          DEADLINE_CLOUD_C4D_SKIP_QT_PLUGIN_APPLICATION=1 \
+            TAKE_DIAGNOSTICS=1 hatch -e integ run pytest --no-cov --numprocesses=0 -s -vv \
             "test/integ/test_cinema4d.py::test_job_specific_take_selection[marked]"
 
       - name: Tear down

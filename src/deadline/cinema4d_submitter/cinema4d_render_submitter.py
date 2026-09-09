@@ -112,7 +112,18 @@ def show_submitter():
             #
             # DCCs that are themselves Qt applications (Maya, Nuke) never reach this branch,
             # which is why the problem is specific to Cinema 4D.
-            if is_macos():
+            #
+            # DEADLINE_CLOUD_C4D_SKIP_QT_PLUGIN_APPLICATION exists because on macOS 26.6.2
+            # this attribute also stops the dialog's combo box popups acting on synthesised
+            # clicks, which makes the Takes combo impossible to drive from the integ tests.
+            # A real user with a mouse is unaffected, so the shipped default is unchanged
+            # and only the tests opt out. It has to be skipped rather than set and cleared:
+            # the effect is applied while the QApplication is constructed and clearing the
+            # attribute afterwards does not restore the popups (see
+            # test/probes/qt_combo_focus, variant plugin-then-cleared-modal-tool).
+            if is_macos() and not str2bool(
+                os.environ.get("DEADLINE_CLOUD_C4D_SKIP_QT_PLUGIN_APPLICATION", "0")
+            ):
                 try:
                     QtWidgets.QApplication.setAttribute(
                         Qt.ApplicationAttribute.AA_PluginApplication, True

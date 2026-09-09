@@ -583,6 +583,36 @@ class TestShowSubmitterNativeMenuBar:
 
         mock_qtwidgets.QApplication.setAttribute.assert_not_called()
 
+    def test_skipped_when_the_opt_out_is_set(self):
+        """The integ tests opt out: on macOS 26.6.2 this attribute stops the dialog's
+        combo box popups acting on synthesised clicks, so the Takes combo cannot be
+        driven. Users are unaffected, so only the tests set this."""
+        with (
+            mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets,
+            mock.patch.dict(
+                cinema4d_render_submitter.os.environ,
+                {"DEADLINE_CLOUD_C4D_SKIP_QT_PLUGIN_APPLICATION": "1"},
+            ),
+        ):
+            self._run(mock_qtwidgets)
+
+        mock_qtwidgets.QApplication.setAttribute.assert_not_called()
+
+    def test_set_when_the_opt_out_is_absent(self):
+        """Absent the opt-out the shipped behaviour is unchanged."""
+        with (
+            mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets,
+            mock.patch.dict(cinema4d_render_submitter.os.environ, {}, clear=False),
+        ):
+            cinema4d_render_submitter.os.environ.pop(
+                "DEADLINE_CLOUD_C4D_SKIP_QT_PLUGIN_APPLICATION", None
+            )
+            self._run(mock_qtwidgets)
+
+        mock_qtwidgets.QApplication.setAttribute.assert_called_once_with(
+            Qt.ApplicationAttribute.AA_PluginApplication, True
+        )
+
     def test_leaves_an_existing_application_alone(self):
         """A host that already owns a QApplication must not be reconfigured."""
         with mock.patch.object(cinema4d_render_submitter, "QtWidgets") as mock_qtwidgets:

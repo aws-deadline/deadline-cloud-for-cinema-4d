@@ -30,35 +30,23 @@ jobs:
   #     id-token: write
   #     contents: read
 
-  # Temporarily disabled while the macOS take-selection failure is isolated with
-  # the standalone probe in probe_macos_qt_focus.yml, which reproduces the same
-  # input failure without Cinema 4D. Re-enable both jobs once the probe passes.
-  # macos:
-  #   name: macOS, Cinema 4D ${{ matrix.c4d_version }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       c4d_version: ["2024", "2025", "2026"]
-  #   uses: ./.github/workflows/integ_macos.yml
-  #   with:
-  #     c4d_version: ${{ matrix.c4d_version }}
-  #   secrets:
-  #     AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
-  #     AWS_REGION: ${{ secrets.AWS_REGION }}
-  #     RLM_PORT: ${{ secrets.RLM_PORT }}
-  #     INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
-  #     INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
-  #     LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
-  #     BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
-  #   permissions:
-  #     id-token: write
-  #     contents: read
-
-  # A workflow must define at least one job, and every real job here is disabled
-  # while the probe runs. This no-op keeps the file valid without burning a runner
-  # on Cinema 4D installs; delete it when the jobs above come back.
-  disabled:
-    name: Integration tests temporarily disabled
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "xa11y integ tests are paused; see probe_macos_qt_focus.yml"
+  macos:
+    name: macOS, Cinema 4D ${{ matrix.c4d_version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        c4d_version: ["2024", "2025", "2026"]
+    uses: ./.github/workflows/integ_macos.yml
+    with:
+      c4d_version: ${{ matrix.c4d_version }}
+    secrets:
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      RLM_PORT: ${{ secrets.RLM_PORT }}
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+      LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+      BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+    permissions:
+      id-token: write
+      contents: read
