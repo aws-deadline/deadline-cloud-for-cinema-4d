@@ -215,25 +215,6 @@ def _take_combo(dialog: xa11y.Locator) -> xa11y.Locator:
     return combo
 
 
-def _take_keyboard_steps(current: str, selection: str) -> tuple[tuple[str, str], ...]:
-    """Return arrow keys and expected values for navigating the Takes combo."""
-    current_index = _TAKE_OPTIONS.index(current)
-    target_index = _TAKE_OPTIONS.index(selection)
-    if current_index == target_index:
-        return ()
-
-    step = 1 if target_index > current_index else -1
-    key = "ArrowDown" if step > 0 else "ArrowUp"
-    return tuple(
-        (key, _TAKE_OPTIONS[index])
-        for index in range(current_index + step, target_index + step, step)
-    )
-
-
-def _take_selection_is(element: xa11y.Element | None, *, selection: str) -> bool:
-    return element is not None and _take_selection(element) == selection
-
-
 def _window_ancestor(element: xa11y.Element | None) -> xa11y.Element | None:
     """Return the nearest window/dialog ancestor of ``element`` (or itself)."""
     seen = 0
@@ -312,55 +293,72 @@ def _press_take_key(combo: xa11y.Locator, key: str) -> None:
     """Send ``key`` to the combo, preferring direct delivery to its process on macOS."""
     pid = _element_pid(_locator_element(combo))
     if pid is not None and _post_key_to_pid(pid, key):
+        _log_take_diagnostics_message(f"posted {key!r} to pid {pid} via CGEventPostToPid")
         return
+    _log_take_diagnostics_message(f"posted {key!r} via input_sim")
     xa11y.input_sim().press(key)
 
 
-def _select_take_with_keyboard(
-    combo: xa11y.Locator,
-    current: str,
-    selection: str,
-) -> None:
-    """Select a macOS Qt combo value without interacting with its AXStaticText rows."""
-    _log_take_diagnostics("before-keyboard-focus", combo=combo)
-    _raise_window_for_input(combo)
-    combo.focus()
+class _CGPoint(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
+
+
+def _post_click_to_pid(pid: int, x: float, y: float) -> bool:
+    """Click at ``(x, y)`` by posting mouse events straight to ``pid``.
+
+    Preferred over keys for committing the popup: Cocoa dispatches a mouse event to
+    whatever is at its location, whereas a key event goes to the key window's focus
+    widget -- and this runner grants no window key status, so Qt has no focus widget
+    for keys to reach at all. Returns False when the frameworks are unavailable.
+    """
+    if sys.platform != "darwin":
+        return False
     try:
-        combo.wait_focused(timeout=5.0)
-    except xa11y.TimeoutError:
-        # Since macOS 26.6 the CI session grants no window key status, so AXFocused
-        # never becomes true here. Keys posted straight to the process still arrive,
-        # so press on regardless and let the per-step assertions decide.
-        _log_take_diagnostics("keyboard-focus-timeout", combo=combo, dump_tree=True)
-    _log_take_diagnostics("after-keyboard-focus", combo=combo)
+        app_services_path = ctypes.util.find_library("ApplicationServices")
+        core_foundation_path = ctypes.util.find_library("CoreFoundation")
+        if not app_services_path or not core_foundation_path:
+            return False
+        app_services = ctypes.cdll.LoadLibrary(app_services_path)
+        core_foundation = ctypes.cdll.LoadLibrary(core_foundation_path)
+        app_services.CGEventCreateMouseEvent.restype = ctypes.c_void_p
+        app_services.CGEventCreateMouseEvent.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_uint32,
+            _CGPoint,
+            ctypes.c_uint32,
+        ]
+        app_services.CGEventPostToPid.argtypes = [ctypes.c_int32, ctypes.c_void_p]
+        core_foundation.CFRelease.argtypes = [ctypes.c_void_p]
+        point = _CGPoint(float(x), float(y))
+        # kCGEventMouseMoved = 5, kCGEventLeftMouseDown = 1, kCGEventLeftMouseUp = 2;
+        # kCGMouseButtonLeft = 0. The move first gives Qt the hover it uses to set the
+        # popup's current row before the press commits it.
+        for event_type in (5, 1, 2):
+            event = app_services.CGEventCreateMouseEvent(None, event_type, point, 0)
+            if not event:
+                return False
+            app_services.CGEventPostToPid(pid, event)
+            core_foundation.CFRelease(event)
+    except Exception as exc:  # noqa: BLE001 - fall back to input_sim rather than fail here
+        _log_take_diagnostics_message(f"CGEventPostToPid mouse ({x}, {y}) failed: {exc!r}")
+        return False
+    return True
 
-    for index, (key, expected) in enumerate(
-        _take_keyboard_steps(current, selection),
-        start=1,
-    ):
-        _press_take_key(combo, key)
-        try:
-            combo.wait_until(
-                partial(_take_selection_is, selection=expected),
-                timeout=5.0,
-            )
-        except xa11y.TimeoutError:
-            observed = _take_selection(combo.element())
-            _log_take_diagnostics(
-                f"keyboard-step-timeout:{index}:{key}:{expected}",
-                combo=combo,
-                dump_tree=True,
-            )
-            raise AssertionError(
-                f"Take combo did not change to {expected!r} after {key}; "
-                f"last observed {observed!r}"
-            ) from None
-        _log_take_diagnostics(
-            f"after-keyboard-step:{index}:{key}:{expected}",
-            combo=combo,
-        )
 
-    _log_take_diagnostics("selection-committed-after-keyboard", combo=combo)
+def _click_take_element(element: xa11y.Element) -> None:
+    """Click ``element``'s centre, preferring direct delivery to its process on macOS."""
+    bounds = element.bounds
+    pid = _element_pid(element)
+    if pid is not None and bounds is not None:
+        centre_x = bounds.x + bounds.width / 2
+        centre_y = bounds.y + bounds.height / 2
+        if _post_click_to_pid(pid, centre_x, centre_y):
+            _log_take_diagnostics_message(
+                f"clicked ({centre_x}, {centre_y}) on pid {pid} via CGEventPostToPid"
+            )
+            return
+    _log_take_diagnostics_message("clicked via input_sim")
+    xa11y.input_sim().click(element)
 
 
 def _diagnostic_value(getter: Callable[[], object]) -> object:
@@ -616,8 +614,8 @@ def _activate_take_option(
     )
 
     # Selecting a UIA row does not consistently commit a Qt combo choice.
-    # A pointer click emits the activation event on Windows.
-    xa11y.input_sim().click(option_element)
+    # A pointer click emits the activation event.
+    _click_take_element(option_element)
     _log_take_diagnostics(
         "after-pointer-click",
         combo=combo,
@@ -659,7 +657,7 @@ def _wait_for_take_selection(
             captured_option=captured_option,
             option_scope=option_scope,
         )
-        xa11y.input_sim().press("Enter")
+        _press_take_key(combo, "Enter")
         _log_take_diagnostics(
             "after-enter",
             combo=combo,
@@ -796,12 +794,13 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         _log_take_diagnostics("selection-already-current", combo=combo)
         return
 
-    if sys.platform == "darwin":
-        _select_take_with_keyboard(combo, current, selection)
-        return
-
     combo_actions = set(combo.element().actions)
     _log_take_diagnostics("before-combo-open", combo=combo)
+    # Both platforms open the popup and commit it by clicking the row. Arrow keys are
+    # not an option on macOS 26.6: that session grants no key window, so Qt has no
+    # focus widget for a key event to reach, however the event is posted. Mouse events
+    # dispatch by location instead, which does not depend on key-window state.
+    _raise_window_for_input(combo)
     if "show_menu" in combo_actions:
         combo.show_menu()
         combo_action = "show_menu"
