@@ -1,0 +1,78 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Isolates the macOS take-selection failure from Cinema 4D entirely.
+#
+# The integ suite's take tests fail because no window in the hosted macOS session
+# becomes key, so nothing Qt can act on ever reaches the combo popup. This probe
+# drives a bare PySide6 QComboBox with xa11y -- no Cinema 4D, no licence tunnel, no
+# AWS -- and reports which input mechanisms commit the selection. If it fails here
+# too, the cause is the runner session rather than anything in this repo.
+#
+# The same probe passes on a real logged-in desktop running the identical OS build
+# (macOS 26.6.2 / 25G83), where windows do become key, so a pass/fail split between
+# that desktop and this runner localises the problem to the session.
+name: "Probe - macOS Qt combo focus"
+
+on:
+  push:
+    branches:
+      - mainline
+      # Restricted to developers with permission to approve pull requests.
+      - feature/ci-tests
+  workflow_dispatch:
+
+jobs:
+  ProbeMacOSQtFocus:
+    if: >-
+      github.repository == 'aws-deadline/deadline-cloud-for-cinema-4d' &&
+      (github.ref == 'refs/heads/mainline' ||
+      github.ref == 'refs/heads/feature/ci-tests' ||
+      github.event_name == 'workflow_dispatch')
+    name: Probe (macOS Qt combo focus)
+    runs-on: macos-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install hatch
+        run: pip install --upgrade hatch
+
+      - name: Grant accessibility
+        run: |
+          # Mirrors the integ workflow: the driver process needs Accessibility
+          # permission to use the AX API at all. Create the env first so pip's
+          # output can't pollute the captured interpreter path.
+          hatch env create integ
+          HATCH_PYTHON=$(hatch -e integ run python -c "import os,sys; print(os.path.realpath(sys.executable))")
+          SETUP_PYTHON=$(python3 -c "import os,sys; print(os.path.realpath(sys.executable))")
+          for BIN_PATH in "$SETUP_PYTHON" "$HATCH_PYTHON"; do
+            sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
+              "INSERT OR REPLACE INTO access(service,client,client_type,auth_value,auth_reason,auth_version,csreq,policy_id,indirect_object_identifier_type,indirect_object_identifier,indirect_object_code_identity,flags,last_modified) \
+              VALUES('kTCCServiceAccessibility','${BIN_PATH}',1,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,$(date +%s));"
+          done
+          sudo launchctl stop com.apple.tccd 2>/dev/null || true
+          sleep 2
+
+      - name: Report runner OS build
+        run: |
+          # Pin down exactly which image/OS this ran on, so a pass/fail can be tied
+          # to an image version rather than guessed at later.
+          sw_vers
+          echo "ImageOS=${ImageOS:-<unset>} ImageVersion=${ImageVersion:-<unset>}"
+
+      - name: Probe Qt combo focus
+        # The probe exits non-zero when no mechanism commits the selection. That is
+        # the signal we are looking for, so let the step fail and keep going to the
+        # summary below rather than masking it.
+        run: |
+          hatch -e integ run python test/probes/qt_combo_focus/drive_combo.py
