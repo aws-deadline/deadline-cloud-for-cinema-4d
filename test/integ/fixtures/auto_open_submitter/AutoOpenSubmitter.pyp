@@ -208,8 +208,39 @@ def _load_active_scene(scene_path):
         _diag(f"LoadDocument raised: {e!r}\n{traceback.format_exc()}")
 
 
+def _log_qt_application_state(when):
+    """Record whether a QApplication already exists and what Qt attributes are set.
+
+    The submitter only sets AA_PluginApplication inside its ``if not app:`` branch, so
+    if Cinema 4D (or another plugin) has already made a QApplication that branch never
+    runs and the attribute is never set. That distinction decides whether the attribute
+    is really behind the Takes combo being undriveable, so record it rather than assume.
+    """
+    try:
+        from qtpy import QtWidgets
+        from qtpy.QtCore import Qt
+
+        instance = QtWidgets.QApplication.instance()
+        states = []
+        for name in ("AA_PluginApplication", "AA_DontUseNativeMenuBar"):
+            attribute = getattr(Qt.ApplicationAttribute, name, None)
+            if attribute is None:
+                states.append(f"{name}=<unavailable>")
+            else:
+                states.append(f"{name}={QtWidgets.QApplication.testAttribute(attribute)}")
+        _diag(
+            f"qt state {when}: QApplication.instance()={instance!r}, "
+            f"{', '.join(states)}, "
+            "DEADLINE_CLOUD_C4D_SKIP_QT_PLUGIN_APPLICATION="
+            f"{os.environ.get('DEADLINE_CLOUD_C4D_SKIP_QT_PLUGIN_APPLICATION', '<unset>')!r}"
+        )
+    except Exception as e:
+        _diag(f"qt state {when} unavailable: {e!r}")
+
+
 def _open_submitter():
     """Dispatch into the real shipped plugin's submitter command."""
+    _log_qt_application_state("before CallCommand")
     active = c4d.documents.GetActiveDocument()
     _diag(
         f"active doc = {active.GetDocumentName() if active else None}, "
