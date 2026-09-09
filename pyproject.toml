@@ -45,7 +45,7 @@ dependencies = [
     "deadline[gui] >= 0.60.4, < 0.61",
     "openjd-adaptor-runtime >= 0.7,< 0.10",
     # fonttools is Windows-only due to Cinema 4D technical limitations
-    "fonttools >=4.59.2, <4.64; sys_platform == 'win32'",
+    "fonttools >=4.59.2, <4.65; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
