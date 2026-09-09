@@ -649,6 +649,22 @@ _XFAIL_REDSHIFT_TEXTURED_IN_CI = pytest.mark.xfail(
     reason="Redshift textured rendering can fail with Cinema 4D 2024, 2025, and 2026",
     strict=False,
 )
+# Changing the Takes combo cannot be automated on the macOS CI runners. The
+# accessibility action opens the popup and its rows are found, but no synthesised
+# click or keypress commits the selection. The only correlated change is the hosted
+# image moving from macOS 26.5.2 to 26.6.2 (image 20260728.0273.1 -> 20260831.0337.3,
+# around 2026-09-03); the same tests pass locally and a real user with a mouse is
+# unaffected, so this is a CI automation limit rather than a product defect. Tracked
+# internally along with what has already been ruled out, so it is not re-investigated.
+#
+# Gated on CI so local runs keep asserting the real behaviour. Not strict: the cause
+# is a runner image we do not control, so a future image that fixes this should show up
+# as an xpass to clean up, not as a red build.
+_XFAIL_MACOS_TAKE_COMBO_IN_CI = pytest.mark.xfail(
+    sys.platform == "darwin" and os.environ.get("CI") == "true",
+    reason="macOS CI: synthesised input does not commit the Takes combo popup",
+    strict=False,
+)
 _SKIP_OCIO_2024 = pytest.mark.skipif(
     os.environ.get("C4D_VERSION", "2026") == "2024",
     reason="BakeOcioViewToBitmap requires Cinema 4D 2025.2 or newer",
@@ -680,8 +696,8 @@ _CASES = [
     "physical_nonascii",
     "physical_textured",
     "physical_custom_fps",
-    "physical_multi_takes",
-    "physical_tiles_multi_takes",
+    pytest.param("physical_multi_takes", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    pytest.param("physical_tiles_multi_takes", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
     "phy_apos_path",
     pytest.param("redshift", marks=_XFAIL_REDSHIFT_2024_2025_IN_CI),
     pytest.param("redshift_textured", marks=_XFAIL_REDSHIFT_TEXTURED_IN_CI),
@@ -689,10 +705,12 @@ _CASES = [
 ]
 
 _TAKE_SELECTIONS = [
-    pytest.param("current", "Current Take", id="current"),
+    pytest.param("current", "Current Take", id="current", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    # "main" is the combo's starting value, so selecting it never opens the popup and is
+    # unaffected. Left unmarked so it keeps asserting take selection on macOS CI.
     pytest.param("main", "Main Take", id="main"),
-    pytest.param("marked", "Marked Takes", id="marked"),
-    pytest.param("all", "All Takes", id="all"),
+    pytest.param("marked", "Marked Takes", id="marked", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    pytest.param("all", "All Takes", id="all", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
 ]
 
 
