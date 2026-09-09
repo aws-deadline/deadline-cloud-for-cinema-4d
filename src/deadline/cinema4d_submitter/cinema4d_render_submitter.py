@@ -144,9 +144,12 @@ def show_submitter():
             prefix="scene_with_assets_", dir=scene_dir_path
         ) as temp_dir:
             app.setStyleSheet(C4D_STYLE)  # type: ignore[attr-defined]
-            w = _show_submitter(
-                temp_dir, None, Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint
-            )
+            if is_windows():
+                w = _show_submitter(
+                    temp_dir, None, Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint
+                )
+            else:
+                w = _show_submitter(temp_dir, None)
             # _show_submitter returns None when the user declines the pre-GUI hook confirmation
             # prompt; treat that as a normal cancellation and skip showing the dialog.
             if w is None:
