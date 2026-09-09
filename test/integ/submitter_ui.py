@@ -209,6 +209,70 @@ def _take_combo(dialog: xa11y.Locator) -> xa11y.Locator:
     return combo
 
 
+def _take_keyboard_steps(current: str, selection: str) -> tuple[tuple[str, str], ...]:
+    """Return arrow keys and expected values for navigating the Takes combo."""
+    current_index = _TAKE_OPTIONS.index(current)
+    target_index = _TAKE_OPTIONS.index(selection)
+    if current_index == target_index:
+        return ()
+
+    step = 1 if target_index > current_index else -1
+    key = "ArrowDown" if step > 0 else "ArrowUp"
+    return tuple(
+        (key, _TAKE_OPTIONS[index])
+        for index in range(current_index + step, target_index + step, step)
+    )
+
+
+def _take_selection_is(element: xa11y.Element | None, *, selection: str) -> bool:
+    return element is not None and _take_selection(element) == selection
+
+
+def _select_take_with_keyboard(
+    combo: xa11y.Locator,
+    current: str,
+    selection: str,
+) -> None:
+    """Select a macOS Qt combo value without interacting with its AXStaticText rows."""
+    _log_take_diagnostics("before-keyboard-focus", combo=combo)
+    combo.focus()
+    try:
+        combo.wait_focused(timeout=5.0)
+    except xa11y.TimeoutError:
+        _log_take_diagnostics("keyboard-focus-timeout", combo=combo, dump_tree=True)
+        raise
+    _log_take_diagnostics("after-keyboard-focus", combo=combo)
+
+    input_sim = xa11y.input_sim()
+    for index, (key, expected) in enumerate(
+        _take_keyboard_steps(current, selection),
+        start=1,
+    ):
+        input_sim.press(key)
+        try:
+            combo.wait_until(
+                partial(_take_selection_is, selection=expected),
+                timeout=5.0,
+            )
+        except xa11y.TimeoutError:
+            observed = _take_selection(combo.element())
+            _log_take_diagnostics(
+                f"keyboard-step-timeout:{index}:{key}:{expected}",
+                combo=combo,
+                dump_tree=True,
+            )
+            raise AssertionError(
+                f"Take combo did not change to {expected!r} after {key}; "
+                f"last observed {observed!r}"
+            ) from None
+        _log_take_diagnostics(
+            f"after-keyboard-step:{index}:{key}:{expected}",
+            combo=combo,
+        )
+
+    _log_take_diagnostics("selection-committed-after-keyboard", combo=combo)
+
+
 def _diagnostic_value(getter: Callable[[], object]) -> object:
     try:
         return getter()
@@ -422,7 +486,7 @@ def _activate_take_option(
     *,
     option_scope: str,
 ) -> xa11y.Element:
-    """Select and activate a take option across AX and UIA."""
+    """Select and activate a take option through Windows UIA."""
     option_element = option.element()
     option_actions = set(option_element.actions)
     option_row = option_element.parent()
@@ -434,14 +498,7 @@ def _activate_take_option(
         option_scope=option_scope,
     )
 
-    if sys.platform == "darwin":
-        if "press" not in option_actions:
-            raise AssertionError(
-                f"Take option {selection!r} has no press action: {sorted(option_actions)}"
-            )
-        option.press()
-        semantic_action = "option.press"
-    elif "select" in option_actions:
+    if "select" in option_actions:
         option.select()
         semantic_action = "option.select"
     elif option_row is not None and "select" in option_row.actions:
@@ -461,9 +518,6 @@ def _activate_take_option(
         captured_option=option_element,
         option_scope=option_scope,
     )
-
-    if sys.platform == "darwin":
-        return option_element
 
     # Selecting a UIA row does not consistently commit a Qt combo choice.
     # A pointer click emits the activation event on Windows.
@@ -644,6 +698,10 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         raise AssertionError(f"Unexpected current take selection {current!r}")
     if current == selection:
         _log_take_diagnostics("selection-already-current", combo=combo)
+        return
+
+    if sys.platform == "darwin":
+        _select_take_with_keyboard(combo, current, selection)
         return
 
     combo_actions = set(combo.element().actions)
