@@ -100,6 +100,42 @@ jobs:
           sudo launchctl stop com.apple.tccd 2>/dev/null || true
           sleep 2
 
+      - name: Diagnose GUI session state
+        # Since the macos-26-arm64 image moved to macOS 26.6.2, no window in the
+        # session becomes key and synthetic input is dropped, which breaks any UI
+        # interaction that needs a real click or keypress. Dump the WindowServer
+        # session so we can tell a locked / off-console session (fixable here) from
+        # an OS-level event-delivery regression (needs an upstream fix). ctypes only:
+        # the runner's python has no PyObjC and this must never fail the job.
+        continue-on-error: true
+        run: |
+          python3 - <<'PY'
+          import ctypes, ctypes.util
+
+          cg = ctypes.cdll.LoadLibrary(ctypes.util.find_library("ApplicationServices"))
+          cf = ctypes.cdll.LoadLibrary(ctypes.util.find_library("CoreFoundation"))
+          cg.CGSessionCopyCurrentDictionary.restype = ctypes.c_void_p
+          cf.CFCopyDescription.restype = ctypes.c_void_p
+          cf.CFCopyDescription.argtypes = [ctypes.c_void_p]
+          cf.CFStringGetCString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_uint32]
+
+          session = cg.CGSessionCopyCurrentDictionary()
+          if not session:
+              print("CGSessionCopyCurrentDictionary returned NULL (no GUI session)")
+          else:
+              description = cf.CFCopyDescription(session)
+              buffer = ctypes.create_string_buffer(16384)
+              # 0x08000100 == kCFStringEncodingUTF8
+              if cf.CFStringGetCString(description, buffer, len(buffer), 0x08000100):
+                  print(buffer.value.decode("utf-8", "replace"))
+              else:
+                  print("could not stringify the session dictionary")
+          PY
+          echo "--- secure input state (a secure-input holder also blocks synthetic keys) ---"
+          ioreg -l -w 0 | grep -i "kCGSSessionSecureInputPID" || echo "no secure input holder"
+          echo "--- frontmost application ---"
+          osascript -e 'tell application "System Events" to get name of first process whose frontmost is true' || true
+
       - name: Bring up license tunnel and run tests
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -157,10 +193,18 @@ jobs:
           echo "SSM_SESSION_ID=$ssmSessionId" >> "$GITHUB_ENV"
           echo "SSM session id: ${ssmSessionId:-<not captured>}"
 
+          # Narrowed to the single marked-takes case while the macOS 26.6 input
+          # regression is being diagnosed: all five take cases fail identically, so
+          # one is enough signal per run and turns a ~25 minute job into a few
+          # minutes. Restore the other cases (and the rest of the suite) before
+          # merging out of feature/ci-tests.
+          #   "test/integ/test_cinema4d.py::test_integ[physical_multi_takes]"
+          #   "test/integ/test_cinema4d.py::test_integ[physical_tiles_multi_takes]"
+          #   "test/integ/test_cinema4d.py::test_job_specific_take_selection[current]"
+          #   "test/integ/test_cinema4d.py::test_job_specific_take_selection[main]"
+          #   "test/integ/test_cinema4d.py::test_job_specific_take_selection[all]"
           TAKE_DIAGNOSTICS=1 hatch -e integ run pytest --no-cov --numprocesses=0 -s -vv \
-            "test/integ/test_cinema4d.py::test_integ[physical_multi_takes]" \
-            "test/integ/test_cinema4d.py::test_integ[physical_tiles_multi_takes]" \
-            "test/integ/test_cinema4d.py::test_job_specific_take_selection"
+            "test/integ/test_cinema4d.py::test_job_specific_take_selection[marked]"
 
       - name: Tear down
         if: always()

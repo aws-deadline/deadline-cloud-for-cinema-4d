@@ -10,6 +10,8 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import os
 import re
 import sys
@@ -68,6 +70,10 @@ _TAKE_DIAGNOSTICS = os.environ.get("TAKE_DIAGNOSTICS") == "1"
 _TAKE_DIAGNOSTIC_PREFIX = "[take-diag]"
 _MAX_SPIN_KEY_PRESSES = 100
 _SPIN_VALUE_PATTERN = re.compile(r"-?\d+")
+
+# Virtual key codes for the keys the take combo needs. macOS identifies keys by
+# hardware-independent code, not character, so these are the same on every layout.
+_MAC_KEY_CODES = {"ArrowDown": 125, "ArrowUp": 126, "Enter": 36}
 
 
 def _spin_value(element: xa11y.Element | None) -> int | None:
@@ -228,6 +234,88 @@ def _take_selection_is(element: xa11y.Element | None, *, selection: str) -> bool
     return element is not None and _take_selection(element) == selection
 
 
+def _window_ancestor(element: xa11y.Element | None) -> xa11y.Element | None:
+    """Return the nearest window/dialog ancestor of ``element`` (or itself)."""
+    seen = 0
+    current = element
+    while current is not None and seen < 20:
+        if current.role in ("window", "dialog"):
+            return current
+        current = current.parent()
+        seen += 1
+    return None
+
+
+def _raise_window_for_input(combo: xa11y.Locator) -> None:
+    """Ask the window owning ``combo`` to raise and take focus before synthesising input.
+
+    On macOS 26.6 a synthesised click no longer makes the window under the pointer key,
+    so input aimed at a popup is dropped. Explicitly driving the accessibility ``raise``
+    and ``focus`` actions -- which still work when event delivery does not -- is the
+    documented workaround for the equivalent regression in other automation tools.
+    Best-effort: failing to raise is not itself the assertion under test.
+    """
+    if sys.platform != "darwin":
+        return
+    window = _window_ancestor(_locator_element(combo))
+    if window is None:
+        return
+    for action in ("raise", "focus"):
+        if action not in set(window.actions):
+            continue
+        try:
+            window.perform_action(action)
+        except Exception as exc:  # noqa: BLE001 - diagnostics only; never mask the real failure
+            _log_take_diagnostics_message(f"window {action} failed: {exc!r}")
+
+
+def _post_key_to_pid(pid: int, key: str) -> bool:
+    """Post ``key`` straight to ``pid`` with CGEventPostToPid, bypassing key-window routing.
+
+    ``xa11y.input_sim()`` posts to the session event tap, which WindowServer routes to
+    whichever window is key -- and on the current macOS CI image nothing ever is, so the
+    event is discarded. ``CGEventPostToPid`` hands the event to one process directly and
+    does not consult key-window state. Uses ctypes because the integ environment has no
+    PyObjC dependency. Returns False when the key or the framework is unavailable.
+    """
+    code = _MAC_KEY_CODES.get(key)
+    if sys.platform != "darwin" or code is None:
+        return False
+    try:
+        app_services_path = ctypes.util.find_library("ApplicationServices")
+        core_foundation_path = ctypes.util.find_library("CoreFoundation")
+        if not app_services_path or not core_foundation_path:
+            return False
+        app_services = ctypes.cdll.LoadLibrary(app_services_path)
+        core_foundation = ctypes.cdll.LoadLibrary(core_foundation_path)
+        app_services.CGEventCreateKeyboardEvent.restype = ctypes.c_void_p
+        app_services.CGEventCreateKeyboardEvent.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_uint16,
+            ctypes.c_bool,
+        ]
+        app_services.CGEventPostToPid.argtypes = [ctypes.c_int32, ctypes.c_void_p]
+        core_foundation.CFRelease.argtypes = [ctypes.c_void_p]
+        for is_key_down in (True, False):
+            event = app_services.CGEventCreateKeyboardEvent(None, code, is_key_down)
+            if not event:
+                return False
+            app_services.CGEventPostToPid(pid, event)
+            core_foundation.CFRelease(event)
+    except Exception as exc:  # noqa: BLE001 - fall back to input_sim rather than fail here
+        _log_take_diagnostics_message(f"CGEventPostToPid({pid}, {key!r}) failed: {exc!r}")
+        return False
+    return True
+
+
+def _press_take_key(combo: xa11y.Locator, key: str) -> None:
+    """Send ``key`` to the combo, preferring direct delivery to its process on macOS."""
+    pid = _element_pid(_locator_element(combo))
+    if pid is not None and _post_key_to_pid(pid, key):
+        return
+    xa11y.input_sim().press(key)
+
+
 def _select_take_with_keyboard(
     combo: xa11y.Locator,
     current: str,
@@ -235,20 +323,22 @@ def _select_take_with_keyboard(
 ) -> None:
     """Select a macOS Qt combo value without interacting with its AXStaticText rows."""
     _log_take_diagnostics("before-keyboard-focus", combo=combo)
+    _raise_window_for_input(combo)
     combo.focus()
     try:
         combo.wait_focused(timeout=5.0)
     except xa11y.TimeoutError:
+        # Since macOS 26.6 the CI session grants no window key status, so AXFocused
+        # never becomes true here. Keys posted straight to the process still arrive,
+        # so press on regardless and let the per-step assertions decide.
         _log_take_diagnostics("keyboard-focus-timeout", combo=combo, dump_tree=True)
-        raise
     _log_take_diagnostics("after-keyboard-focus", combo=combo)
 
-    input_sim = xa11y.input_sim()
     for index, (key, expected) in enumerate(
         _take_keyboard_steps(current, selection),
         start=1,
     ):
-        input_sim.press(key)
+        _press_take_key(combo, key)
         try:
             combo.wait_until(
                 partial(_take_selection_is, selection=expected),
@@ -352,6 +442,12 @@ def _element_center(element: xa11y.Element | None) -> tuple[float, float] | obje
     if isinstance(bounds, xa11y.Rect):
         return (bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
     return bounds
+
+
+def _log_take_diagnostics_message(message: str) -> None:
+    if not _TAKE_DIAGNOSTICS:
+        return
+    print(f"{_TAKE_DIAGNOSTIC_PREFIX} {message}", flush=True)
 
 
 def _log_take_diagnostics(
