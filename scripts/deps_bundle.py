@@ -19,9 +19,9 @@ SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
 #
 # awscrt is here because its wheels are not uniformly abi3: Python 3.10 gets
 # _awscrt.cpython-310-<platform>.so while 3.11+ get _awscrt.abi3.so. Resolving it only in
-# the base environment would ship whichever the build host produced, so Cinema 4D 2024-2025
-# (Python 3.10) would fail to import awscrt and AWS Console sign-in would break there while
-# working on 2026.
+# the base environment would ship whichever the build host produced, so any Cinema 4D whose
+# interpreter that single artifact does not cover would fail to import awscrt and AWS
+# Console sign-in would break there.
 NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt"]
 
 PYSIDE6_VERSION = "6.8.3"
@@ -198,13 +198,19 @@ def _build_base_environment(working_directory: Path, dependencies: list[Dependen
     return base_env_path
 
 
+def _python_version_key(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
 def _download_native_dependencies(working_directory: Path, base_env: Path) -> list[Path]:
     versioned_native_dependencies = [
         f"{package_name}=={_get_package_version(package_name, base_env)}"
         for package_name in NATIVE_DEPENDENCIES
     ]
     native_dependency_paths = []
-    for version in SUPPORTED_PYTHON_VERSIONS:
+    # Ascending order is load-bearing: _copy_native_to_base_env resolves a filename
+    # collision in favour of the tree it sees first.
+    for version in sorted(SUPPORTED_PYTHON_VERSIONS, key=_python_version_key):
         native_dependency_path = working_directory / "native" / f"{version.replace('.', '_')}"
         native_dependency_paths.append(native_dependency_path)
         native_dependency_path.mkdir(parents=True)
@@ -223,14 +229,35 @@ def _download_native_dependencies(working_directory: Path, base_env: Path) -> li
 
 
 def _copy_native_to_base_env(base_env: Path, native_dependency_paths: list[Path]) -> None:
+    """Flatten the per-version native trees into the bundle, lowest version first.
+
+    ``native_dependency_paths`` is ordered by ascending Python version and the first tree
+    to supply a path wins, overwriting the base environment. The base environment resolved
+    these packages for whatever interpreter the build host happens to run, which is not a
+    version the bundle targets, so it must not decide which artifact ships.
+
+    Which artifacts survive follows from how the wheels name their extension modules, so no
+    rule is needed per package. A version-specific name is unique per version and so cannot
+    collide: ``xxhash`` ships one wheel per version and every interpreter keeps its own
+    ``_xxhash.cpython-<tag>-<platform>.so``. An abi3 name is the same for every version and
+    so collides, and there the two cases differ. ``psutil`` publishes a single abi3 wheel
+    that serves all of them, so every tree holds identical bytes and the collision is a
+    no-op. ``awscrt`` publishes a separate abi3 wheel per Python, each installing
+    ``_awscrt.abi3.so``, so the copies differ and only one can ship; abi3 is forward
+    compatible, which makes the one built for the lowest supported Python the only copy
+    that loads on all of them, and taking the first tree is what keeps it.
+    """
+    copied: set[Path] = set()
     for native_dependency_path in native_dependency_paths:
         for file in native_dependency_path.rglob("*"):
             if file.is_file():
                 relative = file.relative_to(native_dependency_path)
+                if relative in copied:
+                    continue
                 in_base_env = base_env / relative
-                if not in_base_env.exists():
-                    in_base_env.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy(str(file), str(in_base_env))
+                in_base_env.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(str(file), str(in_base_env))
+                copied.add(relative)
 
 
 def _get_zip_path(working_directory: Path, project_dict: dict[str, Any]) -> Path:
