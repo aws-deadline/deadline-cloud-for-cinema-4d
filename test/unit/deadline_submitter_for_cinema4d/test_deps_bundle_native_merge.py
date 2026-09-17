@@ -62,8 +62,8 @@ def merged_bundle(tmp_path, supported_versions) -> Path:
 
     Reproduces both naming schemes. awscrt installs the shared abi3 name from every abi3
     wheel and a version-specific name from the non-abi3 wheel it publishes for the oldest
-    supported Python; xxhash installs a version-specific name for every version; psutil
-    ships one abi3 wheel that serves all of them, so every tree holds identical bytes.
+    supported Python; xxhash and pyyaml install a version-specific name for every version;
+    psutil ships one abi3 wheel that serves all of them, so every tree holds identical bytes.
 
     Each file's content records the version whose install produced it, so the merged tree
     reports where its own contents came from. The base environment is seeded with the
@@ -82,6 +82,7 @@ def merged_bundle(tmp_path, supported_versions) -> Path:
         else:
             _write(tree / ABI3_ARTIFACT, version)
         _write(tree / "xxhash" / f"_xxhash.cpython-{_tag(version)}-darwin.so", version)
+        _write(tree / "yaml" / f"_yaml.cpython-{_tag(version)}-darwin.so", version)
         _write(tree / "psutil" / "_psutil_osx.abi3.so", "shared")
 
     deps_bundle._copy_native_to_base_env(base_env, native_paths)
@@ -116,9 +117,12 @@ def test_version_specific_artifacts_are_kept_for_every_supported_version(
     interpreter tag are distinct, and every supported version needs its own.
     """
     for version in supported_versions:
-        artifact = merged_bundle / "xxhash" / f"_xxhash.cpython-{_tag(version)}-darwin.so"
-        assert artifact.exists(), f"the bundle carries no xxhash artifact for Python {version}"
-        assert artifact.read_text() == version
+        for package, module in (("xxhash", "_xxhash"), ("yaml", "_yaml")):
+            artifact = merged_bundle / package / f"{module}.cpython-{_tag(version)}-darwin.so"
+            assert (
+                artifact.exists()
+            ), f"the bundle carries no {package} artifact for Python {version}"
+            assert artifact.read_text() == version
 
     lowest = supported_versions[0]
     awscrt_non_abi3 = merged_bundle / f"_awscrt.cpython-{_tag(lowest)}-darwin.so"
