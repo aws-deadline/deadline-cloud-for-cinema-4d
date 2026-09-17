@@ -94,35 +94,24 @@ def _resolve_render_path(doc: Any, render_data: Any, render_bc: Any, frame: int,
         return path
 
 
-def _matches_beauty_filename(
-    filename: str, beauty_stem: str, ext: str, frame: int, name_format: int
-) -> bool:
-    """Return whether ``filename`` is this render's beauty output.
+def _expected_beauty_stem(beauty_stem: str, frame: int, name_format: int) -> str | None:
+    """Return the filename stem C4D writes for this render's beauty output.
 
     C4D's ``RDATA_NAMEFORMAT_*`` constants select one of seven layouts. Some
-    include the output extension and some do not; all include the frame number.
-    The output stem remains case-sensitive; only the format extension may vary
-    in case on disk.
+    append the output extension and some do not; all include the frame number.
     """
     if name_format in _FOUR_DIGIT_NAME_FORMATS:
         frame_string = str(frame).zfill(4)
     elif name_format in _THREE_DIGIT_NAME_FORMATS:
         frame_string = str(frame).zfill(3)
     else:
-        return False
+        return None
 
     if name_format in _DOTTED_FRAME_NAME_FORMATS:
-        expected_stem = f"{beauty_stem}.{frame_string}"
-    else:
-        separator = "_" if beauty_stem and beauty_stem[-1] in "0123456789" else ""
-        expected_stem = f"{beauty_stem}{separator}{frame_string}"
+        return f"{beauty_stem}.{frame_string}"
 
-    if name_format in _EXTENSION_NAME_FORMATS:
-        return (
-            filename.startswith(expected_stem)
-            and filename[len(expected_stem) :].lower() == ext.lower()
-        )
-    return filename == expected_stem
+    separator = "_" if beauty_stem and beauty_stem[-1] in "0123456789" else ""
+    return f"{beauty_stem}{separator}{frame_string}"
 
 
 def bake_full_frame_beauty(
@@ -131,7 +120,6 @@ def bake_full_frame_beauty(
     render_data: Any,
     doc: Any,
     frame: int,
-    render_start_time: float,
 ) -> None:
     """Bake the OCIO view transform into a single non-tiled beauty frame.
 
@@ -156,7 +144,6 @@ def bake_full_frame_beauty(
         render_data: The render data object (output path / format / tokens).
         doc: The active document (for token resolution).
         frame: The frame number this render produced (for $frame resolution).
-        render_start_time: ``time.time()`` captured just before this frame's render.
     """
     if not (
         hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
@@ -185,34 +172,18 @@ def bake_full_frame_beauty(
         )
         return
 
-    # The beauty file this render wrote: derived from C4D's resolved output base,
-    # configured name format, and modified at/after this render's start (never
-    # re-bakes a stale file; a retry that overwrites in place is caught). Exact name
-    # matching excludes alpha and multi-pass files because they have distinct bases.
-    # Multiple candidates are resolved deterministically by their mtime and filename.
-    target = None
-    target_mtime = render_start_time
-    matched_candidate = False
-    for fn in sorted(os.listdir(beauty_dir)):
-        if not _matches_beauty_filename(fn, beauty_stem, ext, frame, name_format):
-            continue
-        matched_candidate = True
-        full = os.path.join(beauty_dir, fn)
-        try:
-            mtime = os.path.getmtime(full)
-        except OSError:
-            continue
-        if mtime >= target_mtime:
-            target = full
-            target_mtime = mtime
+    # Build the exact beauty filename rather than scanning the output directory. C4D
+    # may vary only the extension's case on disk, so probe the two possible forms.
+    expected_stem = _expected_beauty_stem(beauty_stem, frame, name_format)
+    assert expected_stem is not None
+    candidates = [expected_stem]
+    if name_format in _EXTENSION_NAME_FORMATS:
+        candidates = [f"{expected_stem}{ext}", f"{expected_stem}{ext.upper()}"]
+    candidate_paths = [os.path.join(beauty_dir, candidate) for candidate in candidates]
+    target = next((candidate for candidate in candidate_paths if os.path.isfile(candidate)), None)
 
     if target is None:
-        if matched_candidate:
-            print(
-                "OCIO view transform NOT baked: matching beauty file was not updated by this render"
-            )
-        else:
-            print("OCIO view transform NOT baked: no beauty file matched this render's name format")
+        print("OCIO view transform NOT baked: no beauty file matched this render's name format")
         return
 
     baked = c4d.documents.BakeOcioViewToBitmap(bm, rd, c4d.SAVEBIT_NONE)
