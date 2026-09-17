@@ -22,7 +22,15 @@ SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
 # the base environment would ship whichever the build host produced, so any Cinema 4D whose
 # interpreter that single artifact does not cover would fail to import awscrt and AWS
 # Console sign-in would break there.
-NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt"]
+# pyyaml is here because it ships a version-specific `_yaml` extension and nothing else in the
+# bundle corrects for that. Resolved only in the base environment it lands built for a single
+# interpreter -- the shipped 0.12.2 bundle carries `_yaml.cpython-313-darwin.so` alone -- and
+# pyyaml hides that by falling back to its pure-Python parser, so the bundle merely got slower
+# on three of the four supported interpreters rather than failing.
+NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt", "pyyaml"]
+
+# Distribution name -> the name its extension modules are installed under, where they differ.
+NATIVE_DEPENDENCY_MODULE_NAMES = {"pyyaml": "yaml"}
 
 PYSIDE6_VERSION = "6.8.3"
 PYSIDE6_PACKAGES = [f"PySide6-Essentials=={PYSIDE6_VERSION}", f"shiboken6=={PYSIDE6_VERSION}"]
@@ -146,7 +154,9 @@ PYSIDE6_ALLOWLIST = {
 
 
 def _get_package_version_regex(package: str) -> re.Pattern:
-    return re.compile(rf"^{re.escape(package)} *(.*)$")
+    # Case-insensitive because `pip list` prints the distribution's own casing, which need not
+    # match how the requirement is spelled -- `pyyaml` is reported as `PyYAML`.
+    return re.compile(rf"^{re.escape(package)} *(.*)$", re.IGNORECASE)
 
 
 def _get_package_version(package: str, install_path: Path) -> str:
@@ -175,6 +185,34 @@ def _add_console_extra(requirement: str) -> str:
 
 def _python_version_key(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
+
+
+EXTENSION_SUFFIXES = (".so", ".pyd", ".dylib")
+
+# CPython tags a version-specific extension module differently per platform, and there is no
+# single spelling: `_xxhash.cpython-310-darwin.so` and `_xxhash.cpython-310-x86_64-linux-gnu.so`
+# on Unix, `_xxhash.cp310-win_amd64.pyd` on Windows. Matching only the Unix spelling silently
+# classifies every Windows artifact as untagged.
+_INTERPRETER_TAG = re.compile(r"\.(?:cpython-|cp)(3\d+)[.\-]")
+
+
+def _interpreter_tag_of(artifact_name: str) -> str | None:
+    """The Python version a version-specific extension module is built for, or None.
+
+    None means the artifact is not tied to one interpreter, which on Unix is spelled with an
+    ``abi3`` infix and on Windows is spelled by the *absence* of a tag -- the limited-API
+    suffix there is a bare ``.pyd``, so ``psutil/_psutil_windows.pyd`` and awscrt's
+    ``_awscrt.pyd`` are both stable-ABI despite carrying no marker at all.
+    """
+    match = _INTERPRETER_TAG.search(artifact_name)
+    if not match:
+        return None
+    digits = match.group(1)
+    return f"{digits[0]}.{digits[1:]}"
+
+
+def _is_extension_module(relative: Path) -> bool:
+    return relative.suffix in EXTENSION_SUFFIXES
 
 
 def _ascending_supported_python_versions() -> list[str]:
@@ -284,6 +322,36 @@ def _copy_native_to_base_env(base_env: Path, native_dependency_paths: list[Path]
                 copied.add(relative)
 
 
+def _verify_base_environment(base_env: Path) -> None:
+    """Fail the build if resolution dropped a package the bundle is supposed to carry.
+
+    Runs before the per-version downloads, which is the only point where this is detectable.
+    `_download_native_dependencies` reads each package's resolved version out of the base
+    environment, so a dropped package aborts there with "Could not find version for package",
+    and after the merge every name reappears in the base environment anyway because the trees
+    supply it -- so checked later this says nothing.
+
+    The failure it catches: pip can satisfy a requirement by backtracking to a version that
+    does not provide the extra a package arrives through, drop the package, warn once among
+    hundreds of lines, and exit 0. `check=True` passes and the bundle ships without it.
+    """
+    missing_packages = []
+    for package_name in NATIVE_DEPENDENCIES:
+        try:
+            _get_package_version(package_name, base_env)
+        except RuntimeError:
+            missing_packages.append(package_name)
+    if missing_packages:
+        raise RuntimeError(
+            f"Base environment resolution dropped {', '.join(sorted(missing_packages))}. The "
+            "usual cause is a requirement whose floor admits a version that does not provide "
+            "the extra the package arrives through: pip backtracks to it, warns, and exits 0. "
+            "Check that the `deadline` floor in pyproject.toml is at or above the first "
+            "version providing the `console` extra, and search the pip output above for "
+            "'does not provide the extra'."
+        )
+
+
 def _verify_bundle(base_env: Path, native_dependency_paths: list[Path]) -> None:
     """Fail the build if the bundle cannot serve every interpreter it claims to.
 
@@ -298,21 +366,6 @@ def _verify_bundle(base_env: Path, native_dependency_paths: list[Path]) -> None:
     Checked here, at the point where the per-version trees are still on disk to compare
     against, rather than in the installer test suite, which sees only the merged result.
     """
-    missing_packages = [
-        package_name
-        for package_name in NATIVE_DEPENDENCIES
-        if not (base_env / package_name).is_dir()
-    ]
-    if missing_packages:
-        raise RuntimeError(
-            f"The dependency bundle is missing {', '.join(sorted(missing_packages))}, which "
-            "means resolution silently dropped it. The usual cause is a requirement whose "
-            "floor admits a version that does not provide the extra the package arrives "
-            "through -- pip backtracks to it, warns, and exits 0. Check that the `deadline` "
-            "floor in pyproject.toml is at or above the first version providing the `console` "
-            "extra, and search the pip output above for 'does not provide the extra'."
-        )
-
     # The merge contract: for every path any per-version tree supplies, the bundle holds the
     # copy from the earliest tree that supplied it. For a version-specific extension module
     # that is its own tree's copy, since the name cannot collide. For an abi3 module it is the
@@ -377,6 +430,33 @@ def _verify_bundle(base_env: Path, native_dependency_paths: list[Path]) -> None:
             "the bundle cannot actually serve."
         )
 
+    # NATIVE_DEPENDENCIES is a hand-maintained list, and the per-version loop only corrects the
+    # packages on it. Anything else compiled is left exactly as the base environment resolved
+    # it -- which, now that resolution is pinned to the lowest supported version, means a
+    # version-specific artifact is deterministically built for that version and unloadable on
+    # every other. A transitive dependency can start shipping one at any dependency bump, so
+    # the list going stale has to be a build failure rather than something to notice later.
+    strays = sorted(
+        str(relative)
+        for relative in (
+            path.relative_to(base_env) for path in base_env.rglob("*") if path.is_file()
+        )
+        if _is_extension_module(relative)
+        and _interpreter_tag_of(relative.name) is not None
+        and relative not in expected_source
+    )
+    if strays:
+        details = "\n  ".join(strays)
+        raise RuntimeError(
+            "The bundle carries version-specific compiled artifacts that the per-version "
+            "downloads do not cover, so they load on one interpreter only:\n  "
+            f"{details}\n"
+            "Add the owning distribution to NATIVE_DEPENDENCIES so it is fetched once per "
+            "supported Python. If it genuinely does not need to load -- a package that falls "
+            "back to a pure-Python implementation, say -- say so in a comment there rather "
+            "than leaving it to be rediscovered."
+        )
+
 
 def _has_loadable_artifact(
     package_name: str, version: str, expected_source: dict[Path, tuple[Path, str]]
@@ -388,20 +468,23 @@ def _has_loadable_artifact(
     built for and every later one, and the tree that supplied it is what identifies that
     Python -- the filename does not.
     """
-    interpreter_tag = f"cpython-{version.replace('.', '')}"
     target = _python_version_key(version)
+    module_name = NATIVE_DEPENDENCY_MODULE_NAMES.get(package_name, package_name)
     for relative, (_, tree_version) in expected_source.items():
-        if relative.suffix not in (".so", ".pyd", ".dylib"):
+        if not _is_extension_module(relative):
             continue
-        # awscrt installs `_awscrt.abi3.so` beside the package rather than inside it, so match
-        # on the module name as well as on the containing directory.
-        if package_name not in relative.parts and not relative.name.lstrip("_").startswith(
-            package_name
+        # awscrt installs its extension module beside the package rather than inside it, so
+        # match on the module name as well as on the containing directory.
+        if module_name not in relative.parts and not relative.name.lstrip("_").startswith(
+            module_name
         ):
             continue
-        if interpreter_tag in relative.name:
+        built_for = _interpreter_tag_of(relative.name)
+        if built_for == version:
             return True
-        if ".abi3." in relative.name and _python_version_key(tree_version) <= target:
+        # Untagged means stable ABI, which loads on the Python it was built for and later
+        # ones. The filename does not say which that was, so the tree it came from does.
+        if built_for is None and _python_version_key(tree_version) <= target:
             return True
     return False
 
@@ -482,6 +565,7 @@ def build_deps_bundle() -> None:
             lambda dep: not dep.name.startswith("openjd"), dependencies
         )
         base_env = _build_base_environment(working_directory, deps_noopenjd)
+        _verify_base_environment(base_env)
         native_dependency_paths = _download_native_dependencies(working_directory, base_env)
         _copy_native_to_base_env(base_env, native_dependency_paths)
         _verify_bundle(base_env, native_dependency_paths)

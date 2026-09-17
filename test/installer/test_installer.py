@@ -97,22 +97,30 @@ def _validate_native_artifacts(installation_path: Path) -> None:
     interpreter can.
     """
     sys.path.insert(0, str(Path(__file__).parents[2] / "scripts"))
-    from deps_bundle import SUPPORTED_PYTHON_VERSIONS
+    from deps_bundle import (
+        EXTENSION_SUFFIXES,
+        SUPPORTED_PYTHON_VERSIONS,
+        _interpreter_tag_of,
+    )
 
     # awscrt installs `_awscrt.<tag>.so` beside the `awscrt` package, not inside it, so this
-    # globs the installation root rather than the package directory.
+    # globs the installation root rather than the package directory. The tag spelling differs
+    # by platform, so it is read with deps_bundle's own helper rather than matched here -- the
+    # two must agree, or one of them passes a bundle the other rejects.
     artifacts = [
-        path.name for path in installation_path.glob("_awscrt*") if path.suffix in (".so", ".pyd")
+        path.name
+        for path in installation_path.glob("_awscrt*")
+        if path.suffix in EXTENSION_SUFFIXES
     ]
     assert artifacts, (
         "awscrt shipped no compiled extension module, so botocore will report CRT as "
         "unavailable and AWS Console sign-in will fail"
     )
 
-    has_abi3 = any(".abi3." in name for name in artifacts)
+    tags = {name: _interpreter_tag_of(name) for name in artifacts}
+    has_stable_abi = any(tag is None for tag in tags.values())
     for version in SUPPORTED_PYTHON_VERSIONS:
-        version_specific = f"cpython-{version.replace('.', '')}"
-        assert has_abi3 or any(version_specific in name for name in artifacts), (
+        assert has_stable_abi or version in tags.values(), (
             f"Python {version} is in deps_bundle.SUPPORTED_PYTHON_VERSIONS but the bundle "
             f"holds no awscrt binary that could serve it. Shipped: {sorted(artifacts)}"
         )
