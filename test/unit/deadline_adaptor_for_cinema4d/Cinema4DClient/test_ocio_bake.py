@@ -19,18 +19,14 @@ def _render_data(base_path, fmt=None, mp_save=False, mp_name="", name_format=Non
     return {
         c4d.RDATA_PATH: base_path,
         c4d.RDATA_FORMAT: fmt if fmt is not None else c4d.FILTER_JPG,
-        c4d.RDATA_NAMEFORMAT: (
-            c4d.RDATA_NAMEFORMAT_0 if name_format is None else name_format
-        ),
+        c4d.RDATA_NAMEFORMAT: (c4d.RDATA_NAMEFORMAT_0 if name_format is None else name_format),
         c4d.RDATA_MULTIPASS_SAVEIMAGE: mp_save,
         c4d.RDATA_MULTIPASS_FILENAME: mp_name,
     }
 
 
 def _rd(depth=None):
-    return {
-        c4d.RDATA_FORMATDEPTH: depth if depth is not None else c4d.RDATA_FORMATDEPTH_8
-    }
+    return {c4d.RDATA_FORMATDEPTH: depth if depth is not None else c4d.RDATA_FORMATDEPTH_8}
 
 
 def _touch(path, mtime):
@@ -48,9 +44,7 @@ class TestBakeFullFrameBeauty:
         c4d.GetC4DVersion.return_value = 2026000
         # Token resolver is identity here (test paths carry no tokens), so the resolved
         # base == the input path.
-        c4d.modules.tokensystem.FilenameConvertTokens.side_effect = (
-            lambda path, rp: path
-        )
+        c4d.modules.tokensystem.FilenameConvertTokens.side_effect = lambda path, rp: path
 
     def _base(self, tmp_path):
         # RDATA_PATH is a base (no extension); beauty_dir is its dirname.
@@ -60,28 +54,20 @@ class TestBakeFullFrameBeauty:
         start = time.time()
         _touch(tmp_path / "render0005.jpg", start + 10)
         bm = MagicMock()
-        bake_full_frame_beauty(
-            bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start
-        )
+        bake_full_frame_beauty(bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start)
         bm.Save.assert_called_once()
         assert bm.Save.call_args.args[0] == str(tmp_path / "render0005.jpg")
 
     def test_bakes_current_frame_when_newer_other_frame_is_present(self, tmp_path):
         start = time.time()
         _touch(tmp_path / "render0005.jpg", start + 10)  # frame this task rendered
-        _touch(
-            tmp_path / "render0006.jpg", start + 20
-        )  # concurrent task's newer output
+        _touch(tmp_path / "render0006.jpg", start + 20)  # concurrent task's newer output
         bm = MagicMock()
-        bake_full_frame_beauty(
-            bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start
-        )
+        bake_full_frame_beauty(bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start)
         bm.Save.assert_called_once()
         assert bm.Save.call_args.args[0] == str(tmp_path / "render0005.jpg")
 
-    def test_matches_base_case_sensitively_and_extension_case_insensitively(
-        self, tmp_path
-    ):
+    def test_matches_base_case_sensitively_and_extension_case_insensitively(self, tmp_path):
         assert _matches_beauty_filename(
             "render0005.JPG",
             "render",
@@ -96,6 +82,15 @@ class TestBakeFullFrameBeauty:
             5,
             c4d.RDATA_NAMEFORMAT_0,
         )
+
+    def test_strips_output_path_extension_before_matching(self, tmp_path):
+        start = time.time()
+        _touch(tmp_path / "render0005.jpg", start + 10)
+        bm = MagicMock()
+        bake_full_frame_beauty(
+            bm, _rd(), _render_data(str(tmp_path / "render.v2")), MagicMock(), 5, start
+        )
+        bm.Save.assert_called_once_with(str(tmp_path / "render0005.jpg"), c4d.FILTER_JPG)
 
     @pytest.mark.parametrize(
         ("name_format", "filename"),
@@ -124,19 +119,11 @@ class TestBakeFullFrameBeauty:
         bm.Save.assert_called_once_with(str(tmp_path / filename), c4d.FILTER_JPG)
 
     def test_inserts_separator_after_numeric_output_stem(self, tmp_path):
-        start = time.time()
-        _touch(tmp_path / "render2_0005.jpg", start + 10)
-        bm = MagicMock()
-        bake_full_frame_beauty(
-            bm,
-            _rd(),
-            _render_data(str(tmp_path / "render2")),
-            MagicMock(),
-            5,
-            start,
+        assert _matches_beauty_filename(
+            "render2_0005.jpg", "render2", ".jpg", 5, c4d.RDATA_NAMEFORMAT_0
         )
-        bm.Save.assert_called_once_with(
-            str(tmp_path / "render2_0005.jpg"), c4d.FILTER_JPG
+        assert not _matches_beauty_filename(
+            "render20005.jpg", "render2", ".jpg", 5, c4d.RDATA_NAMEFORMAT_0
         )
 
     def test_skips_alpha_file(self, tmp_path):
@@ -144,47 +131,39 @@ class TestBakeFullFrameBeauty:
         _touch(tmp_path / "render0005.jpg", start + 10)
         _touch(tmp_path / "A_render0005.jpg", start + 10)
         bm = MagicMock()
-        bake_full_frame_beauty(
-            bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start
-        )
+        bake_full_frame_beauty(bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start)
         bm.Save.assert_called_once()
         assert bm.Save.call_args.args[0] == str(tmp_path / "render0005.jpg")
 
-    def test_skips_multipass_file(self, tmp_path):
+    def test_ignores_multipass_file_with_a_distinct_base(self, tmp_path):
         start = time.time()
         _touch(tmp_path / "render0005.jpg", start + 10)
         _touch(tmp_path / "render_mp0005.jpg", start + 20)  # newer, but multi-pass
         bm = MagicMock()
-        rdata = _render_data(
-            self._base(tmp_path), mp_save=True, mp_name=str(tmp_path / "render_mp")
-        )
-        bake_full_frame_beauty(bm, _rd(), rdata, MagicMock(), 5, start)
+        bake_full_frame_beauty(bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start)
         bm.Save.assert_called_once()
         assert bm.Save.call_args.args[0] == str(tmp_path / "render0005.jpg")
 
-    def test_bakes_beauty_when_base_extends_multipass_base(self, tmp_path):
-        # Beauty base "render_beauty" starts with the shorter multi-pass base "render".
-        # The beauty file must still be baked (longest-prefix wins), not mistaken for a
-        # multi-pass file and skipped.
+    def test_unknown_name_format_is_reported_without_baking(self, tmp_path, capsys):
         start = time.time()
-        _touch(tmp_path / "render_beauty0005.jpg", start + 10)
+        _touch(tmp_path / "render0005.jpg", start + 10)
         bm = MagicMock()
-        rdata = _render_data(
-            str(tmp_path / "render_beauty"),
-            mp_save=True,
-            mp_name=str(tmp_path / "render"),
+        bake_full_frame_beauty(
+            bm,
+            _rd(),
+            _render_data(self._base(tmp_path), name_format=999),
+            MagicMock(),
+            5,
+            start,
         )
-        bake_full_frame_beauty(bm, _rd(), rdata, MagicMock(), 5, start)
-        bm.Save.assert_called_once()
-        assert bm.Save.call_args.args[0] == str(tmp_path / "render_beauty0005.jpg")
+        assert "unsupported C4D output name format (999)" in capsys.readouterr().out
+        bm.Save.assert_not_called()
 
     def test_stale_file_not_baked(self, tmp_path):
         start = time.time()
         _touch(tmp_path / "render0005.jpg", start - 30)  # older than this render
         bm = MagicMock()
-        bake_full_frame_beauty(
-            bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start
-        )
+        bake_full_frame_beauty(bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start)
         bm.Save.assert_not_called()
         c4d.documents.BakeOcioViewToBitmap.assert_not_called()
 
@@ -206,8 +185,6 @@ class TestBakeFullFrameBeauty:
     def test_no_beauty_file_is_noop(self, tmp_path):
         start = time.time()
         bm = MagicMock()
-        bake_full_frame_beauty(
-            bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start
-        )
+        bake_full_frame_beauty(bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5, start)
         bm.Save.assert_not_called()
         c4d.documents.BakeOcioViewToBitmap.assert_not_called()

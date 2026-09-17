@@ -16,9 +16,7 @@ from typing import Any
 try:
     import c4d  # type: ignore
 except ImportError:  # pragma: no cover
-    raise OSError(
-        "Could not find the Cinema4D module. Are you running this inside of Cinema4D?"
-    )
+    raise OSError("Could not find the Cinema4D module. Are you running this inside of Cinema4D?")
 
 try:
     from cinema4d_adaptor.Cinema4DClient.tile_rendering import (  # type: ignore[import]
@@ -32,9 +30,44 @@ except ImportError:
     )
 
 
-def _resolve_render_path(
-    doc: Any, render_data: Any, render_bc: Any, frame: int, path: str
-) -> str:
+_MISSING_NAME_FORMAT = object()
+_FOUR_DIGIT_NAME_FORMATS = frozenset(
+    getattr(c4d, name, _MISSING_NAME_FORMAT)
+    for name in (
+        "RDATA_NAMEFORMAT_0",
+        "RDATA_NAMEFORMAT_1",
+        "RDATA_NAMEFORMAT_2",
+        "RDATA_NAMEFORMAT_6",
+    )
+)
+_THREE_DIGIT_NAME_FORMATS = frozenset(
+    getattr(c4d, name, _MISSING_NAME_FORMAT)
+    for name in (
+        "RDATA_NAMEFORMAT_3",
+        "RDATA_NAMEFORMAT_4",
+        "RDATA_NAMEFORMAT_5",
+    )
+)
+_DOTTED_FRAME_NAME_FORMATS = frozenset(
+    getattr(c4d, name, _MISSING_NAME_FORMAT)
+    for name in (
+        "RDATA_NAMEFORMAT_2",
+        "RDATA_NAMEFORMAT_5",
+        "RDATA_NAMEFORMAT_6",
+    )
+)
+_EXTENSION_NAME_FORMATS = frozenset(
+    getattr(c4d, name, _MISSING_NAME_FORMAT)
+    for name in (
+        "RDATA_NAMEFORMAT_0",
+        "RDATA_NAMEFORMAT_3",
+        "RDATA_NAMEFORMAT_6",
+    )
+)
+_KNOWN_NAME_FORMATS = _FOUR_DIGIT_NAME_FORMATS | _THREE_DIGIT_NAME_FORMATS
+
+
+def _resolve_render_path(doc: Any, render_data: Any, render_bc: Any, frame: int, path: str) -> str:
     """Resolve a C4D render-path's tokens ($take, $frame, $res, ...) using C4D's own
     token system -- the same resolver C4D uses at save time. Returns ``path``
     unchanged if the token system is unavailable or resolution fails.
@@ -71,37 +104,20 @@ def _matches_beauty_filename(
     The output stem remains case-sensitive; only the format extension may vary
     in case on disk.
     """
-    if name_format in {
-        c4d.RDATA_NAMEFORMAT_0,
-        c4d.RDATA_NAMEFORMAT_1,
-        c4d.RDATA_NAMEFORMAT_2,
-        c4d.RDATA_NAMEFORMAT_6,
-    }:
+    if name_format in _FOUR_DIGIT_NAME_FORMATS:
         frame_string = str(frame).zfill(4)
-    elif name_format in {
-        c4d.RDATA_NAMEFORMAT_3,
-        c4d.RDATA_NAMEFORMAT_4,
-        c4d.RDATA_NAMEFORMAT_5,
-    }:
+    elif name_format in _THREE_DIGIT_NAME_FORMATS:
         frame_string = str(frame).zfill(3)
     else:
         return False
 
-    if name_format in {
-        c4d.RDATA_NAMEFORMAT_2,
-        c4d.RDATA_NAMEFORMAT_5,
-        c4d.RDATA_NAMEFORMAT_6,
-    }:
+    if name_format in _DOTTED_FRAME_NAME_FORMATS:
         expected_stem = f"{beauty_stem}.{frame_string}"
     else:
-        separator = "_" if beauty_stem and beauty_stem[-1].isdigit() else ""
+        separator = "_" if beauty_stem and beauty_stem[-1] in "0123456789" else ""
         expected_stem = f"{beauty_stem}{separator}{frame_string}"
 
-    if name_format in {
-        c4d.RDATA_NAMEFORMAT_0,
-        c4d.RDATA_NAMEFORMAT_3,
-        c4d.RDATA_NAMEFORMAT_6,
-    }:
+    if name_format in _EXTENSION_NAME_FORMATS:
         return (
             filename.startswith(expected_stem)
             and filename[len(expected_stem) :].lower() == ext.lower()
@@ -131,7 +147,8 @@ def bake_full_frame_beauty(
     the exact filename C4D wrote for its configured name format. This prevents
     concurrent tasks that share an output directory from baking the newest file for a
     different frame. C4D's ``A_`` alpha file is excluded for free (it does not start
-    with the beauty base); multi-pass files are excluded by their own resolved base.
+    with the beauty base); multi-pass files have a distinct output base and therefore
+    do not match the beauty filename.
 
     Args:
         bm: The rendered MultipassBitmap for one frame (render-space).
@@ -161,40 +178,24 @@ def bake_full_frame_beauty(
         return
     ext, save_filter = get_format_info(render_data[c4d.RDATA_FORMAT])
     name_format = render_data[c4d.RDATA_NAMEFORMAT]
-
-    # Multi-pass files can share the beauty prefix (e.g. "beauty" vs "beauty_mp"), so
-    # exclude them by their own resolved base -- but only when that base is a MORE
-    # specific (longer) match than the beauty base (see the loop below). The "A_" alpha
-    # file needs no explicit exclusion -- it does not start with the beauty base.
-    mp_prefix = ""
-    if (
-        render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]
-        and render_data[c4d.RDATA_MULTIPASS_FILENAME]
-    ):
-        mp_resolved = _resolve_render_path(
-            doc, render_data, rd, frame, render_data[c4d.RDATA_MULTIPASS_FILENAME]
+    if name_format not in _KNOWN_NAME_FORMATS:
+        print(
+            f"OCIO view transform NOT baked: unsupported C4D output name format "
+            f"({name_format!r})"
         )
-        mp_prefix = os.path.basename(mp_resolved)
+        return
 
     # The beauty file this render wrote: derived from C4D's resolved output base,
-    # configured name format, not a multi-pass file, and modified at/after this
-    # render's start (never re-bakes a stale file; a retry that overwrites in place is
-    # caught). Multiple candidates are resolved deterministically by their mtime and
-    # filename.
+    # configured name format, and modified at/after this render's start (never
+    # re-bakes a stale file; a retry that overwrites in place is caught). Exact name
+    # matching excludes alpha and multi-pass files because they have distinct bases.
+    # Multiple candidates are resolved deterministically by their mtime and filename.
     target = None
     target_mtime = render_start_time
     matched_candidate = False
     for fn in sorted(os.listdir(beauty_dir)):
         if not _matches_beauty_filename(fn, beauty_stem, ext, frame, name_format):
             continue
-        # A file is multi-pass only when the multi-pass base is a longer (more
-        # specific) prefix than the beauty base. Guarding on length -- not just
-        # inequality -- keeps a beauty file whose base merely starts with a shorter
-        # multi-pass base (e.g. beauty "render_beauty", mp "render") from being
-        # wrongly skipped, and still excludes real multi-pass files whose base
-        # extends the beauty base (e.g. beauty "render", mp "render_mp").
-        if mp_prefix and len(mp_prefix) > len(beauty_stem) and fn.startswith(mp_prefix):
-            continue  # multi-pass file -- leave as-is
         matched_candidate = True
         full = os.path.join(beauty_dir, fn)
         try:
@@ -211,19 +212,13 @@ def bake_full_frame_beauty(
                 "OCIO view transform NOT baked: matching beauty file was not updated by this render"
             )
         else:
-            print(
-                "OCIO view transform NOT baked: no beauty file matched this render's name format"
-            )
+            print("OCIO view transform NOT baked: no beauty file matched this render's name format")
         return
 
     baked = c4d.documents.BakeOcioViewToBitmap(bm, rd, c4d.SAVEBIT_NONE)
     bm = baked or bm
     if c4d.GetC4DVersion() >= C4D_VERSION_2025_2:
-        bm.SetColorProfile(
-            c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE
-        )
-        bm.SetColorProfile(
-            c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM
-        )
+        bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE)
+        bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM)
     bm.Save(target, save_filter)
     print(f"OCIO view transform baked into beauty output: {os.path.basename(target)}")
