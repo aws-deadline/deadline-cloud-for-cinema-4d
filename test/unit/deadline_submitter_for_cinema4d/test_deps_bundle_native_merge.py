@@ -17,6 +17,7 @@ access to -- ``test_console_signin_dependencies`` only reaches the interpreter r
 tests.
 """
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -144,3 +145,72 @@ def test_native_trees_are_merged_lowest_python_version_first(tmp_path, monkeypat
 
     assert requested_versions == ["3.9", "3.10", "3.11", "3.13"]
     assert [path.name for path in tree_paths] == ["3_9", "3_10", "3_11", "3_13"]
+
+
+def _native_trees(tmp_path, supported_versions) -> tuple[Path, list[Path]]:
+    """A merged bundle plus the per-version trees it was built from.
+
+    Same naming scheme as ``merged_bundle``, but the package directories the verification
+    step looks for are created too, since it checks resolution as well as the merge.
+    """
+    base_env = tmp_path / "base_env"
+    _write(base_env / ABI3_ARTIFACT, supported_versions[-1])
+
+    native_paths = []
+    for version in supported_versions:
+        tree = tmp_path / "native" / _tag(version)
+        native_paths.append(tree)
+        if version == supported_versions[0]:
+            _write(tree / f"_awscrt.cpython-{_tag(version)}-darwin.so", version)
+        else:
+            _write(tree / ABI3_ARTIFACT, version)
+        _write(tree / "xxhash" / f"_xxhash.cpython-{_tag(version)}-darwin.so", version)
+        _write(tree / "psutil" / "_psutil_osx.abi3.so", "shared")
+
+    deps_bundle._copy_native_to_base_env(base_env, native_paths)
+    for package_name in deps_bundle.NATIVE_DEPENDENCIES:
+        (base_env / package_name).mkdir(parents=True, exist_ok=True)
+    return base_env, native_paths
+
+
+def test_verify_bundle_accepts_a_correctly_merged_bundle(tmp_path, supported_versions):
+    base_env, native_paths = _native_trees(tmp_path, supported_versions)
+
+    deps_bundle._verify_bundle(base_env, native_paths)
+
+
+def test_verify_bundle_rejects_a_dropped_native_package(tmp_path, supported_versions):
+    """The failure mode when resolution backtracks past the extra a package arrives through.
+
+    pip warns and exits 0, so nothing else in the build notices.
+    """
+    base_env, native_paths = _native_trees(tmp_path, supported_versions)
+    shutil.rmtree(base_env / deps_bundle.NATIVE_DEPENDENCIES[-1])
+
+    with pytest.raises(RuntimeError, match="silently dropped"):
+        deps_bundle._verify_bundle(base_env, native_paths)
+
+
+def test_verify_bundle_rejects_an_abi3_copy_from_the_wrong_python(tmp_path, supported_versions):
+    """The defect this guards: the shipped abi3 copy is not the lowest supported version's.
+
+    Reproduces it exactly as the old merge produced it -- the build host's copy left in place.
+    """
+    base_env, native_paths = _native_trees(tmp_path, supported_versions)
+    (base_env / ABI3_ARTIFACT).write_text(supported_versions[-1])
+
+    with pytest.raises(RuntimeError, match="lowest supported Python"):
+        deps_bundle._verify_bundle(base_env, native_paths)
+
+
+def test_verify_bundle_rejects_an_artifact_missing_from_the_bundle(tmp_path, supported_versions):
+    base_env, native_paths = _native_trees(tmp_path, supported_versions)
+    (base_env / ABI3_ARTIFACT).unlink()
+
+    with pytest.raises(RuntimeError, match="absent from the bundle"):
+        deps_bundle._verify_bundle(base_env, native_paths)
+
+
+def test_base_environment_is_resolved_for_the_lowest_supported_python(supported_versions):
+    """The bundle's contents must not depend on which interpreter the build host runs."""
+    assert deps_bundle._lowest_supported_python_version() == supported_versions[0]
