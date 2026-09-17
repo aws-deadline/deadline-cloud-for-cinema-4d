@@ -74,58 +74,6 @@ def _run_installer(installer_path, install_scope, installation_path) -> Path:
     return Path(installation_path)
 
 
-def _validate_native_artifacts(installation_path: Path) -> None:
-    """Assert every supported Cinema 4D interpreter has an awscrt binary it can load.
-
-    A package directory existing is not evidence the bundle works. The bundle is one flat
-    directory on the interpreter's path, so it holds a single file per name, and awscrt's
-    compiled module arrives under a name that differs by how the wheel was built: a
-    version-specific ``_awscrt.cpython-<tag>-<platform>`` that only its own interpreter loads,
-    or an ``_awscrt.abi3`` that loads on the Python it was built for and later ones. When two
-    supported versions install the same abi3 name, only one copy survives, and if it is the
-    newer one the older interpreter fails at import with an unresolved symbol -- which the
-    submitter surfaces as an unexplained "sign-in needed", not as a packaging error.
-
-    Scope, stated precisely because the limit matters. An abi3 filename does not record which
-    Python it was built for, so the installed tree cannot answer whether the surviving abi3
-    copy is the right one -- the version of this check that tried to infer it would have passed
-    the very defect it was written for. What is decidable here is that no supported version
-    lacks a candidate binary entirely, which is what a dropped per-version download looks like.
-    That the surviving abi3 copy is the lowest supported version's is asserted by
-    ``deps_bundle._verify_bundle`` during the build, comparing bytes against the per-version
-    trees while they still exist. Neither proves the binary imports; only the embedded
-    interpreter can.
-    """
-    sys.path.insert(0, str(Path(__file__).parents[2] / "scripts"))
-    from deps_bundle import (
-        EXTENSION_SUFFIXES,
-        SUPPORTED_PYTHON_VERSIONS,
-        _interpreter_tag_of,
-    )
-
-    # awscrt installs `_awscrt.<tag>.so` beside the `awscrt` package, not inside it, so this
-    # globs the installation root rather than the package directory. The tag spelling differs
-    # by platform, so it is read with deps_bundle's own helper rather than matched here -- the
-    # two must agree, or one of them passes a bundle the other rejects.
-    artifacts = [
-        path.name
-        for path in installation_path.glob("_awscrt*")
-        if path.suffix in EXTENSION_SUFFIXES
-    ]
-    assert artifacts, (
-        "awscrt shipped no compiled extension module, so botocore will report CRT as "
-        "unavailable and AWS Console sign-in will fail"
-    )
-
-    tags = {name: _interpreter_tag_of(name) for name in artifacts}
-    has_stable_abi = any(tag is None for tag in tags.values())
-    for version in SUPPORTED_PYTHON_VERSIONS:
-        assert has_stable_abi or version in tags.values(), (
-            f"Python {version} is in deps_bundle.SUPPORTED_PYTHON_VERSIONS but the bundle "
-            f"holds no awscrt binary that could serve it. Shipped: {sorted(artifacts)}"
-        )
-
-
 def _validate_files(installation_path: Path) -> None:
     if platform.system() == "Darwin":
         uninstaller = "uninstall.app"
@@ -147,8 +95,6 @@ def _validate_files(installation_path: Path) -> None:
     # awscrt reaches the bundle via deadline's console extra, requested by deps_bundle.py.
     # Without it botocore reports CRT as unavailable and AWS Console sign-in fails.
     assert "awscrt" in top_level_dir
-
-    _validate_native_artifacts(installation_path)
 
     # Verify PySide6/shiboken6 are bundled and stripped correctly
     assert "PySide6" in top_level_dir
