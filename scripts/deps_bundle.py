@@ -150,8 +150,9 @@ PYSIDE6_ALLOWLIST = {
 
 def _get_package_version_regex(package: str) -> re.Pattern:
     # Case-insensitive because `pip list` prints the distribution's own casing, which need not
-    # match how the requirement is spelled -- `pyyaml` is reported as `PyYAML`.
-    return re.compile(rf"^{re.escape(package)} *(.*)$", re.IGNORECASE)
+    # match how the requirement is spelled -- `pyyaml` is reported as `PyYAML`. The required
+    # whitespace keeps a prefix sibling like `pyyaml-env-tag` from matching.
+    return re.compile(rf"^{re.escape(package)}\s+(\S+)\s*$", re.IGNORECASE)
 
 
 def _get_package_version(package: str, install_path: Path) -> str:
@@ -227,6 +228,13 @@ def _download_native_dependencies(working_directory: Path, base_env: Path) -> li
             "--python-version",
             version,
             "--only-binary=:all:",
+            # These trees exist only for their compiled artifacts, and they overwrite the
+            # base environment during the merge. Without --no-deps each tree would carry the
+            # packages' full transitive closures, resolved independently of the base
+            # environment's, and clobber whatever it had resolved for anything they share.
+            # Today none of NATIVE_DEPENDENCIES has runtime dependencies, but that is a
+            # property of the current graph, not of this code.
+            "--no-deps",
             *versioned_native_dependencies,
         ]
         subprocess.run(native_dependency_pip_args, check=True)

@@ -25,7 +25,9 @@ import pytest
 
 SCRIPTS_DIR = Path(__file__).parents[3] / "scripts"
 if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
+    # Appended rather than prepended: scripts/ holds generically named modules (common.py),
+    # and prepending would shadow any same-named import for the rest of the pytest session.
+    sys.path.append(str(SCRIPTS_DIR))
 
 import deps_bundle
 
