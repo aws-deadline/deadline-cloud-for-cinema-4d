@@ -13,12 +13,13 @@ from deadline.cinema4d_adaptor.Cinema4DClient.ocio_bake import (
 )
 
 
-def _render_data(base_path, fmt=None, name_format=None):
+def _render_data(base_path, fmt=None, name_format=None, save_image=True):
     """A dict standing in for the RenderData object's __getitem__."""
     return {
         c4d.RDATA_PATH: base_path,
         c4d.RDATA_FORMAT: fmt if fmt is not None else c4d.FILTER_JPG,
         c4d.RDATA_NAMEFORMAT: (c4d.RDATA_NAMEFORMAT_0 if name_format is None else name_format),
+        c4d.RDATA_SAVEIMAGE: save_image,
     }
 
 
@@ -100,7 +101,7 @@ class TestBakeFullFrameBeauty:
             5,
         )
         actual_path = bm.Save.call_args.args[0]
-        assert os.path.normcase(actual_path) == os.path.normcase(str(tmp_path / filename))
+        assert actual_path.lower() == str(tmp_path / filename).lower()
         assert bm.Save.call_args.args[1] == c4d.FILTER_JPG
 
     def test_inserts_separator_after_numeric_output_stem(self):
@@ -140,6 +141,19 @@ class TestBakeFullFrameBeauty:
         bm = MagicMock()
         bake_full_frame_beauty(bm, _rd(), _render_data(self._base(tmp_path)), MagicMock(), 5)
         bm.Save.assert_called_once_with(str(tmp_path / "render0005.jpg"), c4d.FILTER_JPG)
+
+    def test_beauty_save_disabled_is_noop(self, tmp_path):
+        _touch(tmp_path / "render0005.jpg")
+        bm = MagicMock()
+        bake_full_frame_beauty(
+            bm,
+            _rd(),
+            _render_data(self._base(tmp_path), save_image=False),
+            MagicMock(),
+            5,
+        )
+        bm.Save.assert_not_called()
+        c4d.documents.BakeOcioViewToBitmap.assert_not_called()
 
     def test_non_8bit_is_noop(self, tmp_path):
         _touch(tmp_path / "render0005.jpg")

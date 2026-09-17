@@ -153,6 +153,8 @@ def bake_full_frame_beauty(
     if rd[c4d.RDATA_FORMATDEPTH] != c4d.RDATA_FORMATDEPTH_8:
         return  # only display-referred 8-bit output needs the view transform baked in
 
+    if not render_data[c4d.RDATA_SAVEIMAGE]:
+        return
     beauty_path = render_data[c4d.RDATA_PATH] or ""
     if not beauty_path:
         return
@@ -172,8 +174,10 @@ def bake_full_frame_beauty(
         )
         return
 
-    # Build the exact beauty filename rather than scanning the output directory. C4D
-    # may vary only the extension's case on disk, so probe the two possible forms.
+    # Build the exact beauty filename rather than scanning the output directory.
+    # BaseBitmap.Save receives its output format separately, so extensionless name
+    # formats must use the literal filename C4D wrote. C4D may vary only the extension's
+    # case on disk, so probe the two possible forms.
     expected_stem = _expected_beauty_stem(beauty_stem, frame, name_format)
     assert expected_stem is not None
     candidates = [expected_stem]
