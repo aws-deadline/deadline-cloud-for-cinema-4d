@@ -372,9 +372,34 @@ class Cinema4DHandler:
                 bm = tile_rendering.create_tile_bitmap(width, height)
             else:
                 bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
-            result = c4d.documents.RenderDocument(
-                self.doc, rd, bm, render_flags, prog=progress_callback
+            # 32-bit float OCIO workaround (issue #540): RenderDocument's save
+            # applies a colorspace conversion to float output (EXR, HDR, 32-bit
+            # TIFF) that local renders do not, shifting colors. This conversion
+            # is distinct from the view-transform tone-mapping the 8-bit path
+            # re-applies. Disable the render-time bake so float output stays
+            # scene-linear (verified byte-identical to Commandline for EXR, HDR,
+            # and 32-bit TIFF; a measured no-op for 8/16-bit PNG, including
+            # 8-bit multi-pass files alongside a float beauty). Tile renders
+            # manage this flag in tile_rendering.setup/finalize_tile_render, so
+            # the handler must not touch it here; at float depth that path
+            # leaves the conversion in place, so tiled float output still
+            # shifts -- tracked separately.
+            disable_ocio_bake = (
+                not is_tile_render
+                and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
+                and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_32
             )
+            if disable_ocio_bake:
+                orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
+                rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
+                print("Disabling render-time OCIO bake for 32-bit float output (see issue #540)")
+            try:
+                result = c4d.documents.RenderDocument(
+                    self.doc, rd, bm, render_flags, prog=progress_callback
+                )
+            finally:
+                if disable_ocio_bake:
+                    rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
             self._raise_on_render_error(result)
             # Post-render tile processing: OCIO bake, crop, save tile, restore paths
             if is_tile_render and tile_ctx is not None:

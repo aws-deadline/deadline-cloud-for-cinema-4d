@@ -808,7 +808,7 @@ class TestStartRenderWithTextCaching:
         # Set up mock document and render data
         mock_doc = Mock()
         mock_render_data = MagicMock()
-        mock_render_data.GetDataInstance = Mock()
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
@@ -836,7 +836,7 @@ class TestStartRenderWithTextCaching:
         # Set up mock document and render data
         mock_doc = Mock()
         mock_render_data = MagicMock()
-        mock_render_data.GetDataInstance = Mock()
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
@@ -864,7 +864,7 @@ class TestStartRenderWithTextCaching:
         # Set up mock document and render data
         mock_doc = Mock()
         mock_render_data = MagicMock()
-        mock_render_data.GetDataInstance = Mock()
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
@@ -928,7 +928,7 @@ class TestStartRenderChunkRange:
             return MagicMock()
 
         mock_render_data.__getitem__ = mock_getitem
-        mock_render_data.GetDataInstance = Mock()
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
         handler.doc = mock_doc
 
@@ -979,6 +979,167 @@ class TestStartRenderChunkRange:
         mock_bitmap.assert_called_once_with(1920, 1080, c4d.COLORMODE_RGB)
         assert (10, 24) in [call.args for call in mock_base_time.call_args_list]
         assert (20, 24) in [call.args for call in mock_base_time.call_args_list]
+
+
+class TestStartRenderFloatOcio:
+    """Tests the non-tile 32-bit float OCIO workaround in start_render (issue #540).
+
+    32-bit float renders run with RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER disabled
+    so RenderDocument's save keeps the output scene-linear, and the flag is
+    restored afterwards (the document is reused across renders in a session).
+    """
+
+    def _make_handler(self, format_depth=None):
+        handler = Cinema4DHandler(mock_map_path)
+        handler.cached_text_was_used_in_previous_frame = False
+        mock_doc = Mock()
+        mock_render_data = MagicMock()
+        depth = format_depth if format_depth is not None else c4d.RDATA_FORMATDEPTH_32
+
+        def mock_getitem(self, key):
+            if key == c4d.RDATA_FRAMERATE:
+                return 24
+            if key == c4d.RDATA_FORMATDEPTH:
+                return depth
+            return MagicMock()
+
+        mock_render_data.__getitem__ = mock_getitem
+        rd = MagicMock()
+        mock_render_data.GetDataInstance.return_value = rd
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        handler.doc = mock_doc
+        return handler, rd
+
+    def _bake_flag_set_calls(self, rd):
+        return [
+            c.args
+            for c in rd.__setitem__.call_args_list
+            if c.args[0] == c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER
+        ]
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_disables_bake_flag_during_render_and_restores_it(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        handler, rd = self._make_handler()
+        orig_value = rd.GetBool.return_value
+        flag_at_render_time = {}
+
+        def render_doc(*args, **kwargs):
+            calls = self._bake_flag_set_calls(rd)
+            flag_at_render_time["value"] = calls[-1][1] if calls else "never set"
+            return c4d.RENDERRESULT_OK
+
+        mock_render_document.side_effect = render_doc
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5"})
+
+        # the render ran with the bake disabled...
+        assert flag_at_render_time["value"] is False
+        # ...and the original value was restored afterwards
+        assert self._bake_flag_set_calls(rd)[-1] == (
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER,
+            orig_value,
+        )
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_restores_bake_flag_when_render_raises(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        handler, rd = self._make_handler()
+        orig_value = rd.GetBool.return_value
+        mock_render_document.side_effect = RuntimeError("render exploded")
+
+        with (
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+            pytest.raises(RuntimeError, match="render exploded"),
+        ):
+            handler.start_render({"frame": "5"})
+
+        assert self._bake_flag_set_calls(rd)[-1] == (
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER,
+            orig_value,
+        )
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_noop_when_bake_flag_attribute_missing(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Older Cinema 4D (pre-2025.2) has no RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER."""
+        handler, rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        saved = c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER
+        del c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER
+        try:
+            with patch.object(handler, "_cache_text_if_needed", return_value=False):
+                handler.start_render({"frame": "5"})
+        finally:
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER = saved
+
+        rd.GetBool.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_16bit_output_does_not_trigger_float_workaround(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Non-float depth (16-bit) takes the else branch but must not touch the flag."""
+        handler, rd = self._make_handler(format_depth=c4d.RDATA_FORMATDEPTH_16)
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5"})
+
+        rd.GetBool.assert_not_called()
+        assert self._bake_flag_set_calls(rd) == []
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.ocio_bake")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_8bit_output_takes_bake_path_not_float_workaround(
+        self,
+        mock_base_time: Mock,
+        mock_bitmap: Mock,
+        mock_render_document: Mock,
+        mock_ocio_bake: Mock,
+    ):
+        """8-bit output takes the bake_ocio branch (manual re-bake), not this workaround."""
+        handler, _rd = self._make_handler(format_depth=c4d.RDATA_FORMATDEPTH_8)
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5"})
+
+        mock_ocio_bake.bake_full_frame_beauty.assert_called_once()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_tile_render_does_not_touch_bake_flag(
+        self, mock_base_time: Mock, mock_render_document: Mock, mock_tile_rendering: Mock
+    ):
+        """The float workaround must not fire for tile renders; the handler leaves
+        the flag untouched and delegates to tile_rendering."""
+        handler, rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        rd.GetBool.assert_not_called()
+        assert self._bake_flag_set_calls(rd) == []
+        mock_tile_rendering.setup_tile_render.assert_called_once()
+        mock_tile_rendering.finalize_tile_render.assert_called_once()
 
 
 class TestSetFrameChunkRange:
