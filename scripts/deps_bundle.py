@@ -257,13 +257,15 @@ def _copy_native_to_base_env(base_env: Path, native_dependency_paths: list[Path]
     Which artifacts survive follows from how the wheels name their extension modules, so no
     rule is needed per package. A version-specific name is unique per version and so cannot
     collide: ``xxhash`` ships one wheel per version and every interpreter keeps its own
-    ``_xxhash.cpython-<tag>-<platform>.so``, and ``pyyaml`` is the same case, one wheel per
-    version installing ``yaml/_yaml.cpython-<tag>-<platform>.so``. An abi3 name is the same
-    for every version and so collides, and there the two cases differ. ``psutil`` publishes
-    a single abi3 wheel
-    that serves all of them, so every tree holds identical bytes and the collision is a
-    no-op. ``awscrt`` publishes a separate abi3 wheel per Python, each installing
-    ``_awscrt.abi3.so``, so the copies differ and only one can ship; abi3 is forward
+    extension module named for the interpreter tag (``_xxhash.cpython-<tag>-<platform>.so``
+    on POSIX, ``_xxhash.cp<tag>-<platform>.pyd`` on Windows -- CPython does not use the
+    ``cpython-`` spelling there), and ``pyyaml`` is the same case, one wheel per version
+    installing ``yaml/_yaml.cpython-<tag>-<platform>.so`` (``yaml/_yaml.cp<tag>-<platform>.pyd``
+    on Windows). An abi3 name is the same for every version and so collides, and there the
+    two cases differ. ``psutil`` publishes a single abi3 wheel that serves all of them, so
+    every tree holds identical bytes and the collision is a no-op. ``awscrt`` publishes a
+    separate abi3 wheel per Python, each installing ``_awscrt.abi3.so`` (an untagged
+    ``_awscrt.pyd`` on Windows), so the copies differ and only one can ship; abi3 is forward
     compatible, which makes the one built for the lowest supported Python the only copy
     that loads on all of them, and taking the first tree is what keeps it.
     """
