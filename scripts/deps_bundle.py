@@ -19,10 +19,13 @@ SUPPORTED_PLATFORMS = ["Windows", "Linux", "Darwin"]
 #
 # awscrt is here because its wheels are not uniformly abi3: Python 3.10 gets
 # _awscrt.cpython-310-<platform>.so while 3.11+ get _awscrt.abi3.so. Resolving it only in
-# the base environment would ship whichever the build host produced, so Cinema 4D 2024-2025
-# (Python 3.10) would fail to import awscrt and AWS Console sign-in would break there while
-# working on 2026.
-NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt"]
+# the base environment would ship whichever the build host produced, so any Cinema 4D whose
+# interpreter that single artifact does not cover would fail to import awscrt and AWS
+# Console sign-in would break there.
+# pyyaml is here because it ships a version-specific `_yaml` extension module: resolved only
+# in the base environment it lands built for a single interpreter, and pyyaml hides that by
+# falling back to its pure-Python parser on the other three.
+NATIVE_DEPENDENCIES = ["xxhash", "psutil", "awscrt", "pyyaml"]
 
 PYSIDE6_VERSION = "6.8.3"
 PYSIDE6_PACKAGES = [f"PySide6-Essentials=={PYSIDE6_VERSION}", f"shiboken6=={PYSIDE6_VERSION}"]
@@ -146,7 +149,10 @@ PYSIDE6_ALLOWLIST = {
 
 
 def _get_package_version_regex(package: str) -> re.Pattern:
-    return re.compile(rf"^{re.escape(package)} *(.*)$")
+    # Case-insensitive because `pip list` prints the distribution's own casing, which need not
+    # match how the requirement is spelled -- `pyyaml` is reported as `PyYAML`. The required
+    # whitespace keeps a prefix sibling like `pyyaml-env-tag` from matching.
+    return re.compile(rf"^{re.escape(package)}\s+(\S+)\s*$", re.IGNORECASE)
 
 
 def _get_package_version(package: str, install_path: Path) -> str:
@@ -198,13 +204,19 @@ def _build_base_environment(working_directory: Path, dependencies: list[Dependen
     return base_env_path
 
 
+def _python_version_key(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
 def _download_native_dependencies(working_directory: Path, base_env: Path) -> list[Path]:
     versioned_native_dependencies = [
         f"{package_name}=={_get_package_version(package_name, base_env)}"
         for package_name in NATIVE_DEPENDENCIES
     ]
     native_dependency_paths = []
-    for version in SUPPORTED_PYTHON_VERSIONS:
+    # Ascending order is load-bearing: _copy_native_to_base_env resolves a filename
+    # collision in favour of the tree it sees first.
+    for version in sorted(SUPPORTED_PYTHON_VERSIONS, key=_python_version_key):
         native_dependency_path = working_directory / "native" / f"{version.replace('.', '_')}"
         native_dependency_paths.append(native_dependency_path)
         native_dependency_path.mkdir(parents=True)
@@ -216,6 +228,18 @@ def _download_native_dependencies(working_directory: Path, base_env: Path) -> li
             "--python-version",
             version,
             "--only-binary=:all:",
+            # These trees exist only for their compiled artifacts, and they overwrite the
+            # base environment during the merge. Without --no-deps each tree would carry the
+            # packages' full transitive closures, resolved independently of the base
+            # environment's, and clobber whatever it had resolved for anything they share.
+            # Today none of NATIVE_DEPENDENCIES has runtime dependencies, but that is a
+            # property of the current graph, not of this code. --no-deps cuts the other way
+            # too: a compiled transitive dependency of one of these packages would then only
+            # ever reach the bundle from _build_base_environment, built for whatever
+            # interpreter the build host runs, and fail to import on the other supported
+            # versions -- silently, since the artifact is present either way. If one shows up,
+            # add it to NATIVE_DEPENDENCIES.
+            "--no-deps",
             *versioned_native_dependencies,
         ]
         subprocess.run(native_dependency_pip_args, check=True)
@@ -223,14 +247,39 @@ def _download_native_dependencies(working_directory: Path, base_env: Path) -> li
 
 
 def _copy_native_to_base_env(base_env: Path, native_dependency_paths: list[Path]) -> None:
+    """Flatten the per-version native trees into the bundle, lowest version first.
+
+    ``native_dependency_paths`` is ordered by ascending Python version and the first tree
+    to supply a path wins, overwriting the base environment. The base environment resolved
+    these packages for whatever interpreter the build host happens to run, which is not a
+    version the bundle targets, so it must not decide which artifact ships.
+
+    Which artifacts survive follows from how the wheels name their extension modules, so no
+    rule is needed per package. A version-specific name is unique per version and so cannot
+    collide: ``xxhash`` ships one wheel per version and every interpreter keeps its own
+    extension module named for the interpreter tag (``_xxhash.cpython-<tag>-<platform>.so``
+    on POSIX, ``_xxhash.cp<tag>-<platform>.pyd`` on Windows -- CPython does not use the
+    ``cpython-`` spelling there), and ``pyyaml`` is the same case, one wheel per version
+    installing ``yaml/_yaml.cpython-<tag>-<platform>.so`` (``yaml/_yaml.cp<tag>-<platform>.pyd``
+    on Windows). An abi3 name is the same for every version and so collides, and there the
+    two cases differ. ``psutil`` publishes a single abi3 wheel that serves all of them, so
+    every tree holds identical bytes and the collision is a no-op. ``awscrt`` publishes a
+    separate abi3 wheel per Python, each installing ``_awscrt.abi3.so`` (an untagged
+    ``_awscrt.pyd`` on Windows), so the copies differ and only one can ship; abi3 is forward
+    compatible, which makes the one built for the lowest supported Python the only copy
+    that loads on all of them, and taking the first tree is what keeps it.
+    """
+    copied: set[Path] = set()
     for native_dependency_path in native_dependency_paths:
         for file in native_dependency_path.rglob("*"):
             if file.is_file():
                 relative = file.relative_to(native_dependency_path)
+                if relative in copied:
+                    continue
                 in_base_env = base_env / relative
-                if not in_base_env.exists():
-                    in_base_env.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy(str(file), str(in_base_env))
+                in_base_env.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(str(file), str(in_base_env))
+                copied.add(relative)
 
 
 def _get_zip_path(working_directory: Path, project_dict: dict[str, Any]) -> Path:
