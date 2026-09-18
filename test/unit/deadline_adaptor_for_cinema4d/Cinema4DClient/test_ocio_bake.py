@@ -136,6 +136,24 @@ class TestBakeFullFrameBeauty:
         assert "unsupported C4D output name format (999)" in capsys.readouterr().out
         bm.Save.assert_not_called()
 
+    def test_unsupported_output_format_is_reported_without_baking(self, tmp_path, capsys):
+        _touch(tmp_path / "render0005")
+        bm = MagicMock()
+        bake_full_frame_beauty(
+            bm,
+            _rd(),
+            _render_data(
+                self._base(tmp_path),
+                fmt=999,
+                name_format=c4d.RDATA_NAMEFORMAT_1,
+            ),
+            MagicMock(),
+            5,
+        )
+        assert "unsupported C4D output format (999)" in capsys.readouterr().out
+        bm.Save.assert_not_called()
+        c4d.documents.BakeOcioViewToBitmap.assert_not_called()
+
     def test_bakes_exact_filename_regardless_of_mtime(self, tmp_path):
         _touch(tmp_path / "render0005.jpg", mtime=1)
         bm = MagicMock()

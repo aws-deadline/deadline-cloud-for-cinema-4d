@@ -21,50 +21,30 @@ except ImportError:  # pragma: no cover
 try:
     from cinema4d_adaptor.Cinema4DClient.tile_rendering import (  # type: ignore[import]
         C4D_VERSION_2025_2,
+        FORMAT_MAP,
         get_format_info,
     )
 except ImportError:
     from deadline.cinema4d_adaptor.Cinema4DClient.tile_rendering import (  # type: ignore[import]
         C4D_VERSION_2025_2,
+        FORMAT_MAP,
         get_format_info,
     )
 
 
-_MISSING_NAME_FORMAT = object()
-_FOUR_DIGIT_NAME_FORMATS = frozenset(
-    getattr(c4d, name, _MISSING_NAME_FORMAT)
-    for name in (
-        "RDATA_NAMEFORMAT_0",
-        "RDATA_NAMEFORMAT_1",
-        "RDATA_NAMEFORMAT_2",
-        "RDATA_NAMEFORMAT_6",
+_NAME_FORMAT_PROPERTIES = {
+    getattr(c4d, name): properties
+    for name, properties in (
+        ("RDATA_NAMEFORMAT_0", (4, False, True)),
+        ("RDATA_NAMEFORMAT_1", (4, False, False)),
+        ("RDATA_NAMEFORMAT_2", (4, True, False)),
+        ("RDATA_NAMEFORMAT_3", (3, False, True)),
+        ("RDATA_NAMEFORMAT_4", (3, False, False)),
+        ("RDATA_NAMEFORMAT_5", (3, True, False)),
+        ("RDATA_NAMEFORMAT_6", (4, True, True)),
     )
-)
-_THREE_DIGIT_NAME_FORMATS = frozenset(
-    getattr(c4d, name, _MISSING_NAME_FORMAT)
-    for name in (
-        "RDATA_NAMEFORMAT_3",
-        "RDATA_NAMEFORMAT_4",
-        "RDATA_NAMEFORMAT_5",
-    )
-)
-_DOTTED_FRAME_NAME_FORMATS = frozenset(
-    getattr(c4d, name, _MISSING_NAME_FORMAT)
-    for name in (
-        "RDATA_NAMEFORMAT_2",
-        "RDATA_NAMEFORMAT_5",
-        "RDATA_NAMEFORMAT_6",
-    )
-)
-_EXTENSION_NAME_FORMATS = frozenset(
-    getattr(c4d, name, _MISSING_NAME_FORMAT)
-    for name in (
-        "RDATA_NAMEFORMAT_0",
-        "RDATA_NAMEFORMAT_3",
-        "RDATA_NAMEFORMAT_6",
-    )
-)
-_KNOWN_NAME_FORMATS = _FOUR_DIGIT_NAME_FORMATS | _THREE_DIGIT_NAME_FORMATS
+    if hasattr(c4d, name)
+}
 
 
 def _resolve_render_path(doc: Any, render_data: Any, render_bc: Any, frame: int, path: str) -> str:
@@ -94,20 +74,16 @@ def _resolve_render_path(doc: Any, render_data: Any, render_bc: Any, frame: int,
         return path
 
 
-def _expected_beauty_stem(beauty_stem: str, frame: int, name_format: int) -> str | None:
+def _expected_beauty_stem(beauty_stem: str, frame: int, name_format: int) -> str:
     """Return the filename stem C4D writes for this render's beauty output.
 
     C4D's ``RDATA_NAMEFORMAT_*`` constants select one of seven layouts. Some
     append the output extension and some do not; all include the frame number.
     """
-    if name_format in _FOUR_DIGIT_NAME_FORMATS:
-        frame_string = str(frame).zfill(4)
-    elif name_format in _THREE_DIGIT_NAME_FORMATS:
-        frame_string = str(frame).zfill(3)
-    else:
-        return None
+    padding, dotted, _has_extension = _NAME_FORMAT_PROPERTIES[name_format]
+    frame_string = str(frame).zfill(padding)
 
-    if name_format in _DOTTED_FRAME_NAME_FORMATS:
+    if dotted:
         return f"{beauty_stem}.{frame_string}"
 
     separator = "_" if beauty_stem and beauty_stem[-1] in "0123456789" else ""
@@ -165,23 +141,26 @@ def bake_full_frame_beauty(
     beauty_stem = os.path.splitext(os.path.basename(resolved_base))[0]
     if not beauty_stem or not os.path.isdir(beauty_dir):
         return
-    ext, save_filter = get_format_info(render_data[c4d.RDATA_FORMAT])
     name_format = render_data[c4d.RDATA_NAMEFORMAT]
-    if name_format not in _KNOWN_NAME_FORMATS:
+    if name_format not in _NAME_FORMAT_PROPERTIES:
         print(
             f"OCIO view transform NOT baked: unsupported C4D output name format "
             f"({name_format!r})"
         )
         return
+    output_format = render_data[c4d.RDATA_FORMAT]
+    if output_format not in FORMAT_MAP:
+        print(f"OCIO view transform NOT baked: unsupported C4D output format ({output_format!r})")
+        return
+    ext, save_filter = get_format_info(output_format)
 
     # Build the exact beauty filename rather than scanning the output directory.
     # BaseBitmap.Save receives its output format separately, so extensionless name
     # formats must use the literal filename C4D wrote. C4D may vary only the extension's
     # case on disk, so probe the two possible forms.
     expected_stem = _expected_beauty_stem(beauty_stem, frame, name_format)
-    assert expected_stem is not None
     candidates = [expected_stem]
-    if name_format in _EXTENSION_NAME_FORMATS:
+    if _NAME_FORMAT_PROPERTIES[name_format][2]:
         candidates = [f"{expected_stem}{ext}", f"{expected_stem}{ext.upper()}"]
     candidate_paths = [os.path.join(beauty_dir, candidate) for candidate in candidates]
     target = next((candidate for candidate in candidate_paths if os.path.isfile(candidate)), None)
