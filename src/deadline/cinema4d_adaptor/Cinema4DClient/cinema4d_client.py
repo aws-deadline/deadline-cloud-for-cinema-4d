@@ -34,7 +34,7 @@ class Cinema4DClient(ClientInterface):
 
     def __init__(self, server_path: str) -> None:
         super().__init__(server_path=server_path)
-        self.actions.update(Cinema4DHandler(lambda path: self.map_path(path)).action_dict)
+        self.actions.update(Cinema4DHandler(self.map_path).action_dict)
 
     def close(self, args: dict | None = None) -> None:
         sys.exit(0)
@@ -61,21 +61,23 @@ class Cinema4DClient(ClientInterface):
             str: The mapped path
 
         Raises:
-            RuntimeError: If path mapping rules cannot be retrieved
             ValueError: If path is empty or None
         """
         if not path:
             raise ValueError("Path cannot be empty or None")
-
-        # If not running on Windows, just do normal path mapping
-        if not sys.platform.startswith("win"):
-            return super().map_path(path)
 
         try:
             # Get path mapping rules
             rules = self.path_mapping_rules()
             if not rules:
                 print("Warning: No path mapping rules found")
+                # The adaptor runtime returns the original path when it has no rules.
+                # Avoid a remote request for every asset while preserving C4D's
+                # per-asset write-backs in Cinema4DHandler.
+                return path
+
+            # If not running on Windows, just do normal path mapping
+            if not sys.platform.startswith("win"):
                 return super().map_path(path)
 
             # Check if any rule has posix format

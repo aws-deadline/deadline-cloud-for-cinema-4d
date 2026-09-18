@@ -85,7 +85,11 @@ class TestCinema4DClient:
             client.map_path("")
 
     @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.map_path")
-    def test_map_path(self, mock_map_path: Mock):
+    @patch(
+        "openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.path_mapping_rules"
+    )
+    def test_map_path(self, mock_rules: Mock, mock_map_path: Mock):
+        mock_rules.return_value = [Mock()]
         mock_map_path.return_value = "test"
         client = Cinema4DClient(server_path="/tmp/9999")
         assert client.map_path("test") == "test"
@@ -96,11 +100,25 @@ class TestCinema4DClient:
         "openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.path_mapping_rules"
     )
     def test_map_path_win(self, mock_rules: Mock, mock_map_path: Mock, mock_platform: Mock):
-        mock_rules.return_value = None
+        mock_rules.return_value = []
         mock_map_path.return_value = "C:/test"
         mock_platform.return_value = "win"
         client = Cinema4DClient(server_path="/tmp/9999")
-        assert client.map_path("test") == "C:/test"
+        assert client.map_path("test") == "test"
+        mock_map_path.assert_not_called()
+
+    @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.map_path")
+    @patch(
+        "openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.path_mapping_rules"
+    )
+    def test_map_path_without_rules_returns_original_path_on_non_windows(
+        self, mock_rules: Mock, mock_map_path: Mock
+    ):
+        mock_rules.return_value = []
+        client = Cinema4DClient(server_path="/tmp/9999")
+
+        assert client.map_path("/project/asset.png") == "/project/asset.png"
+        mock_map_path.assert_not_called()
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_client.sys.platform")
     @patch("openjd.adaptor_runtime_client.base_client_interface.BaseClientInterface.map_path")
