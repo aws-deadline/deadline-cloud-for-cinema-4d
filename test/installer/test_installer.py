@@ -95,6 +95,14 @@ def _validate_files(installation_path: Path) -> None:
     # awscrt reaches the bundle via deadline's console extra, requested by deps_bundle.py.
     # Without it botocore reports CRT as unavailable and AWS Console sign-in fails.
     assert "awscrt" in top_level_dir
+    # pyyaml fails silently: yaml/__init__.py falls back to its pure-Python parser when the
+    # compiled extension is missing or built for the wrong interpreter, so a bad artifact
+    # produces no error, only slower parsing. Assert the artifact directly since nothing
+    # else would catch its absence.
+    assert "yaml" in top_level_dir
+    assert list(
+        (installation_path / "yaml").glob("_yaml.cpython-*")
+    ), "expected a compiled _yaml.cpython-* artifact in the yaml package"
 
     # Verify PySide6/shiboken6 are bundled and stripped correctly
     assert "PySide6" in top_level_dir

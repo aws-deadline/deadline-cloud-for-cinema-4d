@@ -34,6 +34,13 @@ import deps_bundle
 # awscrt's abi3 wheels all install this one name, whatever Python they were built for.
 ABI3_ARTIFACT = "_awscrt.abi3.so"
 
+# awscrt ships a version-specific wheel through Python 3.10 and abi3 wheels from 3.11
+# onward. Named explicitly, rather than left for the fixture and the assertion below to
+# each infer from list position, so the two move together if SUPPORTED_PYTHON_VERSIONS ever
+# drops 3.10 -- changing this constant changes which supported versions get an abi3 name at
+# all, not which list index a test happens to read.
+AWSCRT_LAST_NON_ABI3_VERSION = "3.10"
+
 
 def _version_key(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
@@ -73,11 +80,19 @@ def merged_bundle(tmp_path, supported_versions) -> Path:
     base_env = tmp_path / "base_env"
     _write(base_env / ABI3_ARTIFACT, supported_versions[-1])
 
+    boundary = _version_key(AWSCRT_LAST_NON_ABI3_VERSION)
+    assert any(_version_key(v) <= boundary for v in supported_versions) and any(
+        _version_key(v) > boundary for v in supported_versions
+    ), (
+        "AWSCRT_LAST_NON_ABI3_VERSION needs supported versions on both sides of it for this "
+        "fixture to exercise both the version-specific and the abi3-collision case"
+    )
+
     native_paths = []
     for version in supported_versions:
         tree = tmp_path / "native" / _tag(version)
         native_paths.append(tree)
-        if version == supported_versions[0]:
+        if _version_key(version) <= boundary:
             _write(tree / f"_awscrt.cpython-{_tag(version)}-darwin.so", version)
         else:
             _write(tree / ABI3_ARTIFACT, version)
@@ -98,7 +113,14 @@ def test_colliding_abi3_artifact_comes_from_the_lowest_supported_abi(
     it fails to import there -- botocore then leaves its crypto binding unset and AWS
     Console sign-in reports that sign-in is needed, indefinitely.
     """
-    lowest_abi3_version = supported_versions[1]
+    lowest_abi3_version = min(
+        (
+            version
+            for version in supported_versions
+            if _version_key(version) > _version_key(AWSCRT_LAST_NON_ABI3_VERSION)
+        ),
+        key=_version_key,
+    )
     shipped = (merged_bundle / ABI3_ARTIFACT).read_text()
 
     assert shipped == lowest_abi3_version, (
@@ -141,7 +163,11 @@ def test_native_trees_are_merged_lowest_python_version_first(tmp_path, monkeypat
     requested_versions: list[str] = []
 
     def record(args, **kwargs):
-        requested_versions.append(args[args.index("--python-version") + 1])
+        # deps_bundle.subprocess is the stdlib module, so this patch reaches every caller of
+        # subprocess.run for the duration of the test, not just deps_bundle's. Guard rather
+        # than assume every call is the one under test, or an unrelated caller raises here.
+        if "--python-version" in args:
+            requested_versions.append(args[args.index("--python-version") + 1])
         return subprocess.CompletedProcess(args, 0)
 
     monkeypatch.setattr(deps_bundle.subprocess, "run", record)

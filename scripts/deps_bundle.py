@@ -233,7 +233,12 @@ def _download_native_dependencies(working_directory: Path, base_env: Path) -> li
             # packages' full transitive closures, resolved independently of the base
             # environment's, and clobber whatever it had resolved for anything they share.
             # Today none of NATIVE_DEPENDENCIES has runtime dependencies, but that is a
-            # property of the current graph, not of this code.
+            # property of the current graph, not of this code. --no-deps cuts the other way
+            # too: a compiled transitive dependency of one of these packages would then only
+            # ever reach the bundle from _build_base_environment, built for whatever
+            # interpreter the build host runs, and fail to import on the other supported
+            # versions -- silently, since the artifact is present either way. If one shows up,
+            # add it to NATIVE_DEPENDENCIES.
             "--no-deps",
             *versioned_native_dependencies,
         ]
