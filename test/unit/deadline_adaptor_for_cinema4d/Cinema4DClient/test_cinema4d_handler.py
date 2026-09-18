@@ -924,6 +924,42 @@ class TestStartRenderChunkRange:
         assert (start_frame, fps) in [c.args for c in calls]
         assert (end_frame, fps) in [c.args for c in calls]
 
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_start_render_uses_single_range_for_unsupported_output_format(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Unsupported formats, including movies, must not be split into one render per frame."""
+        handler = Cinema4DHandler(mock_map_path)
+        values = {
+            c4d.RDATA_FRAMERATE: 24,
+            c4d.RDATA_PATH: "",
+            c4d.RDATA_MULTIPASS_SAVEIMAGE: False,
+            c4d.RDATA_XRES: 1920,
+            c4d.RDATA_YRES: 1080,
+            c4d.RDATA_SAVEIMAGE: True,
+            c4d.RDATA_FORMAT: c4d.FILTER_MOVIE,
+            c4d.RDATA_FORMATDEPTH: c4d.RDATA_FORMATDEPTH_8,
+        }
+        mock_render_data = MagicMock()
+        mock_render_data.__getitem__.side_effect = values.__getitem__
+        mock_render_data.__setitem__.side_effect = values.__setitem__
+        mock_render_data.GetDataInstance.return_value = MagicMock()
+
+        mock_doc = Mock()
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        handler.doc = mock_doc
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "10-20"})
+
+        mock_render_document.assert_called_once()
+        mock_bitmap.assert_called_once_with(1920, 1080, c4d.COLORMODE_RGB)
+        assert (10, 24) in [call.args for call in mock_base_time.call_args_list]
+        assert (20, 24) in [call.args for call in mock_base_time.call_args_list]
+
 
 class TestSetFrameChunkRange:
     """Tests that set_frame stores chunk range strings without casting to int"""

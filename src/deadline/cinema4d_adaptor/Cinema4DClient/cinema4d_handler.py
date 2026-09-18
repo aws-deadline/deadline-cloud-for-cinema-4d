@@ -337,6 +337,7 @@ class Cinema4DHandler:
             not is_tile_render
             and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
             and self.render_data[c4d.RDATA_SAVEIMAGE]
+            and self.render_data[c4d.RDATA_FORMAT] in tile_rendering.FORMAT_MAP
             and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_8
         )
         if bake_ocio:
