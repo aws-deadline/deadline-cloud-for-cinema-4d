@@ -312,9 +312,7 @@ class Cinema4DHandler:
         # Set up tile rendering if this is a tile render action
         tile_action = data.get("tile_action", "")
         is_tile_render = tile_action == "render"
-        tile_ctx = None
-        if is_tile_render:
-            tile_ctx = tile_rendering.setup_tile_render(self.render_data, data)
+        tile_ctx = None  # created in the render branch below, just before rendering
 
         width = int(self.render_data[c4d.RDATA_XRES])
         height = int(self.render_data[c4d.RDATA_YRES])
@@ -369,21 +367,20 @@ class Cinema4DHandler:
                 rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
         else:
             if is_tile_render:
-                bm = tile_rendering.create_tile_bitmap(width, height)
-            else:
-                bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
+                # Set up as late as possible so the try/finally below covers the
+                # whole window in which render state is mutated.
+                tile_ctx = tile_rendering.setup_tile_render(self.render_data, data)
             # 32-bit float OCIO workaround (issue #540): RenderDocument's save
             # applies a colorspace conversion to float output (EXR, HDR, 32-bit
             # TIFF) that local renders do not, shifting colors. This conversion
             # is distinct from the view-transform tone-mapping the 8-bit path
-            # re-applies. Disable the render-time bake so float output stays
-            # scene-linear (verified byte-identical to Commandline for EXR, HDR,
+            # re-applies. Disable the render-time bake so the save writes the
+            # same data as a local render (verified byte-identical for EXR, HDR,
             # and 32-bit TIFF; a measured no-op for 8/16-bit PNG, including
             # 8-bit multi-pass files alongside a float beauty). Tile renders
             # manage this flag in tile_rendering.setup/finalize_tile_render, so
-            # the handler must not touch it here; at float depth that path
-            # leaves the conversion in place, so tiled float output still
-            # shifts -- tracked separately.
+            # the handler must not touch it here; float tiles route through
+            # C4D's internal save with the bake disabled (same mechanism).
             disable_ocio_bake = (
                 not is_tile_render
                 and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
@@ -394,16 +391,27 @@ class Cinema4DHandler:
                 rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
                 print("Disabling render-time OCIO bake for 32-bit float output (see issue #540)")
             try:
+                if is_tile_render:
+                    bm = tile_rendering.create_tile_bitmap(width, height)
+                else:
+                    bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
                 result = c4d.documents.RenderDocument(
                     self.doc, rd, bm, render_flags, prog=progress_callback
                 )
+                self._raise_on_render_error(result)
+                if is_tile_render and tile_ctx is not None:
+                    # Post-render tile processing: OCIO bake, crop, save tile
+                    tile_rendering.finalize_tile_render(
+                        bm, rd, tile_ctx, self.render_data, start_frame
+                    )
             finally:
                 if disable_ocio_bake:
                     rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
-            self._raise_on_render_error(result)
-            # Post-render tile processing: OCIO bake, crop, save tile, restore paths
-            if is_tile_render and tile_ctx is not None:
-                tile_rendering.finalize_tile_render(bm, rd, tile_ctx, self.render_data, start_frame)
+                if tile_ctx is not None:
+                    # Safe to call again after a successful finalize (no-op);
+                    # covers every exception path (allocation, render, finalize)
+                    # so mutated state cannot leak into the next task.
+                    tile_rendering.restore_tile_render_state(self.render_data, rd, tile_ctx)
 
         print("Finished Rendering")
 
