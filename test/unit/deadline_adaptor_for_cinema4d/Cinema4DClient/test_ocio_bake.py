@@ -107,6 +107,40 @@ class TestBakeFullFrameBeauty:
     def test_inserts_separator_after_numeric_output_stem(self):
         assert _expected_beauty_stem("render2", 5, c4d.RDATA_NAMEFORMAT_0) == "render2_0005"
 
+    @pytest.mark.parametrize(
+        ("name_format", "filename"),
+        [
+            (c4d.RDATA_NAMEFORMAT_0, "render_0005_0005.JPG"),
+            (c4d.RDATA_NAMEFORMAT_1, "render_0005_0005"),
+            (c4d.RDATA_NAMEFORMAT_2, "render_0005.0005"),
+            (c4d.RDATA_NAMEFORMAT_3, "render_0005_005.JPG"),
+            (c4d.RDATA_NAMEFORMAT_4, "render_0005_005"),
+            (c4d.RDATA_NAMEFORMAT_5, "render_0005.005"),
+            (c4d.RDATA_NAMEFORMAT_6, "render_0005.0005.JPG"),
+        ],
+    )
+    def test_bakes_all_c4d_name_formats_with_frame_token_numeric_stem(
+        self, tmp_path, name_format, filename
+    ):
+        output_path = str(tmp_path / "render_$frame")
+        c4d.modules.tokensystem.FilenameConvertTokens.side_effect = (
+            lambda path, rp: path.replace("$frame", "0005")
+        )
+        _touch(tmp_path / filename)
+        bm = MagicMock()
+
+        bake_full_frame_beauty(
+            bm,
+            _rd(),
+            _render_data(output_path, name_format=name_format),
+            MagicMock(),
+            5,
+        )
+
+        actual_path = bm.Save.call_args.args[0]
+        assert actual_path.lower() == str(tmp_path / filename).lower()
+        assert bm.Save.call_args.args[1] == c4d.FILTER_JPG
+
     def test_skips_alpha_file(self, tmp_path):
         _touch(tmp_path / "render0005.jpg")
         _touch(tmp_path / "A_render0005.jpg")
