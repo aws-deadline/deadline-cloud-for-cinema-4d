@@ -123,8 +123,8 @@ class TestBakeFullFrameBeauty:
         self, tmp_path, name_format, filename
     ):
         output_path = str(tmp_path / "render_$frame")
-        c4d.modules.tokensystem.FilenameConvertTokens.side_effect = (
-            lambda path, rp: path.replace("$frame", "0005")
+        c4d.modules.tokensystem.FilenameConvertTokens.side_effect = lambda path, rp: path.replace(
+            "$frame", "0005"
         )
         _touch(tmp_path / filename)
         bm = MagicMock()
