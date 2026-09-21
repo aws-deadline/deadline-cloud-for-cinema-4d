@@ -81,7 +81,10 @@ class Cinema4DHandler:
         c4d.DescLevel(c4d.PRIM_TEXT_FONT, c4d.FONTCHOOSER_DATA, c4d.OBJECT_SPLINETEXT)
     )
 
-    def __init__(self, map_path: Callable[[str], str]) -> None:
+    def __init__(
+        self,
+        map_path: Callable[[str], str],
+    ) -> None:
         """
         Constructor for the c4dpy handler. Initializes action_dict and render variables
         """

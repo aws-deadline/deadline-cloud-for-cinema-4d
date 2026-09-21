@@ -47,6 +47,26 @@ class TestCinema4DHandler:
         handler = Cinema4DHandler(mock_map_path)
         assert handler.take == "Main"
 
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetAllAssetsNew"
+    )
+    def test_remap_assets_maps_assets_when_paths_are_unchanged(self, mock_get_all_assets: Mock):
+        map_path = Mock(return_value="asset.png")
+        handler = Cinema4DHandler(map_path)
+        handler.doc = Mock()
+        owner = Mock()
+
+        def add_asset(_doc, allowDialogs, lastPath, assetList):
+            assetList.append({"owner": owner, "paramId": 1, "filename": "asset.png"})
+
+        mock_get_all_assets.side_effect = add_asset
+        with patch.object(handler, "_pathmap_recognized_types", return_value=True) as mock_remap:
+            handler._remap_assets()
+
+        mock_get_all_assets.assert_called_once()
+        map_path.assert_called_once_with("asset.png")
+        mock_remap.assert_called_once_with(owner, 1, None, None, "asset.png")
+
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
     def test_set_scene_file(self, mock_isfile: Mock):
         mock_isfile.return_value = True
