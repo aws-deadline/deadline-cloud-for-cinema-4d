@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import os
-import time
 import traceback
 from collections.abc import Callable
 from typing import Any
@@ -340,6 +339,8 @@ class Cinema4DHandler:
         bake_ocio = (
             not is_tile_render
             and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
+            and self.render_data[c4d.RDATA_SAVEIMAGE]
+            and self.render_data[c4d.RDATA_FORMAT] in tile_rendering.FORMAT_MAP
             and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_8
         )
         if bake_ocio:
@@ -357,13 +358,12 @@ class Cinema4DHandler:
                     # full-precision render-space data (baking 8-bit data would band the
                     # gradients) -- same rationale as the tile path's create_tile_bitmap.
                     frame_bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGBf)
-                    render_start = time.time()
                     result = c4d.documents.RenderDocument(
                         self.doc, frame_rd, frame_bm, render_flags, prog=progress_callback
                     )
                     self._raise_on_render_error(result)
                     ocio_bake.bake_full_frame_beauty(
-                        frame_bm, frame_rd, self.render_data, self.doc, frame, render_start
+                        frame_bm, frame_rd, self.render_data, self.doc, frame
                     )
             finally:
                 rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag

@@ -21,13 +21,30 @@ except ImportError:  # pragma: no cover
 try:
     from cinema4d_adaptor.Cinema4DClient.tile_rendering import (  # type: ignore[import]
         C4D_VERSION_2025_2,
+        FORMAT_MAP,
         get_format_info,
     )
 except ImportError:
     from deadline.cinema4d_adaptor.Cinema4DClient.tile_rendering import (  # type: ignore[import]
         C4D_VERSION_2025_2,
+        FORMAT_MAP,
         get_format_info,
     )
+
+
+_NAME_FORMAT_PROPERTIES = {
+    getattr(c4d, name): properties
+    for name, properties in (
+        ("RDATA_NAMEFORMAT_0", (4, False, True)),
+        ("RDATA_NAMEFORMAT_1", (4, False, False)),
+        ("RDATA_NAMEFORMAT_2", (4, True, False)),
+        ("RDATA_NAMEFORMAT_3", (3, False, True)),
+        ("RDATA_NAMEFORMAT_4", (3, False, False)),
+        ("RDATA_NAMEFORMAT_5", (3, True, False)),
+        ("RDATA_NAMEFORMAT_6", (4, True, True)),
+    )
+    if hasattr(c4d, name)
+}
 
 
 def _resolve_render_path(doc: Any, render_data: Any, render_bc: Any, frame: int, path: str) -> str:
@@ -35,9 +52,9 @@ def _resolve_render_path(doc: Any, render_data: Any, render_bc: Any, frame: int,
     token system -- the same resolver C4D uses at save time. Returns ``path``
     unchanged if the token system is unavailable or resolution fails.
 
-    Note: this expands tokens only; C4D still appends the frame number + extension to
-    the result at save time (per RDATA_NAMEFORMAT), so the return value is the output
-    BASE (a filename prefix), not the full final path.
+    Note: this expands tokens only; C4D applies ``RDATA_NAMEFORMAT`` to the result at
+    save time, so the return value is the output BASE (a filename prefix), not the
+    full final path.
     """
     tokensystem = getattr(c4d.modules, "tokensystem", None)
     if tokensystem is None or not hasattr(tokensystem, "FilenameConvertTokens"):
@@ -52,8 +69,25 @@ def _resolve_render_path(doc: Any, render_data: Any, render_bc: Any, frame: int,
     }
     try:
         return tokensystem.FilenameConvertTokens(path, rp_data)
-    except Exception:  # noqa: BLE001 - token conversion failures must preserve the original path
+    except Exception:  # noqa: BLE001
+        # Token conversion failures must preserve the original path.
         return path
+
+
+def _expected_beauty_stem(beauty_stem: str, frame: int, name_format: int) -> str:
+    """Return the filename stem C4D writes for this render's beauty output.
+
+    C4D's ``RDATA_NAMEFORMAT_*`` constants select one of seven layouts. Some
+    append the output extension and some do not; all include the frame number.
+    """
+    padding, dotted, _has_extension = _NAME_FORMAT_PROPERTIES[name_format]
+    frame_string = str(frame).zfill(padding)
+
+    if dotted:
+        return f"{beauty_stem}.{frame_string}"
+
+    separator = "_" if beauty_stem and beauty_stem[-1] in "0123456789" else ""
+    return f"{beauty_stem}{separator}{frame_string}"
 
 
 def bake_full_frame_beauty(
@@ -62,7 +96,6 @@ def bake_full_frame_beauty(
     render_data: Any,
     doc: Any,
     frame: int,
-    render_start_time: float,
 ) -> None:
     """Bake the OCIO view transform into a single non-tiled beauty frame.
 
@@ -75,11 +108,11 @@ def bake_full_frame_beauty(
 
     Call once per rendered frame (``bm`` holds one frame). The target file is found by
     resolving the render output path's tokens with C4D's own token system and matching
-    only files under that exact base name -- so we never touch an unrelated file in the
-    folder. C4D's ``A_`` alpha file is excluded for free (it does not start with the
-    beauty base); multi-pass files are excluded by their own resolved base. Among
-    matches, the file written by this render (newest mtime at/after
-    ``render_start_time``) is baked, which is retry-safe.
+    the exact filename C4D wrote for its configured name format. This prevents
+    concurrent tasks that share an output directory from baking the newest file for a
+    different frame. C4D's ``A_`` alpha file is excluded for free (it does not start
+    with the beauty base); multi-pass files have a distinct output base and therefore
+    do not match the beauty filename.
 
     Args:
         bm: The rendered MultipassBitmap for one frame (render-space).
@@ -87,7 +120,6 @@ def bake_full_frame_beauty(
         render_data: The render data object (output path / format / tokens).
         doc: The active document (for token resolution).
         frame: The frame number this render produced (for $frame resolution).
-        render_start_time: ``time.time()`` captured just before this frame's render.
     """
     if not (
         hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
@@ -97,58 +129,44 @@ def bake_full_frame_beauty(
     if rd[c4d.RDATA_FORMATDEPTH] != c4d.RDATA_FORMATDEPTH_8:
         return  # only display-referred 8-bit output needs the view transform baked in
 
+    if not render_data[c4d.RDATA_SAVEIMAGE]:
+        return
     beauty_path = render_data[c4d.RDATA_PATH] or ""
     if not beauty_path:
         return
     # Resolve tokens ($take, $frame, ...) with C4D's own resolver, then anchor on the
-    # exact base name C4D derives -- C4D appends the frame number + extension to it.
+    # filename stem C4D derives before it applies the configured name format.
     resolved_base = _resolve_render_path(doc, render_data, rd, frame, beauty_path)
     beauty_dir = os.path.dirname(resolved_base) or "."
-    beauty_prefix = os.path.basename(resolved_base)
-    if not beauty_prefix or not os.path.isdir(beauty_dir):
+    beauty_stem = os.path.splitext(os.path.basename(resolved_base))[0]
+    if not beauty_stem or not os.path.isdir(beauty_dir):
         return
-    ext, save_filter = get_format_info(render_data[c4d.RDATA_FORMAT])
-
-    # Multi-pass files can share the beauty prefix (e.g. "beauty" vs "beauty_mp"), so
-    # exclude them by their own resolved base -- but only when that base is a MORE
-    # specific (longer) match than the beauty base (see the loop below). The "A_" alpha
-    # file needs no explicit exclusion -- it does not start with the beauty base.
-    mp_prefix = ""
-    if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE] and render_data[c4d.RDATA_MULTIPASS_FILENAME]:
-        mp_resolved = _resolve_render_path(
-            doc, render_data, rd, frame, render_data[c4d.RDATA_MULTIPASS_FILENAME]
+    name_format = render_data[c4d.RDATA_NAMEFORMAT]
+    if name_format not in _NAME_FORMAT_PROPERTIES:
+        print(
+            f"OCIO view transform NOT baked: unsupported C4D output name format "
+            f"({name_format!r})"
         )
-        mp_prefix = os.path.basename(mp_resolved)
+        return
+    output_format = render_data[c4d.RDATA_FORMAT]
+    if output_format not in FORMAT_MAP:
+        print(f"OCIO view transform NOT baked: unsupported C4D output format ({output_format!r})")
+        return
+    ext, save_filter = get_format_info(output_format)
 
-    # The beauty file this render wrote: derived from C4D's resolved output base,
-    # correct extension, not a multi-pass file, and modified at/after this render's
-    # start (never re-bakes a stale file; a retry that overwrites in place is caught).
-    target = None
-    target_mtime = render_start_time
-    for fn in os.listdir(beauty_dir):
-        if not fn.startswith(beauty_prefix):
-            continue
-        if not fn.lower().endswith(ext.lower()):
-            continue
-        # A file is multi-pass only when the multi-pass base is a longer (more
-        # specific) prefix than the beauty base. Guarding on length -- not just
-        # inequality -- keeps a beauty file whose base merely starts with a shorter
-        # multi-pass base (e.g. beauty "render_beauty", mp "render") from being
-        # wrongly skipped, and still excludes real multi-pass files whose base
-        # extends the beauty base (e.g. beauty "render", mp "render_mp").
-        if mp_prefix and len(mp_prefix) > len(beauty_prefix) and fn.startswith(mp_prefix):
-            continue  # multi-pass file -- leave as-is
-        full = os.path.join(beauty_dir, fn)
-        try:
-            mtime = os.path.getmtime(full)
-        except OSError:
-            continue
-        if mtime >= target_mtime:
-            target = full
-            target_mtime = mtime
+    # Build the exact beauty filename rather than scanning the output directory.
+    # BaseBitmap.Save receives its output format separately, so extensionless name
+    # formats must use the literal filename C4D wrote. C4D may vary only the extension's
+    # case on disk, so probe the two possible forms.
+    expected_stem = _expected_beauty_stem(beauty_stem, frame, name_format)
+    candidates = [expected_stem]
+    if _NAME_FORMAT_PROPERTIES[name_format][2]:
+        candidates = [f"{expected_stem}{ext}", f"{expected_stem}{ext.upper()}"]
+    candidate_paths = [os.path.join(beauty_dir, candidate) for candidate in candidates]
+    target = next((candidate for candidate in candidate_paths if os.path.isfile(candidate)), None)
 
     if target is None:
-        print("OCIO view transform NOT baked: no beauty file found from this render")
+        print("OCIO view transform NOT baked: no beauty file matched this render's name format")
         return
 
     baked = c4d.documents.BakeOcioViewToBitmap(bm, rd, c4d.SAVEBIT_NONE)
