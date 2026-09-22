@@ -1003,6 +1003,10 @@ class TestStartRenderFloatOcio:
                 return 24
             if key == c4d.RDATA_FORMATDEPTH:
                 return depth
+            if key == c4d.RDATA_FORMAT:
+                # a real, FORMAT_MAP-known format: the 8-bit per-frame path is
+                # gated on it since #555
+                return c4d.FILTER_PNG
             return MagicMock()
 
         mock_render_data.__getitem__ = mock_getitem
