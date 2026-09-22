@@ -16,7 +16,8 @@ fonttools >= 4.0.0
 deadline-cloud-test-fixtures >= 0.18.21
 # Drives the real submitter dialog via the OS accessibility tree.
 # Used by test/integ/.
-xa11y >= 0.13.0
+# Temporary compatibility pin while the suite is updated for xa11y 0.15.
+xa11y == 0.14.*
 # Both are used by test_console_signin_dependencies.py, which parses pyproject.toml.
 packaging >= 26.3
 tomli == 2.*; python_version < "3.11"
