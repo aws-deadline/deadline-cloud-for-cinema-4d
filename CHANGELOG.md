@@ -1,3 +1,9 @@
+## 0.12.3 (2026-09-22)
+
+### Bug Fixes
+* OCIO color transform is now correctly baked into the current output frame, fixing incorrect color handling during rendering. (#555)
+* Fixed unnecessary identity path mapping requests being sent, which could cause spurious errors or slowdowns. (#557)
+* The submitter dependency bundle now ships the lowest-ABI `awscrt` copy, ensuring forward compatibility with all supported Python versions. Previously, the wrong copy could be included, causing import failures on some Python versions. (#554)
 ## 0.12.2 (2026-08-24)
 
 ### Features
