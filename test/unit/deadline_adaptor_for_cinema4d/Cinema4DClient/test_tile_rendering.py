@@ -211,6 +211,43 @@ class TestFloatTileInternalSave:
 
         self._assert_original_state_restored(render_data, rd, tmp_path)
 
+    def test_unset_paths_captured_as_empty_string(self, tmp_path):
+        """C4D can return None for an unset path; the snapshot must normalize it
+        to "" so restore never writes None into a string slot (and so cleanup
+        running inside finally/except cannot raise and mask the real error)."""
+        c4d = tile_rendering.c4d
+
+        render_data, rd = self._render_data(tmp_path, c4d.RDATA_FORMATDEPTH_32)
+        values = {
+            c4d.RDATA_XRES: 100.0,
+            c4d.RDATA_YRES: 50.0,
+            c4d.RDATA_PATH: None,
+            c4d.RDATA_MULTIPASS_FILENAME: None,
+            c4d.RDATA_FORMATDEPTH: c4d.RDATA_FORMATDEPTH_32,
+            c4d.RDATA_FORMAT: c4d.FILTER_EXR,
+            c4d.RDATA_SAVEIMAGE: False,
+            c4d.RDATA_RENDERREGION: False,
+            c4d.RDATA_RENDERREGION_LEFT: 11,
+            c4d.RDATA_RENDERREGION_TOP: 12,
+            c4d.RDATA_RENDERREGION_RIGHT: 13,
+            c4d.RDATA_RENDERREGION_BOTTOM: 14,
+        }
+        render_data.__getitem__ = lambda self, key: values.get(key, MagicMock())
+
+        # No output path -> the internal-save branch is skipped, setup succeeds.
+        ctx = tile_rendering.setup_tile_render(render_data, self._data())
+
+        assert ctx.original_state.output_path == ""
+        assert ctx.original_state.multipass_filename == ""
+        assert ctx.tile_output_path == ""
+
+        # restore must not write None back into the path slots
+        render_data.__setitem__.reset_mock()
+        tile_rendering.restore_tile_render_state(render_data, rd, ctx)
+        assignments = self._last_assignments(render_data)
+        assert assignments[c4d.RDATA_PATH] == ""
+        assert assignments[c4d.RDATA_MULTIPASS_FILENAME] == ""
+
     def test_unmapped_format_keeps_bitmap_save_flow(self, tmp_path):
         c4d = tile_rendering.c4d
 

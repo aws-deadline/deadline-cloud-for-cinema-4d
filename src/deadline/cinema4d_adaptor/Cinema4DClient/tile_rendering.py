@@ -226,8 +226,11 @@ def _capture_tile_render_state(render_data: Any, rd: Any) -> TileRenderState:
         region_top=render_data[c4d.RDATA_RENDERREGION_TOP],
         region_right=render_data[c4d.RDATA_RENDERREGION_RIGHT],
         region_bottom=render_data[c4d.RDATA_RENDERREGION_BOTTOM],
-        output_path=render_data[c4d.RDATA_PATH],
-        multipass_filename=render_data[c4d.RDATA_MULTIPASS_FILENAME],
+        # Normalize to "" here so the snapshot never carries None: restore writes
+        # these back unconditionally into string-typed slots, and it runs inside
+        # finally/except blocks where a raise would mask the real exception.
+        output_path=render_data[c4d.RDATA_PATH] or "",
+        multipass_filename=render_data[c4d.RDATA_MULTIPASS_FILENAME] or "",
         save_image=render_data[c4d.RDATA_SAVEIMAGE],
         bake_flag=bake_flag,
     )
@@ -265,8 +268,8 @@ def setup_tile_render(
         tile_h=tile_h,
         region_left=region_left,
         region_top=region_top,
-        tile_output_path=original_state.output_path or "",
-        tile_multipass_path=original_state.multipass_filename or "",
+        tile_output_path=original_state.output_path,
+        tile_multipass_path=original_state.multipass_filename,
         requires_baking=has_ocio_bake and format_depth == c4d.RDATA_FORMATDEPTH_8,
         save_bits=determine_save_bits(format_depth),
         original_state=original_state,
