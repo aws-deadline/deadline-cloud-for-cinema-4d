@@ -90,8 +90,8 @@ def _get_session_temp_dir() -> str:
         temp_root = tempfile.gettempdir()
         try:
             _sweep_dead_session_dirs(temp_root)
-        except OSError:
-            pass
+        except OSError as exc:
+            print(f"WARNING: could not sweep stale tile temp directories: {exc}")
         _session_temp_dir = tempfile.mkdtemp(prefix=f"c4dtile_{os.getpid()}_")
     return _session_temp_dir
 
@@ -178,6 +178,21 @@ def _tile_extent(index: int, count: int, full_size: int) -> tuple[int, int]:
     return offset, size
 
 
+@dataclass(frozen=True)
+class TileRenderState:
+    """Render settings captured before tile setup mutates them."""
+
+    render_region: Any
+    region_left: Any
+    region_top: Any
+    region_right: Any
+    region_bottom: Any
+    output_path: Any
+    multipass_filename: Any
+    save_image: Any
+    bake_flag: Any
+
+
 @dataclass
 class TileContext:
     """Holds tile render state between setup and finalize phases."""
@@ -190,13 +205,32 @@ class TileContext:
     region_top: int
     tile_output_path: str
     tile_multipass_path: str
-    orig_bake_flag: Any
     requires_baking: bool
     save_bits: int
+    original_state: TileRenderState
     internal_save_base: str = ""
-    orig_save_image: Any = None
     full_w: int = 0
     full_h: int = 0
+
+
+def _capture_tile_render_state(render_data: Any, rd: Any) -> TileRenderState:
+    """Capture every render setting that tile setup may mutate."""
+    bake_flag = (
+        rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
+        if hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
+        else None
+    )
+    return TileRenderState(
+        render_region=render_data[c4d.RDATA_RENDERREGION],
+        region_left=render_data[c4d.RDATA_RENDERREGION_LEFT],
+        region_top=render_data[c4d.RDATA_RENDERREGION_TOP],
+        region_right=render_data[c4d.RDATA_RENDERREGION_RIGHT],
+        region_bottom=render_data[c4d.RDATA_RENDERREGION_BOTTOM],
+        output_path=render_data[c4d.RDATA_PATH],
+        multipass_filename=render_data[c4d.RDATA_MULTIPASS_FILENAME],
+        save_image=render_data[c4d.RDATA_SAVEIMAGE],
+        bake_flag=bake_flag,
+    )
 
 
 def setup_tile_render(
@@ -205,15 +239,8 @@ def setup_tile_render(
 ) -> TileContext:
     """Configure render data for tile rendering and return a TileContext.
 
-    Sets the render region on render_data, adjusts output paths for tile saving,
-    and computes all values needed for post-render finalization.
-
-    Args:
-        render_data: The active C4D render data object.
-        data: The action data dict containing tile grid coordinates.
-
-    Returns:
-        A TileContext with all state needed by finalize_tile_render.
+    Captures all mutated render settings first and restores them if setup fails,
+    so later tasks in the same Cinema 4D session cannot inherit partial state.
     """
     tiles_columns = int(data["total_tiles_column"])
     tiles_rows = int(data["total_tiles_row"])
@@ -222,87 +249,61 @@ def setup_tile_render(
 
     full_w = int(render_data[c4d.RDATA_XRES])
     full_h = int(render_data[c4d.RDATA_YRES])
-
-    # Pixel coordinates of the tile region (absolute, for cropping later).
-    # _tile_extent ensures the last tile absorbs remainder pixels from integer division.
     region_left, tile_w = _tile_extent(tile_col, tiles_columns, full_w)
     region_top, tile_h = _tile_extent(tile_row, tiles_rows, full_h)
-    region_right = region_left + tile_w
-    region_bottom = region_top + tile_h
 
-    # Capture originals before any mutation so a failed setup restores
-    # everything: leaked state (especially a cleared RDATA_PATH) would make
-    # later tasks in the session report success while writing no output.
-    orig_region = render_data[c4d.RDATA_RENDERREGION]
-    tile_output_path = render_data[c4d.RDATA_PATH] or ""
-    tile_multipass_path = render_data[c4d.RDATA_MULTIPASS_FILENAME] or ""
     rd = render_data.GetDataInstance()
-    # All statements that can realistically raise (path creation, frame
-    # parsing, temp-dir creation) occur before the Save Image / bake-flag
-    # mutations, so restoring region + paths covers every partial state.
+    original_state = _capture_tile_render_state(render_data, rd)
+    format_depth = render_data[c4d.RDATA_FORMATDEPTH]
+    has_ocio_bake = original_state.bake_flag is not None and hasattr(
+        c4d.documents, "BakeOcioViewToBitmap"
+    )
+    context = TileContext(
+        tile_col=tile_col,
+        tile_row=tile_row,
+        tile_w=tile_w,
+        tile_h=tile_h,
+        region_left=region_left,
+        region_top=region_top,
+        tile_output_path=original_state.output_path or "",
+        tile_multipass_path=original_state.multipass_filename or "",
+        requires_baking=has_ocio_bake and format_depth == c4d.RDATA_FORMATDEPTH_8,
+        save_bits=determine_save_bits(format_depth),
+        original_state=original_state,
+        full_w=full_w,
+        full_h=full_h,
+    )
+
     try:
-        return _apply_tile_render_setup(
-            render_data,
-            rd,
-            data,
-            tile_col,
-            tile_row,
-            tile_w,
-            tile_h,
-            region_left,
-            region_top,
-            region_right,
-            region_bottom,
-            full_w,
-            full_h,
-            tile_output_path,
-            tile_multipass_path,
-        )
+        _apply_tile_render_setup(render_data, rd, data, context, format_depth)
     except BaseException:
-        render_data[c4d.RDATA_RENDERREGION] = orig_region
-        render_data[c4d.RDATA_PATH] = tile_output_path
-        render_data[c4d.RDATA_MULTIPASS_FILENAME] = tile_multipass_path
+        restore_tile_render_state(render_data, rd, context)
         raise
+    return context
 
 
 def _apply_tile_render_setup(
     render_data: Any,
     rd: Any,
     data: dict,
-    tile_col: int,
-    tile_row: int,
-    tile_w: int,
-    tile_h: int,
-    region_left: int,
-    region_top: int,
-    region_right: int,
-    region_bottom: int,
-    full_w: int,
-    full_h: int,
-    tile_output_path: str,
-    tile_multipass_path: str,
-) -> TileContext:
-    """Apply the tile render mutations (see setup_tile_render, which restores
-    them if anything here raises)."""
-    # C4D's RDATA_RENDERREGION_* values are offsets inward from each edge,
-    # NOT absolute pixel coordinates.  For example RIGHT=0 means "render up
-    # to the right edge" and BOTTOM=0 means "render down to the bottom edge".
+    context: TileContext,
+    format_depth: int,
+) -> None:
+    """Apply tile render mutations; setup_tile_render rolls them back on error."""
+    region_right = context.region_left + context.tile_w
+    region_bottom = context.region_top + context.tile_h
     render_data[c4d.RDATA_RENDERREGION] = True
-    render_data[c4d.RDATA_RENDERREGION_LEFT] = region_left
-    render_data[c4d.RDATA_RENDERREGION_TOP] = region_top
-    render_data[c4d.RDATA_RENDERREGION_RIGHT] = full_w - region_right
-    render_data[c4d.RDATA_RENDERREGION_BOTTOM] = full_h - region_bottom
+    render_data[c4d.RDATA_RENDERREGION_LEFT] = context.region_left
+    render_data[c4d.RDATA_RENDERREGION_TOP] = context.region_top
+    render_data[c4d.RDATA_RENDERREGION_RIGHT] = context.full_w - region_right
+    render_data[c4d.RDATA_RENDERREGION_BOTTOM] = context.full_h - region_bottom
 
-    # Clear RDATA_PATH so C4D doesn't save the full-resolution beauty image
-    # (we crop and save it manually). For multi-pass, set a tile-specific path
-    # so C4D saves multi-pass natively.
+    # Beauty output is normally saved from the render bitmap after cropping.
     render_data[c4d.RDATA_PATH] = ""
 
-    # Build a tile-specific multi-pass path — C4D's native save appends its own
-    # frame numbering and format extension.
-    if tile_multipass_path:
-        mp_base, _mp_ext = os.path.splitext(tile_multipass_path)
-        tile_mp_save_path = f"{mp_base}_tile_{tile_col}_{tile_row}"
+    if context.tile_multipass_path:
+        mp_base, _mp_ext = os.path.splitext(context.tile_multipass_path)
+        tile_mp_save_path = f"{mp_base}_tile_{context.tile_col}_{context.tile_row}"
         mp_output_dir = os.path.dirname(tile_mp_save_path)
         if mp_output_dir:
             os.makedirs(mp_output_dir, exist_ok=True)
@@ -310,111 +311,68 @@ def _apply_tile_render_setup(
     else:
         render_data[c4d.RDATA_MULTIPASS_FILENAME] = ""
 
-    # OCIO: for 8-bit output during tile renders, disable the render-time OCIO view
-    # transform bake so we can bake it manually after rendering.
-    # BakeOcioViewToBitmap and RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER were introduced
-    # in Cinema 4D 2025.2 — skip OCIO baking on older versions.
-    _has_ocio_bake = hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER") and hasattr(
-        c4d.documents, "BakeOcioViewToBitmap"
-    )
-    # NOTE: read the depth via the RenderData object, not the raw container --
-    # the container may lack the key and return 0, which equals FORMATDEPTH_8.
-    format_depth = render_data[c4d.RDATA_FORMATDEPTH]
-    requires_baking = _has_ocio_bake and format_depth == c4d.RDATA_FORMATDEPTH_8
-    orig_bake_flag = None
-    if requires_baking:
-        orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
+    if context.requires_baking:
         rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
 
-    # 32-bit float tiles (issue #540): RenderDocument fills a caller-supplied
-    # bitmap with raw render-space data (no flag changes that), so saving the
-    # bitmap writes shifted colors. Instead, save through C4D's internal save
-    # with the render-time bake disabled -- the mechanism verified for non-tile
-    # float output -- by redirecting RDATA_PATH to a per-tile temp base;
-    # finalize_tile_render crops the tile from that file and deletes it.
-    internal_save_base = ""
-    orig_save_image = None
-    is_float_depth = _has_ocio_bake and format_depth == c4d.RDATA_FORMATDEPTH_32
-    # Only formats in FORMAT_MAP can be located again after the save; others
-    # keep the previous bitmap-save flow.
+    # C4D's internal save produces local-matching 32-bit float output. Route it
+    # to a private, token-free per-tile base and crop from that file afterwards.
+    is_float_depth = (
+        context.original_state.bake_flag is not None and format_depth == c4d.RDATA_FORMATDEPTH_32
+    )
     is_known_format = render_data[c4d.RDATA_FORMAT] in FORMAT_MAP
-    if is_float_depth and is_known_format and tile_output_path:
-        # Save into the session's private temp directory with a token-free
-        # name: keeps temp files out of the customer output directory (and
-        # job-attachment sync) and sidesteps C4D path tokens in the user's
-        # output path. frame/col/row in the base keeps tiles unambiguous; the
-        # trailing separator stops e.g. row 1 prefix-matching row 10.
+    if is_float_depth and is_known_format and context.tile_output_path:
         frame = _parse_start_frame(data.get("frame", "0"))
-        internal_save_base = os.path.join(
-            _get_session_temp_dir(), f"tile_{frame}_{tile_col}_{tile_row}_"
+        context.internal_save_base = os.path.join(
+            _get_session_temp_dir(), f"tile_{frame}_{context.tile_col}_{context.tile_row}_"
         )
-        render_data[c4d.RDATA_PATH] = internal_save_base
-        # The internal save only fires when Save Image is enabled; the scene may
-        # have it off (the old bitmap save did not depend on it).
-        orig_save_image = render_data[c4d.RDATA_SAVEIMAGE]
+        render_data[c4d.RDATA_PATH] = context.internal_save_base
         render_data[c4d.RDATA_SAVEIMAGE] = True
-        orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
         rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
         print(
-            f"Tile ({tile_col}, {tile_row}): using internal save for 32-bit "
-            "float output (see issue #540)"
+            f"Tile ({context.tile_col}, {context.tile_row}): using internal save "
+            "for 32-bit float output (see issue #540)"
         )
 
-    save_bits = determine_save_bits(format_depth)
 
-    return TileContext(
-        tile_col=tile_col,
-        tile_row=tile_row,
-        tile_w=tile_w,
-        tile_h=tile_h,
-        region_left=region_left,
-        region_top=region_top,
-        tile_output_path=tile_output_path,
-        tile_multipass_path=tile_multipass_path,
-        orig_bake_flag=orig_bake_flag,
-        requires_baking=requires_baking,
-        save_bits=save_bits,
-        internal_save_base=internal_save_base,
-        orig_save_image=orig_save_image,
-        full_w=full_w,
-        full_h=full_h,
-    )
+def restore_tile_render_state(render_data: Any, rd: Any, context: TileContext) -> None:
+    """Restore all render settings captured before tile setup; remove temp files.
 
-
-def restore_tile_render_state(render_data: Any, rd: Any, ctx: TileContext) -> None:
-    """Restore render state mutated by setup_tile_render; remove the tile's temp files.
-
-    Safe to call more than once: the restores are plain assignments and file
-    removal skips anything already gone. Called from finalize_tile_render and
-    from the handler's finally, covering every failure path.
+    Safe to call more than once: assignments repeat the original values and
+    file removal skips files already gone.
     """
-    if ctx.orig_bake_flag is not None:
-        rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = ctx.orig_bake_flag
-    if ctx.tile_output_path:
-        render_data[c4d.RDATA_PATH] = ctx.tile_output_path
-    if ctx.tile_multipass_path:
-        render_data[c4d.RDATA_MULTIPASS_FILENAME] = ctx.tile_multipass_path
-    if ctx.internal_save_base:
-        if ctx.orig_save_image is not None:
-            render_data[c4d.RDATA_SAVEIMAGE] = ctx.orig_save_image
-        temp_dir = os.path.realpath(os.path.dirname(ctx.internal_save_base))
-        prefix = os.path.basename(ctx.internal_save_base)
-        # Remove only this tile's files; the session directory persists for
-        # later tiles. Guarded to a session directory (c4dtile_*) strictly
-        # inside the private temp area (separator-safe check).
-        temp_root = os.path.realpath(tempfile.gettempdir())
-        if os.path.dirname(temp_dir) == temp_root and os.path.basename(temp_dir).startswith(
-            "c4dtile_"
-        ):
+    state = context.original_state
+    render_data[c4d.RDATA_RENDERREGION] = state.render_region
+    render_data[c4d.RDATA_RENDERREGION_LEFT] = state.region_left
+    render_data[c4d.RDATA_RENDERREGION_TOP] = state.region_top
+    render_data[c4d.RDATA_RENDERREGION_RIGHT] = state.region_right
+    render_data[c4d.RDATA_RENDERREGION_BOTTOM] = state.region_bottom
+    render_data[c4d.RDATA_PATH] = state.output_path
+    render_data[c4d.RDATA_MULTIPASS_FILENAME] = state.multipass_filename
+    render_data[c4d.RDATA_SAVEIMAGE] = state.save_image
+    if state.bake_flag is not None:
+        rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = state.bake_flag
+
+    if not context.internal_save_base:
+        return
+    temp_dir = os.path.realpath(os.path.dirname(context.internal_save_base))
+    prefix = os.path.basename(context.internal_save_base)
+    temp_root = os.path.realpath(tempfile.gettempdir())
+    if os.path.dirname(temp_dir) != temp_root or not os.path.basename(temp_dir).startswith(
+        "c4dtile_"
+    ):
+        return
+    try:
+        for filename in os.listdir(temp_dir):
+            if not filename.startswith(prefix):
+                continue
             try:
-                for fn in os.listdir(temp_dir):
-                    if fn.startswith(prefix):
-                        try:
-                            os.remove(os.path.join(temp_dir, fn))
-                        except OSError:
-                            pass
+                os.remove(os.path.join(temp_dir, filename))
             except OSError:
-                pass
+                # Temp-file cleanup is best effort; a later session sweep removes leftovers.
+                continue
+    except OSError:
+        # The directory may already be gone after a repeated restore or concurrent shutdown.
+        return
 
 
 def _crop_float_bitmap(source_bmp: Any, left: int, top: int, width: int, height: int) -> Any:
@@ -486,8 +444,8 @@ def finalize_tile_render(
             baked = c4d.documents.BakeOcioViewToBitmap(bm, rd, c4d.SAVEBIT_NONE)
             bm = baked or bm
     finally:
-        if ctx.orig_bake_flag is not None:
-            rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = ctx.orig_bake_flag
+        if ctx.original_state.bake_flag is not None:
+            rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = ctx.original_state.bake_flag
 
     try:
         _finalize_tile_output(bm, ctx, render_data, frame)

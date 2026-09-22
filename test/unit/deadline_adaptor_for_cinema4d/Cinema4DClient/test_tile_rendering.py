@@ -119,6 +119,10 @@ class TestFloatTileInternalSave:
             c4d.RDATA_FORMAT: c4d.FILTER_EXR,
             c4d.RDATA_SAVEIMAGE: False,
             c4d.RDATA_RENDERREGION: False,
+            c4d.RDATA_RENDERREGION_LEFT: 11,
+            c4d.RDATA_RENDERREGION_TOP: 12,
+            c4d.RDATA_RENDERREGION_RIGHT: 13,
+            c4d.RDATA_RENDERREGION_BOTTOM: 14,
         }
         render_data = MagicMock()
         render_data.__getitem__ = lambda self, key: values.get(key, MagicMock())
@@ -153,18 +157,35 @@ class TestFloatTileInternalSave:
         assert ctx.full_w == 100 and ctx.full_h == 50
         render_data.__setitem__.assert_any_call(c4d.RDATA_PATH, ctx.internal_save_base)
         render_data.__setitem__.assert_any_call(c4d.RDATA_SAVEIMAGE, True)
-        assert ctx.orig_save_image is False  # scene had Save Image off
+        assert ctx.original_state.save_image is False  # scene had Save Image off
         rd.__setitem__.assert_any_call(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER, False)
-        assert ctx.orig_bake_flag is rd.GetBool.return_value
+        assert ctx.original_state.bake_flag is rd.GetBool.return_value
         assert not ctx.requires_baking
 
-    def test_failed_setup_restores_render_state(self, tmp_path):
-        """A mid-setup failure must restore state, or later tasks in the session
-        render but silently write no output (review: session-level recovery)."""
-        c4d = tile_rendering.c4d
+    @staticmethod
+    def _last_assignments(mock):
+        return {call.args[0]: call.args[1] for call in mock.__setitem__.call_args_list}
 
-        render_data, _rd = self._render_data(tmp_path, c4d.RDATA_FORMATDEPTH_32)
-        original_path = str(tmp_path / "out")
+    def _assert_original_state_restored(self, render_data, rd, tmp_path):
+        c4d = tile_rendering.c4d
+        assignments = self._last_assignments(render_data)
+        assert assignments[c4d.RDATA_RENDERREGION] is False
+        assert assignments[c4d.RDATA_RENDERREGION_LEFT] == 11
+        assert assignments[c4d.RDATA_RENDERREGION_TOP] == 12
+        assert assignments[c4d.RDATA_RENDERREGION_RIGHT] == 13
+        assert assignments[c4d.RDATA_RENDERREGION_BOTTOM] == 14
+        assert assignments[c4d.RDATA_PATH] == str(tmp_path / "out")
+        assert assignments[c4d.RDATA_MULTIPASS_FILENAME] == ""
+        assert assignments[c4d.RDATA_SAVEIMAGE] is False
+        assert (
+            self._last_assignments(rd)[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER]
+            is rd.GetBool.return_value
+        )
+
+    def test_failed_setup_restores_all_render_state(self, tmp_path):
+        """A mid-setup failure must not leak partial state to later tasks."""
+        c4d = tile_rendering.c4d
+        render_data, rd = self._render_data(tmp_path, c4d.RDATA_FORMATDEPTH_32)
         with (
             patch.object(
                 tile_rendering, "_get_session_temp_dir", side_effect=OSError("temp fs full")
@@ -173,10 +194,22 @@ class TestFloatTileInternalSave:
         ):
             tile_rendering.setup_tile_render(render_data, self._data())
 
-        # the mutations were rolled back: output path and region flag restored
-        render_data.__setitem__.assert_any_call(c4d.RDATA_PATH, original_path)
-        assert render_data.__setitem__.call_args_list[-2].args == (c4d.RDATA_PATH, original_path)
-        assert render_data.__setitem__.call_args_list[-3].args == (c4d.RDATA_RENDERREGION, False)
+        self._assert_original_state_restored(render_data, rd, tmp_path)
+
+    def test_failed_setup_after_flag_mutations_restores_all_render_state(self, tmp_path):
+        """Even a log failure after Save Image/bake changes restores everything."""
+        c4d = tile_rendering.c4d
+        render_data, rd = self._render_data(tmp_path, c4d.RDATA_FORMATDEPTH_32)
+        with (
+            patch.object(
+                tile_rendering, "_get_session_temp_dir", return_value=str(tmp_path / "session")
+            ),
+            patch("builtins.print", side_effect=BrokenPipeError("stdout closed")),
+            pytest.raises(BrokenPipeError, match="stdout closed"),
+        ):
+            tile_rendering.setup_tile_render(render_data, self._data())
+
+        self._assert_original_state_restored(render_data, rd, tmp_path)
 
     def test_unmapped_format_keeps_bitmap_save_flow(self, tmp_path):
         c4d = tile_rendering.c4d
@@ -251,11 +284,20 @@ class TestFloatTileInternalSave:
             region_top=0,
             tile_output_path=str(tmp_path / "tileout"),
             tile_multipass_path="",
-            orig_bake_flag=True,
             requires_baking=False,
             save_bits=4,
+            original_state=tile_rendering.TileRenderState(
+                render_region=False,
+                region_left=11,
+                region_top=12,
+                region_right=13,
+                region_bottom=14,
+                output_path=str(tmp_path / "tileout"),
+                multipass_filename="",
+                save_image=False,
+                bake_flag=True,
+            ),
             internal_save_base=str(tmp_path / "c4dtile_t1" / "tile_0_0_0_"),
-            orig_save_image=False,
             full_w=100,
             full_h=50,
         )
@@ -282,9 +324,14 @@ class TestFloatTileInternalSave:
         assert other_tile.exists()  # other tiles' files untouched
         assert (tmp_path / "c4dtile_t1").is_dir()  # session dir persists
         rd.__setitem__.assert_any_call(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER, True)
-        # Save Image and output path restored
-        render_data.__setitem__.assert_any_call(c4d.RDATA_SAVEIMAGE, False)
-        render_data.__setitem__.assert_any_call(c4d.RDATA_PATH, ctx.tile_output_path)
+        assignments = self._last_assignments(render_data)
+        assert assignments[c4d.RDATA_RENDERREGION] is False
+        assert assignments[c4d.RDATA_RENDERREGION_LEFT] == 11
+        assert assignments[c4d.RDATA_RENDERREGION_TOP] == 12
+        assert assignments[c4d.RDATA_RENDERREGION_RIGHT] == 13
+        assert assignments[c4d.RDATA_RENDERREGION_BOTTOM] == 14
+        assert assignments[c4d.RDATA_SAVEIMAGE] is False
+        assert assignments[c4d.RDATA_PATH] == ctx.tile_output_path
 
     def test_finalize_restores_paths_when_locating_file_raises(self, tmp_path):
         c4d = tile_rendering.c4d
@@ -298,11 +345,20 @@ class TestFloatTileInternalSave:
             region_top=0,
             tile_output_path=str(tmp_path / "tileout"),
             tile_multipass_path="",
-            orig_bake_flag=None,
             requires_baking=False,
             save_bits=4,
+            original_state=tile_rendering.TileRenderState(
+                render_region=False,
+                region_left=11,
+                region_top=12,
+                region_right=13,
+                region_bottom=14,
+                output_path=str(tmp_path / "tileout"),
+                multipass_filename="",
+                save_image=True,
+                bake_flag=None,
+            ),
             internal_save_base=str(tmp_path / "c4dtile_t2" / "tile"),
-            orig_save_image=True,
         )
         (tmp_path / "c4dtile_t2").mkdir()
         render_data = MagicMock()
