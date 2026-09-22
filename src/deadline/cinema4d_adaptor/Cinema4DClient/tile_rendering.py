@@ -230,6 +230,60 @@ def setup_tile_render(
     region_right = region_left + tile_w
     region_bottom = region_top + tile_h
 
+    # Capture originals before any mutation so a failed setup restores
+    # everything: leaked state (especially a cleared RDATA_PATH) would make
+    # later tasks in the session report success while writing no output.
+    orig_region = render_data[c4d.RDATA_RENDERREGION]
+    tile_output_path = render_data[c4d.RDATA_PATH] or ""
+    tile_multipass_path = render_data[c4d.RDATA_MULTIPASS_FILENAME] or ""
+    rd = render_data.GetDataInstance()
+    # All statements that can realistically raise (path creation, frame
+    # parsing, temp-dir creation) occur before the Save Image / bake-flag
+    # mutations, so restoring region + paths covers every partial state.
+    try:
+        return _apply_tile_render_setup(
+            render_data,
+            rd,
+            data,
+            tile_col,
+            tile_row,
+            tile_w,
+            tile_h,
+            region_left,
+            region_top,
+            region_right,
+            region_bottom,
+            full_w,
+            full_h,
+            tile_output_path,
+            tile_multipass_path,
+        )
+    except BaseException:
+        render_data[c4d.RDATA_RENDERREGION] = orig_region
+        render_data[c4d.RDATA_PATH] = tile_output_path
+        render_data[c4d.RDATA_MULTIPASS_FILENAME] = tile_multipass_path
+        raise
+
+
+def _apply_tile_render_setup(
+    render_data: Any,
+    rd: Any,
+    data: dict,
+    tile_col: int,
+    tile_row: int,
+    tile_w: int,
+    tile_h: int,
+    region_left: int,
+    region_top: int,
+    region_right: int,
+    region_bottom: int,
+    full_w: int,
+    full_h: int,
+    tile_output_path: str,
+    tile_multipass_path: str,
+) -> TileContext:
+    """Apply the tile render mutations (see setup_tile_render, which restores
+    them if anything here raises)."""
     # C4D's RDATA_RENDERREGION_* values are offsets inward from each edge,
     # NOT absolute pixel coordinates.  For example RIGHT=0 means "render up
     # to the right edge" and BOTTOM=0 means "render down to the bottom edge".
@@ -239,11 +293,9 @@ def setup_tile_render(
     render_data[c4d.RDATA_RENDERREGION_RIGHT] = full_w - region_right
     render_data[c4d.RDATA_RENDERREGION_BOTTOM] = full_h - region_bottom
 
-    # Save original output paths — we clear RDATA_PATH so C4D doesn't save the
-    # full-resolution beauty image (we crop and save it manually).
-    # For multi-pass, we set a tile-specific path so C4D saves multi-pass natively.
-    tile_output_path = render_data[c4d.RDATA_PATH] or ""
-    tile_multipass_path = render_data[c4d.RDATA_MULTIPASS_FILENAME] or ""
+    # Clear RDATA_PATH so C4D doesn't save the full-resolution beauty image
+    # (we crop and save it manually). For multi-pass, set a tile-specific path
+    # so C4D saves multi-pass natively.
     render_data[c4d.RDATA_PATH] = ""
 
     # Build a tile-specific multi-pass path — C4D's native save appends its own
@@ -262,7 +314,6 @@ def setup_tile_render(
     # transform bake so we can bake it manually after rendering.
     # BakeOcioViewToBitmap and RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER were introduced
     # in Cinema 4D 2025.2 — skip OCIO baking on older versions.
-    rd = render_data.GetDataInstance()
     _has_ocio_bake = hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER") and hasattr(
         c4d.documents, "BakeOcioViewToBitmap"
     )

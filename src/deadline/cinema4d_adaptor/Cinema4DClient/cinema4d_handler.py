@@ -367,8 +367,8 @@ class Cinema4DHandler:
                 rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
         else:
             if is_tile_render:
-                # Set up as late as possible so the try/finally below covers the
-                # whole window in which render state is mutated.
+                # setup_tile_render restores its own mutations if it raises;
+                # the try/finally below covers everything after it returns.
                 tile_ctx = tile_rendering.setup_tile_render(self.render_data, data)
             # 32-bit float OCIO workaround (issue #540): RenderDocument's save
             # applies a colorspace conversion to float output (EXR, HDR, 32-bit

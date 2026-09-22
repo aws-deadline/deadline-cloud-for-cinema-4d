@@ -118,6 +118,7 @@ class TestFloatTileInternalSave:
             c4d.RDATA_FORMATDEPTH: depth,
             c4d.RDATA_FORMAT: c4d.FILTER_EXR,
             c4d.RDATA_SAVEIMAGE: False,
+            c4d.RDATA_RENDERREGION: False,
         }
         render_data = MagicMock()
         render_data.__getitem__ = lambda self, key: values.get(key, MagicMock())
@@ -156,6 +157,26 @@ class TestFloatTileInternalSave:
         rd.__setitem__.assert_any_call(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER, False)
         assert ctx.orig_bake_flag is rd.GetBool.return_value
         assert not ctx.requires_baking
+
+    def test_failed_setup_restores_render_state(self, tmp_path):
+        """A mid-setup failure must restore state, or later tasks in the session
+        render but silently write no output (review: session-level recovery)."""
+        c4d = tile_rendering.c4d
+
+        render_data, _rd = self._render_data(tmp_path, c4d.RDATA_FORMATDEPTH_32)
+        original_path = str(tmp_path / "out")
+        with (
+            patch.object(
+                tile_rendering, "_get_session_temp_dir", side_effect=OSError("temp fs full")
+            ),
+            pytest.raises(OSError, match="temp fs full"),
+        ):
+            tile_rendering.setup_tile_render(render_data, self._data())
+
+        # the mutations were rolled back: output path and region flag restored
+        render_data.__setitem__.assert_any_call(c4d.RDATA_PATH, original_path)
+        assert render_data.__setitem__.call_args_list[-2].args == (c4d.RDATA_PATH, original_path)
+        assert render_data.__setitem__.call_args_list[-3].args == (c4d.RDATA_RENDERREGION, False)
 
     def test_unmapped_format_keeps_bitmap_save_flow(self, tmp_path):
         c4d = tile_rendering.c4d
