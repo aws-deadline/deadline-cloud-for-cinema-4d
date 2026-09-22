@@ -251,78 +251,36 @@ def _launch_cinema4d(cinema4d_gui_exe: Path, scene_path: Path, env: dict) -> sub
     return proc
 
 
-def _dump_dialog_discovery_failure(app) -> None:
-    """Dump the C4D app tree and the full running-app list when the submitter
-    dialog never registers as its own UIA app (Windows). Diagnostics only."""
-    log("dialog never registered as a UIA app; debugging info:")
-    try:
-        log("Cinema 4D app tree:")
-        print(app.dump())
-    except Exception as e:  # noqa: BLE001 - diagnostics must not mask the original failure
-        # Best-effort diagnostics; the dump itself failing must not mask the
-        # original failure this function is reporting.
-        log(f"Cinema 4D app tree dump failed: {e!r}")
-    try:
-        log("All running apps:")
-        for a in xa11y.App.list():
-            print(f"  - {a.name!r} (pid={a.pid})")
-    except Exception as e:  # noqa: BLE001 - diagnostics must not mask the original failure
-        log(f"App.list() failed: {e!r}")
-
-
 def _resolve_dialog_app(proc: subprocess.Popen):
-    """Attach xa11y to the launched Cinema 4D process and return the
-    accessibility app that hosts the submitter dialog.
+    """Attach xa11y to the launched Cinema 4D process.
 
     The sidecar plugin opens the submitter automatically once C4D finishes
-    starting (C4DPL_PROGRAM_STARTED). Where the dialog appears in the
-    accessibility tree is platform-specific:
-      - Windows UIA: Qt registers each dialog as a separate top-level UIA
-        app sharing the C4D pid.
-      - macOS AX: dialogs are child windows of the host app.
+    starting (C4DPL_PROGRAM_STARTED). xa11y 0.15+ exposes one process-scoped
+    app for C4D; the submitter dialog is a child window of that app.
     """
     log(f"waiting up to {_C4D_BOOT_TIMEOUT_S:.0f}s for xa11y to attach by pid")
-    if sys.platform == "win32":
-        try:
-            dialog_app = find_accessibility_app(
-                proc.pid,
-                timeout=_C4D_BOOT_TIMEOUT_S + _DIALOG_VISIBLE_TIMEOUT_S,
-                name_prefix=_DIALOG_NAME_PREFIX,
-            )
-        except TimeoutError:
-            try:
-                host_app = find_accessibility_app(proc.pid, timeout=2.0)
-                _dump_dialog_discovery_failure(host_app)
-            except TimeoutError:
-                # Host-app discovery is diagnostics-only; preserve the original
-                # submitter-dialog timeout when the host is also unavailable.
-                pass
-            raise AssertionError(
-                "Submitter dialog did not register with UIA "
-                f"(expected app name prefix {_DIALOG_NAME_PREFIX!r})"
-            )
-        log(f"submitter dialog UIA app: {dialog_app.name!r}")
-    else:
-        # On macOS the dialog is a child window of the C4D app.
-        dialog_app = find_accessibility_app(
-            proc.pid,
-            timeout=_C4D_BOOT_TIMEOUT_S,
-        )
-        log("macOS: using C4D app handle for dialog discovery")
+    dialog_app = find_accessibility_app(
+        proc.pid,
+        timeout=_C4D_BOOT_TIMEOUT_S,
+    )
+    log(f"using Cinema 4D process app: {dialog_app.name!r}")
     log("xa11y attached to Cinema 4D")
 
-    # Dump the tree for diagnostics on first run / failures.
-    try:
-        log("dialog app tree (depth=8):")
-        print(dialog_app.dump(max_depth=8))
-    except Exception as e:  # noqa: BLE001 - diagnostics must not fail dialog discovery
-        log(f"dialog_app.dump() failed: {e!r}")
+    # UIA tree traversal can itself block while Qt is materializing controls.
+    # Keep the expensive diagnostic opt-in, matching the existing DIALOG_DUMP
+    # mode used for locator harvesting below.
+    if os.environ.get("DIALOG_DUMP") == "1":
+        try:
+            log("dialog app tree (depth=8):")
+            print(dialog_app.dump(max_depth=8))
+        except Exception as e:  # noqa: BLE001 - diagnostics must not fail dialog discovery
+            log(f"dialog_app.dump() failed: {e!r}")
 
     return dialog_app
 
 
 def _wait_for_submitter_dialog(dialog_app):
-    """Wait for the submitter dialog to become visible and return its locator.
+    """Wait for the submitter dialog to attach and return its locator.
 
     On Windows UIA: role=dialog, name=QApplication display name.
     On macOS AX: role=window, name=window title. Try both selectors.
@@ -332,7 +290,11 @@ def _wait_for_submitter_dialog(dialog_app):
         f"dialog[name^='{_DIALOG_NAME_PREFIX}'], " f"window[name^='{_DIALOG_NAME_PREFIX}']"
     )
     try:
-        dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+        # On Windows UIA, the modal Qt dialog attaches to the process tree
+        # before xa11y's visibility-state poll completes. Attachment is the
+        # condition this test needs; individual control actions wait for their
+        # targets as the dialog finishes loading.
+        dialog.wait_attached(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
     except Exception:
         log("dialog selector failed; final tree:")
         try:
@@ -342,7 +304,7 @@ def _wait_for_submitter_dialog(dialog_app):
             # original error below.
             log(f"Final dialog tree dump failed: {e!r}")
         raise
-    log("submitter dialog visible")
+    log("submitter dialog attached")
     return dialog
 
 
