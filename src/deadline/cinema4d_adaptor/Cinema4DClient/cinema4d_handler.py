@@ -392,7 +392,16 @@ class Cinema4DHandler:
                 print("Disabling render-time OCIO bake for 32-bit float output (see issue #540)")
             try:
                 if is_tile_render:
-                    bm = tile_rendering.create_tile_bitmap(width, height)
+                    if tile_ctx is not None and tile_ctx.internal_save_base:
+                        # Float tile: C4D writes the tile from its own internal
+                        # save, so this bitmap is a write-only sink whose pixels
+                        # are never read (finalize crops from the saved file).
+                        # A cheap 8-bit bitmap is ~5x smaller than the RGBf+alpha
+                        # one and produces byte-identical output (verified on
+                        # 2026 + Redshift), which matters at large tile sizes.
+                        bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
+                    else:
+                        bm = tile_rendering.create_tile_bitmap(width, height)
                 else:
                     bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
                 result = c4d.documents.RenderDocument(

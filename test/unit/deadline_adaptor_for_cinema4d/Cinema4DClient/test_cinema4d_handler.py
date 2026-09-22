@@ -1147,6 +1147,52 @@ class TestStartRenderFloatOcio:
         mock_tile_rendering.setup_tile_render.assert_called_once()
         mock_tile_rendering.finalize_tile_render.assert_called_once()
 
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_float_tile_uses_cheap_rgb_sink(
+        self,
+        mock_base_time: Mock,
+        mock_render_document: Mock,
+        mock_tile_rendering: Mock,
+        mock_bitmap: Mock,
+    ):
+        """Float tile (internal_save_base set): the render bitmap is a write-only
+        sink, so use a cheap RGB MultipassBitmap, not the expensive RGBf one."""
+        handler, _rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+        mock_tile_rendering.setup_tile_render.return_value = Mock(internal_save_base="/tmp/x/tile_")
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_bitmap.assert_called_once_with(1, 1, c4d.COLORMODE_RGB)
+        mock_tile_rendering.create_tile_bitmap.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_non_float_tile_uses_create_tile_bitmap(
+        self,
+        mock_base_time: Mock,
+        mock_render_document: Mock,
+        mock_tile_rendering: Mock,
+        mock_bitmap: Mock,
+    ):
+        """8-bit tile (no internal_save_base): keep create_tile_bitmap, whose
+        RGBf+alpha bitmap the manual bake/crop path still needs."""
+        handler, _rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+        mock_tile_rendering.setup_tile_render.return_value = Mock(internal_save_base="")
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_tile_rendering.create_tile_bitmap.assert_called_once_with(1, 1)
+        mock_bitmap.assert_not_called()
+
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
