@@ -262,7 +262,12 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             completed_regexes = [re.compile(".*Finished Rendering.*")]
             callback_list.append(RegexCallback(completed_regexes, self._handle_complete))
 
-            progress_regexes = [re.compile(".*Progress ([0-9]+)%.*")]
+            progress_regexes = [
+                re.compile(
+                    r".*ALF_PROGRESS\s+" r"([0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)%?(?:\s|$)"
+                ),
+                re.compile(r".*Progress ([0-9]+)%.*"),
+            ]
             callback_list.append(RegexCallback(progress_regexes, self._handle_progress))
 
             error_regexes = [
@@ -352,14 +357,9 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             match (re.Match): The match object from the regex pattern that was matched in the
                               message.
         """
-        text = match.group(0)
-        loc = text.index("ALF_PROGRESS ") + len("ALF_PROGRESS ")
-        percent = text[loc : loc + 2]
-        # check for % in case of single digit progress
-        percent = percent[0] if percent.endswith("%") else percent
         # C4D can report progress > 100%. This is also clamped in progress_callback(),
         # but we clamp here too to prevent regression if progress_callback() is modified.
-        progress = min(int(percent), 100)
+        progress = min(int(float(match.group(1))), 100)
         self.update_status(progress=progress)
 
     def _handle_error(self, match: re.Match) -> None:
