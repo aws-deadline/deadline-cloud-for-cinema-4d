@@ -309,6 +309,28 @@ class TestFloatTileInternalSave:
             found = tile_rendering._find_internal_save_file(ctx, render_data)
         assert found == str(written)
 
+    def test_find_internal_save_file_excludes_separate_alpha_sidecar(self, tmp_path):
+        """With Separate Alpha, C4D writes an 'A_'-PREFIXED sidecar
+        (A_tile_..., verified on 2026), so the beauty prefix match excludes it
+        even though it lands in the same dir with a newer mtime."""
+        import os
+
+        base = tmp_path / "tile_0_0_0_"
+        beauty = tmp_path / "tile_0_0_0_0000.exr"
+        alpha = tmp_path / "A_tile_0_0_0_0000.exr"  # sidecar, 'A_' prefix
+        beauty.write_bytes(b"x")
+        alpha.write_bytes(b"x")
+        os.utime(beauty, (1000, 1000))
+        os.utime(alpha, (2000, 2000))  # newer, would win max(mtime) if matched
+
+        ctx = MagicMock(internal_save_base=str(base), tile_col=0, tile_row=0)
+        render_data = MagicMock()
+        render_data.__getitem__ = lambda self, key: tile_rendering.c4d.FILTER_EXR
+
+        with patch.object(tile_rendering, "get_format_info", return_value=(".exr", 42)):
+            found = tile_rendering._find_internal_save_file(ctx, render_data)
+        assert found == str(beauty)
+
     def test_find_internal_save_file_raises_when_missing(self, tmp_path):
         ctx = MagicMock(
             internal_save_base=str(tmp_path / "nope_c4dtile_0_0"), tile_col=0, tile_row=0
