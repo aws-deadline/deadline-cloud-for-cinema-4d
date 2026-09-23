@@ -991,7 +991,7 @@ class TestStartRenderFloatOcio:
     restored afterwards (the document is reused across renders in a session).
     """
 
-    def _make_handler(self, format_depth=None):
+    def _make_handler(self, format_depth=None, multipass=False):
         handler = Cinema4DHandler(mock_map_path)
         handler.cached_text_was_used_in_previous_frame = False
         mock_doc = Mock()
@@ -1007,6 +1007,8 @@ class TestStartRenderFloatOcio:
                 # a real, FORMAT_MAP-known format: the 8-bit per-frame path is
                 # gated on it since #555
                 return c4d.FILTER_PNG
+            if key == c4d.RDATA_MULTIPASS_SAVEIMAGE:
+                return multipass
             return MagicMock()
 
         mock_render_data.__getitem__ = mock_getitem
@@ -1064,6 +1066,31 @@ class TestStartRenderFloatOcio:
         with (
             patch.object(handler, "_cache_text_if_needed", return_value=False),
             pytest.raises(RuntimeError, match="render exploded"),
+        ):
+            handler.start_render({"frame": "5"})
+
+        assert self._bake_flag_set_calls(rd)[-1] == (
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER,
+            orig_value,
+        )
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_restores_bake_flag_when_log_after_disable_raises(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """A failure between disabling the flag and the render (e.g. a broken
+        stdout pipe in the log line) must still restore the flag, or later
+        non-tile renders in the session write un-tone-mapped output."""
+        handler, rd = self._make_handler()
+        orig_value = rd.GetBool.return_value
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with (
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+            patch("builtins.print", side_effect=BrokenPipeError("stdout closed")),
+            pytest.raises(BrokenPipeError, match="stdout closed"),
         ):
             handler.start_render({"frame": "5"})
 
@@ -1169,6 +1196,30 @@ class TestStartRenderFloatOcio:
 
         mock_bitmap.assert_called_once_with(1, 1, c4d.COLORMODE_RGB)
         mock_tile_rendering.create_tile_bitmap.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_float_tile_with_multipass_keeps_rich_bitmap(
+        self,
+        mock_base_time: Mock,
+        mock_render_document: Mock,
+        mock_tile_rendering: Mock,
+        mock_bitmap: Mock,
+    ):
+        """Float tile WITH multi-pass saving: C4D writes the multi-pass layers
+        from this bitmap, so keep create_tile_bitmap (RGBf+alpha) -- a plain RGB
+        sink would drop the alpha pass."""
+        handler, _rd = self._make_handler(multipass=True)
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+        mock_tile_rendering.setup_tile_render.return_value = Mock(internal_save_base="/tmp/x/tile_")
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_tile_rendering.create_tile_bitmap.assert_called_once_with(1, 1)
+        mock_bitmap.assert_not_called()
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")

@@ -386,19 +386,31 @@ class Cinema4DHandler:
                 and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
                 and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_32
             )
-            if disable_ocio_bake:
-                orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
-                rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
-                print("Disabling render-time OCIO bake for 32-bit float output (see issue #540)")
+            # Sentinel so the finally can tell "never disabled" from "disabled to
+            # a real value"; keeps the mutation and its restore in one try block.
+            orig_bake_flag = None
             try:
+                if disable_ocio_bake:
+                    orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
+                    rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
+                    print(
+                        "Disabling render-time OCIO bake for 32-bit float output "
+                        "(see issue #540)"
+                    )
                 if is_tile_render:
-                    if tile_ctx is not None and tile_ctx.internal_save_base:
-                        # Float tile: C4D writes the tile from its own internal
-                        # save, so this bitmap is a write-only sink whose pixels
-                        # are never read (finalize crops from the saved file).
-                        # A cheap 8-bit bitmap is ~5x smaller than the RGBf+alpha
-                        # one and produces byte-identical output (verified on
-                        # 2026 + Redshift), which matters at large tile sizes.
+                    if (
+                        tile_ctx is not None
+                        and tile_ctx.internal_save_base
+                        and not self.render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]
+                    ):
+                        # Float tile, beauty only: C4D writes the tile from its
+                        # own internal save, so this bitmap is a write-only sink
+                        # whose pixels are never read (finalize crops from the
+                        # saved file). A cheap RGB bitmap is ~5x smaller than the
+                        # RGBf+alpha one and produces byte-identical output
+                        # (verified on 2026 + Redshift). NOT used when multi-pass
+                        # saving is on: C4D writes the multi-pass layers FROM this
+                        # bitmap, and a plain RGB bitmap drops the alpha pass.
                         bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
                     else:
                         bm = tile_rendering.create_tile_bitmap(width, height)
@@ -414,7 +426,7 @@ class Cinema4DHandler:
                         bm, rd, tile_ctx, self.render_data, start_frame
                     )
             finally:
-                if disable_ocio_bake:
+                if orig_bake_flag is not None:
                     rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
                 if tile_ctx is not None:
                     # Safe to call again after a successful finalize (no-op);
