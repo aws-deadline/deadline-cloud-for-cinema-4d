@@ -311,6 +311,49 @@ def test_activate_error_checking(init_data: dict, activate_error_checking: int) 
         ), "Error checking should be deactivated when activate_error_checking=0"
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
+class TestCinema4DAdaptor_progress:
+    @pytest.mark.parametrize(
+        "stdout,regex_index,expected_progress",
+        [
+            ("ALF_PROGRESS 50", 0, 50),
+            ("ALF_PROGRESS 50%", 0, 50),
+            ("ALF_PROGRESS 50.5", 0, 50),
+            ("ALF_PROGRESS 1e-05", 0, 0),
+            ("ALF_PROGRESS 100", 0, 100),
+            ("ALF_PROGRESS 101", 0, 100),
+            ("Progress 42%", 1, 42),
+        ],
+    )
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.Cinema4DAdaptor.update_status")
+    def test_handle_progress(
+        self,
+        mock_update_status: Mock,
+        init_data: dict,
+        stdout: str,
+        regex_index: int,
+        expected_progress: int,
+    ) -> None:
+        adaptor = Cinema4DAdaptor(init_data)
+        progress_regex = adaptor._get_regex_callbacks()[1].regex_list[regex_index]
+
+        match = progress_regex.search(stdout)
+
+        assert match is not None
+        adaptor._handle_progress(match)
+
+        mock_update_status.assert_called_once_with(progress=expected_progress)
+
+    def test_progress_regex_does_not_match_human_readable_diagnostic(self, init_data: dict) -> None:
+        adaptor = Cinema4DAdaptor(init_data)
+        progress_regexes = adaptor._get_regex_callbacks()[1].regex_list
+
+        assert all(
+            progress_regex.search("Progress update (during rendering): 50.0%") is None
+            for progress_regex in progress_regexes
+        )
+
+
 @pytest.fixture()
 def run_data() -> dict:
     return {"frame": "42"}
