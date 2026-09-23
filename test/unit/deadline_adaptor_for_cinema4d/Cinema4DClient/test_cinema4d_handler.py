@@ -1169,3 +1169,229 @@ class TestPathmapBaseObject:
         # (only for the first texture type that has a path)
         desc_id = mock_c4d.DescID.return_value
         mock_owner.__setitem__.assert_called_once_with(desc_id, mapped_path)
+
+
+class TestPathmapGraphView:
+    """Tests for legacy Redshift GraphView node path mapping."""
+
+    @staticmethod
+    def _create_mock_c4d(gv_node_type):
+        mock_c4d = Mock()
+        mock_c4d.BaseShader = type("BaseShader", (), {})
+        mock_c4d.BaseObject = type("BaseObject", (), {})
+        mock_c4d.documents.BaseVideoPost = type("BaseVideoPost", (), {})
+        mock_c4d.BaseMaterial = type("BaseMaterial", (), {})
+        mock_c4d.modules.graphview.GvNode = gv_node_type
+        mock_c4d.REDSHIFT_FILE_PATH = 2001
+        mock_c4d.DTYPE_STRING = 3001
+        mock_c4d.DescID = Mock(return_value=Mock())
+        mock_c4d.DescLevel = Mock(return_value=Mock())
+        return mock_c4d
+
+    @staticmethod
+    def _remap_single_gv_asset(handler, mock_c4d, owner, filename):
+        def get_all_assets(_, **kwargs):
+            kwargs["assetList"].append(
+                {
+                    "owner": owner,
+                    "paramId": -1,
+                    "filename": filename,
+                    "nodeSpace": None,
+                    "nodePath": None,
+                }
+            )
+
+        handler.doc = Mock()
+        mock_c4d.documents.GetAllAssetsNew.side_effect = get_all_assets
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            handler._remap_assets()
+
+    def test_pathmap_gv_node_maps_matching_relative_texture_path(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "albedo.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        original_path = r"C:\source\tex\albedo.jpg"
+        mapped_path = r"C:\Sessions\assetroot\tex\albedo.jpg"
+        texture_parameter_id = 10000
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 1
+        operator_container.GetIndexId.return_value = texture_parameter_id
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(owner, original_path, mapped_path)
+
+        assert result is True
+        owner.setitem.assert_called_once_with(mock_c4d.DescID.return_value, mapped_path)
+
+    def test_pathmap_gv_node_does_not_map_other_texture_data(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "roughness.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 1
+        operator_container.GetIndexId.return_value = 10000
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(
+                owner, r"C:\source\tex\albedo.jpg", r"C:\Sessions\assetroot\tex\albedo.jpg"
+            )
+
+        assert result is False
+        owner.setitem.assert_not_called()
+
+    def test_pathmap_gv_node_does_not_map_ambiguous_texture_basenames(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "albedo.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 2
+        operator_container.GetIndexId.side_effect = [10000, 10001]
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(
+                owner, r"C:\source\tex\albedo.jpg", r"C:\Sessions\assetroot\tex\albedo.jpg"
+            )
+
+        assert result is True
+        owner.setitem.assert_not_called()
+
+    def test_remap_assets_does_not_write_param_minus_one_for_unmatched_gv_node(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "other.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 1
+        operator_container.GetIndexId.return_value = 10000
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(Mock(return_value=r"C:\Sessions\assetroot\tex\albedo.jpg"))
+
+        self._remap_single_gv_asset(handler, mock_c4d, owner, r"C:\source\tex\albedo.jpg")
+
+        owner.setitem.assert_not_called()
+
+    def test_remap_assets_does_not_write_param_minus_one_when_gv_node_inspection_fails(self):
+        class GvNode:
+            def __init__(self):
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                raise RuntimeError("corrupt GraphView operator container")
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        owner = GvNode()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(Mock(return_value=r"C:\Sessions\assetroot\tex\albedo.jpg"))
+
+        self._remap_single_gv_asset(handler, mock_c4d, owner, r"C:\source\tex\albedo.jpg")
+
+        owner.setitem.assert_not_called()
+
+    def test_pathmap_recognized_types_handles_gv_nodes(self):
+        class GvNode:
+            pass
+
+        owner = GvNode()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(mock_map_path)
+
+        with (
+            patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d),
+            patch.object(handler, "_pathmap_gv_node", return_value=True) as mock_pathmap_gv_node,
+        ):
+            result = handler._pathmap_recognized_types(
+                owner,
+                -1,
+                "tex/albedo.jpg",
+                None,
+                None,
+                "C:/Sessions/assetroot/tex/albedo.jpg",
+            )
+
+        assert result is True
+        mock_pathmap_gv_node.assert_called_once_with(
+            owner, "tex/albedo.jpg", "C:/Sessions/assetroot/tex/albedo.jpg"
+        )
+
+    def test_pathmap_recognized_types_does_not_handle_gv_node_with_parameter_id(self):
+        class GvNode:
+            pass
+
+        owner = GvNode()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(mock_map_path)
+
+        with (
+            patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d),
+            patch.object(handler, "_pathmap_gv_node") as mock_pathmap_gv_node,
+        ):
+            result = handler._pathmap_recognized_types(
+                owner,
+                10000,
+                "tex/albedo.jpg",
+                None,
+                None,
+                "C:/Sessions/assetroot/tex/albedo.jpg",
+            )
+
+        assert result is False
+        mock_pathmap_gv_node.assert_not_called()
