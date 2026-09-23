@@ -99,8 +99,11 @@ def _get_session_temp_dir() -> str:
 def _parse_start_frame(frame_value: Any) -> int:
     """Extract the start frame from a CHUNK[INT] value like '5-5' or '5'.
 
-    Frames can be negative ('-5', '-5--5'), so anchor on a leading signed
-    integer instead of splitting on '-'.
+    Note: negative frames are not supported end-to-end -- the handler's
+    Cinema4DHandler._parse_frame_range runs first on every render and raises on
+    a leading-'-' value, so this parser never sees one in practice. The regex
+    (leading signed integer) is used simply because it is a robust way to take
+    the start of a 'start-end' chunk; it does not imply negative-frame support.
     """
     match = re.match(r"^\s*(-?\d+)", str(frame_value))
     if match is None:
@@ -403,23 +406,29 @@ def _crop_float_bitmap(source_bmp: Any, left: int, top: int, width: int, height:
 def _find_internal_save_file(ctx: TileContext, render_data: Any) -> str:
     """Locate the file C4D's internal save wrote for this tile's region render.
 
-    The base lives in a per-tile private temp directory, so a prefix+extension
-    match within it is unambiguous; newest mtime wins if a stale file survived
-    an earlier failure.
+    The base lives in a private, per-process temp directory and its basename
+    (``tile_<frame>_<col>_<row>_``) is digits delimited by underscores, so it
+    cannot prefix another tile's base -- the prefix match alone is unambiguous.
+    We do NOT filter on extension: C4D may write an extension that differs from
+    our FORMAT_MAP entry (e.g. ``.tiff`` vs ``.tif``), and a mismatch there
+    would turn a present file into a hard failure. Extension is used only to
+    break ties if more than one file somehow matches; newest mtime otherwise.
     """
-    ext, _save_filter = get_format_info(render_data[c4d.RDATA_FORMAT])
     base_dir = os.path.dirname(ctx.internal_save_base) or "."
     prefix = os.path.basename(ctx.internal_save_base)
     candidates = [
-        os.path.join(base_dir, fn)
-        for fn in os.listdir(base_dir)
-        if fn.startswith(prefix) and fn.lower().endswith(ext.lower())
+        os.path.join(base_dir, fn) for fn in os.listdir(base_dir) if fn.startswith(prefix)
     ]
     if not candidates:
         raise RuntimeError(
             f"Tile ({ctx.tile_col}, {ctx.tile_row}): internal save output not "
             f"found under {ctx.internal_save_base}"
         )
+    if len(candidates) > 1:
+        ext, _save_filter = get_format_info(render_data[c4d.RDATA_FORMAT])
+        preferred = [c for c in candidates if c.lower().endswith(ext.lower())]
+        if preferred:
+            candidates = preferred
     return max(candidates, key=os.path.getmtime)
 
 

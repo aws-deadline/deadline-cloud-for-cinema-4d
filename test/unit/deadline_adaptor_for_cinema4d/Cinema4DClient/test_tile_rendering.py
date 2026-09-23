@@ -293,6 +293,22 @@ class TestFloatTileInternalSave:
             found = tile_rendering._find_internal_save_file(ctx, render_data)
         assert found == str(fresh)
 
+    def test_find_internal_save_file_matches_despite_extension_mismatch(self, tmp_path):
+        """Prefix match must find the file even if C4D wrote an extension that
+        differs from FORMAT_MAP (e.g. .tiff vs .tif) -- previously a hard fail."""
+        base = tmp_path / "tile_0_0_0_"
+        # C4D wrote ".tiff" but get_format_info reports ".tif"
+        written = tmp_path / "tile_0_0_0_0000.tiff"
+        written.write_bytes(b"x")
+
+        ctx = MagicMock(internal_save_base=str(base), tile_col=0, tile_row=0)
+        render_data = MagicMock()
+        render_data.__getitem__ = lambda self, key: tile_rendering.c4d.FILTER_TIF
+
+        with patch.object(tile_rendering, "get_format_info", return_value=(".tif", 42)):
+            found = tile_rendering._find_internal_save_file(ctx, render_data)
+        assert found == str(written)
+
     def test_find_internal_save_file_raises_when_missing(self, tmp_path):
         ctx = MagicMock(
             internal_save_base=str(tmp_path / "nope_c4dtile_0_0"), tile_col=0, tile_row=0
@@ -446,11 +462,6 @@ class TestParseStartFrame:
     def test_positive_and_ranges(self):
         assert tile_rendering._parse_start_frame("5") == 5
         assert tile_rendering._parse_start_frame("5-10") == 5
-
-    def test_negative_frames(self):
-        assert tile_rendering._parse_start_frame("-5") == -5
-        assert tile_rendering._parse_start_frame("-5--5") == -5
-        assert tile_rendering._parse_start_frame("-10-5") == -10
 
     def test_unparseable_raises(self):
         with pytest.raises(ValueError, match="Cannot parse frame value"):
