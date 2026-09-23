@@ -44,6 +44,7 @@ SCENE_FILE_KEY = "scene_file"
 START_RENDER_KEY = "start_render"
 ASSEMBLE_TILES_KEY = "assemble_tiles"
 TAKE_KEY = "take"
+REDSHIFT_TEXTURE_DATA_TYPE = 1036765
 
 
 def progress_callback(progress_percent, progress_type_int):
@@ -126,14 +127,21 @@ class Cinema4DHandler:
             # note: we can't skip if mapped_path == filename because some internal
             # references in the owner nodes may need to be updated
 
+            is_legacy_redshift_gv_node = self._is_legacy_redshift_gv_node(owner, param_id)
             # whether we have done owner[param_id] = mapped_path
             attempted_basic_path_mapping_approach = False
             try:
                 success = self._pathmap_recognized_types(
-                    owner, param_id, node_space, node_path, mapped_path
+                    owner, param_id, filename, node_space, node_path, mapped_path
                 )
 
                 if not success:
+                    if is_legacy_redshift_gv_node:
+                        print(
+                            f"WARNING: legacy Redshift GraphView texture '{filename}' could not be "
+                            "path mapped because no matching texture parameter was found."
+                        )
+                        continue
                     print(
                         f"WARNING: asset wasn't recognized. Attempting to path map {owner}[{param_id}] = {mapped_path}"
                     )
@@ -146,7 +154,7 @@ class Cinema4DHandler:
                     f"'{filename}', nodeSpace '{node_space}', and nodePath '{node_path}' could not be path "
                     f"mapped. Error: {e} {traceback.format_exc()}"
                 )
-                if not attempted_basic_path_mapping_approach:
+                if not attempted_basic_path_mapping_approach and not is_legacy_redshift_gv_node:
                     print(
                         f"Attempting to use basic path mapping {owner}[{param_id}] = {mapped_path}"
                     )
@@ -167,7 +175,7 @@ class Cinema4DHandler:
             )
 
     def _pathmap_recognized_types(
-        self, owner, param_id, node_space, node_path, mapped_path
+        self, owner, param_id, filename, node_space, node_path, mapped_path
     ) -> bool:
         """
         Applies path mapping to recognized owner types.
@@ -191,6 +199,70 @@ class Cinema4DHandler:
             # Redshift node-based materials
             return self._pathmap_base_material(owner, node_space, node_path, mapped_path)
 
+        if self._is_legacy_redshift_gv_node(owner, param_id):
+            # Legacy Redshift GraphView materials store an image path in a
+            # texture-data DescID, but GetAllAssetsNew reports paramId=-1.
+            return self._pathmap_gv_node(owner, filename, mapped_path)
+
+        return False
+
+    @staticmethod
+    def _is_legacy_redshift_gv_node(owner, param_id) -> bool:
+        """Return whether an asset owner is a legacy Redshift GraphView node."""
+        if param_id != -1:
+            return False
+        try:
+            return isinstance(owner, c4d.modules.graphview.GvNode)
+        except (AttributeError, TypeError):
+            # GraphView is not available in every C4D configuration. Keep
+            # remapping other scene assets when its type cannot be inspected.
+            return False
+
+    def _pathmap_gv_node(self, owner, filename, mapped_path) -> bool:
+        """Path map a legacy Redshift GraphView texture node."""
+        operator_container = owner.GetOperatorContainer()
+        normalized_filename = str(filename).replace("\\", "/")
+        filename_basename = os.path.basename(normalized_filename)
+        exact_matches = []
+        basename_matches = []
+        for index in range(len(operator_container)):
+            parameter_id = operator_container.GetIndexId(index)
+            if operator_container.GetType(parameter_id) != REDSHIFT_TEXTURE_DATA_TYPE:
+                continue
+
+            desc_id = c4d.DescID(
+                c4d.DescLevel(parameter_id, REDSHIFT_TEXTURE_DATA_TYPE),
+                c4d.DescLevel(c4d.REDSHIFT_FILE_PATH, c4d.DTYPE_STRING, 0),
+            )
+            existing_path = owner[desc_id]
+            if not existing_path:
+                continue
+            normalized_existing_path = str(existing_path).replace("\\", "/")
+            if normalized_existing_path == normalized_filename:
+                exact_matches.append(desc_id)
+                continue
+
+            existing_basename = os.path.basename(normalized_existing_path)
+            if existing_basename == filename_basename:
+                basename_matches.append(desc_id)
+
+        if exact_matches:
+            for desc_id in exact_matches:
+                owner[desc_id] = mapped_path
+            return True
+
+        if len(basename_matches) == 1:
+            owner[basename_matches[0]] = mapped_path
+            return True
+
+        if len(basename_matches) > 1:
+            print(
+                f"WARNING: Unable to path map legacy Redshift GraphView texture '{filename}' "
+                "because multiple texture parameters have the same filename."
+            )
+            # Avoid the unsafe owner[-1] fallback.
+            return False
+
         return False
 
     def _pathmap_base_shader(self, owner, param_id, mapped_path) -> bool:
@@ -212,8 +284,7 @@ class Cinema4DHandler:
             # For each type of texture, we check if the texture is specified,
             # and if it is, we override the path
             desc_id = c4d.DescID(
-                # 1036765 is the data type for textures
-                c4d.DescLevel(item, 1036765),
+                c4d.DescLevel(item, REDSHIFT_TEXTURE_DATA_TYPE),
                 c4d.DescLevel(c4d.REDSHIFT_FILE_PATH, c4d.DTYPE_STRING, 0),
             )
             existing_path = owner[desc_id]
