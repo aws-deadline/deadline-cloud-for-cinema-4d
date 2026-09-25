@@ -7,6 +7,7 @@ import tempfile
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,11 @@ from qtpy.QtCore import Qt  # type: ignore[attr-defined]
 
 from deadline.client.config import get_setting, str2bool
 from deadline.client.dataclasses import SubmitterInfo
-from deadline.client.exceptions import DeadlineOperationCanceled, DeadlineOperationError
+from deadline.client.exceptions import (
+    DeadlineOperationCanceled,
+    DeadlineOperationError,
+    UserInitiatedCancel,
+)
 from deadline.client.job_bundle._yaml import deadline_yaml_dump
 from deadline.client.job_bundle.parameters import JobParameter
 from deadline.client.job_bundle.submission import AssetReferences
@@ -59,6 +64,51 @@ if not any(isinstance(h, WarningCollectorHandler) for h in logger.handlers):
 LOADED = False
 
 _TAKE_TOKEN = "$take"
+
+
+class Cinema4DSubmitJobToDeadlineDialog(SubmitJobToDeadlineDialog):
+    """Handle C4D-specific bundle-generation cancellation without showing an export error."""
+
+    def _generate_export_bundle(
+        self,
+        output_dir: str,
+        settings: RenderSubmitterUISettings,
+        queue_parameters: list[JobParameter],
+        asset_references: AssetReferences,
+        requirements: dict[str, Any] | None,
+    ) -> bool:
+        try:
+            if self.show_host_requirements_tab:
+                parameters_from_callback = self.on_create_job_bundle_callback(
+                    self,
+                    output_dir,
+                    settings,
+                    queue_parameters,
+                    asset_references,
+                    requirements,
+                    purpose=JobBundlePurpose.EXPORT,
+                )
+            else:
+                parameters_from_callback = self.on_create_job_bundle_callback(
+                    self,
+                    output_dir,
+                    settings,
+                    queue_parameters,
+                    asset_references,
+                    purpose=JobBundlePurpose.EXPORT,
+                )
+            job_parameters = (parameters_from_callback or {}).get("job_parameters", [])
+            if job_parameters:
+                self.save_job_parameters_to_job_bundle(output_dir, job_parameters)
+            return True
+        except UserInitiatedCancel:
+            return False
+        except Exception as exc:  # noqa: BLE001 - match shared dialog error handling
+            logger.error("Failed to generate bundle for export: %s", exc)
+            QtWidgets.QMessageBox.critical(
+                self, "Export failed", f"Failed to export bundle:\n{exc}"
+            )
+            return False
 
 
 def _get_release_date() -> str | None:
@@ -911,7 +961,9 @@ def _apply_take_name(take: TakeData, new_name: str) -> None:
     take.display_name = new_name[:64]
 
 
-def warn_duplicate_take_names(submit_takes: list[TakeData]) -> None:
+def warn_duplicate_take_names(
+    submit_takes: list[TakeData], warning_source: object | None = None
+) -> None:
     """
     Checks for duplicate take names and adds a warning via warning_collector
     if any are found.
@@ -921,7 +973,8 @@ def warn_duplicate_take_names(submit_takes: list[TakeData]) -> None:
         renamed_list = ", ".join(f"'{name}'" for name in sorted(duplicated_names))
         warning_collector.add_warning(
             f"Duplicate take names were found: {renamed_list}. "
-            "They have been automatically renamed with _1, _2, etc. suffixes to ensure uniqueness."
+            "They have been automatically renamed with _1, _2, etc. suffixes to ensure uniqueness.",
+            warning_source,
         )
 
 
@@ -1031,7 +1084,9 @@ def get_submit_takes(
 
 
 def check_take_token_warnings(
-    settings: RenderSubmitterUISettings, takes: dict[str, list[TakeData]]
+    settings: RenderSubmitterUISettings,
+    takes: dict[str, list[TakeData]],
+    warning_source: object | None = None,
 ) -> None:
     """
     Check if multiple takes are selected without $take token in output paths.
@@ -1046,8 +1101,57 @@ def check_take_token_warnings(
         return
     warning_collector.add_warning(
         f"Multiple takes are selected but output paths do not contain the {_TAKE_TOKEN} token. "
-        f"This will cause different takes to overwrite each other. Use {_TAKE_TOKEN} in your path to avoid this."
+        f"This will cause different takes to overwrite each other. Use {_TAKE_TOKEN} in your path to avoid this.",
+        warning_source,
     )
+
+
+def check_output_directory_warnings(
+    settings: RenderSubmitterUISettings,
+    takes: dict[str, list[TakeData]],
+    warning_source: object | None = None,
+) -> None:
+    """
+    Warn when selected takes have no Cinema 4D output directory configured.
+
+    Output directories are discovered from each take's effective Cinema 4D render settings,
+    rather than from job attachments. This prevents manually attached directories from masking a
+    take that will not write render output.
+    """
+    missing_output_takes = [
+        take.name for take in get_submit_takes(settings, takes) if not take.output_directories
+    ]
+    if not missing_output_takes:
+        return
+
+    warning_collector.add_warning(
+        "No output directories were detected for selected take(s): "
+        f"{', '.join(missing_output_takes)}. These takes may render without producing output "
+        "files. Enable Regular Image or Multi-Pass Image saving in Cinema 4D, or continue only "
+        "if output is intentionally handled elsewhere.",
+        warning_source,
+    )
+
+
+def get_warning_cancel_label(purpose: JobBundlePurpose | str | Enum) -> str:
+    """Return an action label that matches the current job-bundle workflow."""
+    if getattr(purpose, "value", purpose) == JobBundlePurpose.EXPORT.value:
+        return "Cancel Export"
+    return "Cancel Submission"
+
+
+def collect_submission_warnings(
+    settings: RenderSubmitterUISettings,
+    takes: dict[str, list[TakeData]],
+    warning_source: object,
+) -> None:
+    """Refresh warnings that depend on the current submission settings and selected takes."""
+    warning_collector.remove_warnings_for_source(warning_source)
+
+    submit_takes = get_submit_takes(settings, takes)
+    warn_duplicate_take_names(submit_takes, warning_source)
+    check_output_directory_warnings(settings, takes, warning_source)
+    check_take_token_warnings(settings, takes, warning_source)
 
 
 def export_to_temp_folder(temp_dir: str, asset_references: AssetReferences) -> None:
@@ -1174,6 +1278,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: 
     # after the hooks run below and passed to create_job_bundle, which uses it to keep hook output
     # out of the persisted sticky settings. See the block near apply_pre_gui_output.
     pre_gui_hook_sticky_reset: dict[str, tuple[Any, Any]] = {}
+    submission_warning_source = object()
 
     def on_create_job_bundle_callback(
         widget: SubmitJobToDeadlineDialog,
@@ -1187,19 +1292,19 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: 
         """
         Callback function for creating a job bundle when submitting the job.
         """
-        submit_takes = get_submit_takes(settings, takes)
-        warn_duplicate_take_names(submit_takes)
-
-        check_take_token_warnings(settings, takes)
+        collect_submission_warnings(settings, takes, submission_warning_source)
 
         if warning_collector.has_warnings():
             continue_submission = SubmissionWarningDialog.show_warnings(
-                warning_collector.get_warnings(), "Issues Detected", widget
+                warning_collector.get_warnings(),
+                "Issues Detected",
+                widget,
+                cancel_label=get_warning_cancel_label(purpose),
             )
 
             if not continue_submission:
-                # User chose to cancel submission
-                raise RuntimeError("Submission cancelled")
+                purpose_value = getattr(purpose, "value", purpose)
+                raise UserInitiatedCancel(f"{purpose_value.capitalize()} cancelled")
 
         return create_job_bundle(
             settings,
@@ -1261,7 +1366,7 @@ def _show_submitter(temp_dir: str, parent=None, f=Qt.WindowType.Tool):  # type: 
         shared_parameter_values,
     )
 
-    submitter_dialog = SubmitJobToDeadlineDialog(
+    submitter_dialog = Cinema4DSubmitJobToDeadlineDialog(
         job_setup_widget_type=SceneSettingsWidget,
         initial_job_settings=render_settings,
         initial_shared_parameter_values=shared_parameter_values,

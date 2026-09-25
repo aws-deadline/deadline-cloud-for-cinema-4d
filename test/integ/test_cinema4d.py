@@ -75,6 +75,7 @@ _SCENE_RELATIVE_PATHS = {
 # Whatever a configurator changes must be reflected in that scene's
 # expected/job_bundle/, since the golden comparison is exact.
 DialogConfigurator = Callable[[xa11y.Locator], None]
+SubmissionWarningHandler = Callable[[xa11y.App], None]
 
 
 def _prepend(new: str, existing: str, sep: str) -> str:
@@ -367,9 +368,18 @@ def _wait_for_queue_environment_loading(dialog_app) -> None:
         log(f"loading-text wait failed (non-fatal): {e!r}")
 
 
-def _save_bundle_locally(dialog, dialog_app) -> None:
+def _save_bundle_locally(
+    dialog,
+    dialog_app,
+    warning_handler: SubmissionWarningHandler | None = None,
+) -> None:
     """Open Save bundle as, choose Local, and confirm the modal save."""
     log("saving bundle locally through Save bundle as")
+    if warning_handler is not None:
+        _start_local_bundle_export(dialog, dialog_app)
+        warning_handler(dialog_app)
+        return
+
     try:
         SharedSubmitterDialog(dialog, app_root=dialog_app).save_bundle_locally(
             timeout=_DIALOG_VISIBLE_TIMEOUT_S
@@ -383,6 +393,30 @@ def _save_bundle_locally(dialog, dialog_app) -> None:
             # original error below.
             log(f"Final dialog tree dump failed: {e!r}")
         raise
+
+
+def _start_local_bundle_export(dialog, dialog_app) -> None:
+    """Open Save bundle as, choose Local, and begin bundle generation."""
+    submitter_dialog = SharedSubmitterDialog(dialog, app_root=dialog_app)
+    open_button = submitter_dialog.button("Save bundle as")
+    open_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    open_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    open_button.press()
+
+    save_dialog = dialog_app.locator(
+        'dialog[name="Save bundle as"], window[name="Save bundle as"], sheet[name="Save bundle as"]'
+    )
+    save_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    SharedSubmitterDialog._select_radio(
+        save_dialog,
+        "Local",
+        timeout=_DIALOG_VISIBLE_TIMEOUT_S,
+    )
+
+    save_button = save_dialog.descendant('button[name="Save bundle as"]')
+    save_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    save_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    save_button.press()
 
 
 def _dump_settings_tabs(dialog) -> None:
@@ -418,6 +452,7 @@ def _drive_submitter_ui(
     proc: subprocess.Popen,
     history_dir: Path,
     configure: DialogConfigurator | None = None,
+    warning_handler: SubmissionWarningHandler | None = None,
 ) -> Path:
     """Drive the running submitter dialog via xa11y and return the exported
     bundle directory.
@@ -444,7 +479,7 @@ def _drive_submitter_ui(
     if configure is not None:
         log("running per-scene dialog configurator")
         configure(dialog)
-    _save_bundle_locally(dialog, dialog_app)
+    _save_bundle_locally(dialog, dialog_app, warning_handler=warning_handler)
 
     # The submitter writes the bundle files before showing the success popup,
     # so once the popup is up the bundle is complete on disk.
@@ -469,6 +504,7 @@ def _export_job_bundle_via_submitter(
     job_bundle_generated: Path,
     deadline_farm: dict,
     configure: DialogConfigurator | None = None,
+    warning_handler: SubmissionWarningHandler | None = None,
     extra_env: dict | None = None,
 ) -> None:
     """Launch Cinema 4D, drive the real submitter UI to export a job bundle,
@@ -498,8 +534,83 @@ def _export_job_bundle_via_submitter(
         )
         proc = _launch_cinema4d(cinema4d_gui_exe, scene_path, env)
         try:
-            staged_bundle = _drive_submitter_ui(proc, history_dir, configure=configure)
+            staged_bundle = _drive_submitter_ui(
+                proc,
+                history_dir,
+                configure=configure,
+                warning_handler=warning_handler,
+            )
             _copy_bundle_files(staged_bundle, job_bundle_generated)
+        finally:
+            kill_proc(proc)
+            _dump_plugin_diag_log(plugin_diag_log)
+    finally:
+        rmtree(bundle_staging, ignore_errors=True)
+        log(f"removed staging dir: {bundle_staging}")
+
+
+def _attempt_submit_via_submitter(
+    cinema4d_location: Path,
+    scene_path: Path,
+    deadline_farm: dict,
+    warning_handler: SubmissionWarningHandler,
+    configure: DialogConfigurator | None = None,
+) -> None:
+    """Launch Cinema 4D and press Submit in the real submitter dialog.
+
+    This helper is intentionally used with a warning handler that cancels the
+    warning. It verifies that a warning is shown before a job can be submitted,
+    without sending a job to the mock backend.
+    """
+    cinema4d_gui_exe = resolve_c4d_exe(cinema4d_location, "Cinema 4D")
+    bundle_staging = Path(tempfile.mkdtemp(prefix="c4d-submitter-ui-"))
+    plugin_diag_log = bundle_staging / "plugin-diag.log"
+    log(f"bundle staging dir: {bundle_staging}; attempting submission")
+    try:
+        env = _build_launch_env(scene_path, plugin_diag_log, deadline_farm["env_overlay"])
+        proc = _launch_cinema4d(cinema4d_gui_exe, scene_path, env)
+        try:
+            dialog_app = _resolve_dialog_app(proc)
+            dialog = _wait_for_submitter_dialog(dialog_app)
+            _wait_for_queue_environment_loading(dialog_app)
+            if configure is not None:
+                log("running per-scene dialog configurator")
+                configure(dialog)
+
+            submit_button = SharedSubmitterDialog(dialog, app_root=dialog_app).button("Submit")
+            submit_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+            submit_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+            submit_button.press()
+
+            warning_handler(dialog_app)
+        finally:
+            kill_proc(proc)
+            _dump_plugin_diag_log(plugin_diag_log)
+    finally:
+        rmtree(bundle_staging, ignore_errors=True)
+        log(f"removed staging dir: {bundle_staging}")
+
+
+def _attempt_export_via_submitter(
+    cinema4d_location: Path,
+    scene_path: Path,
+    deadline_farm: dict,
+    warning_handler: SubmissionWarningHandler,
+) -> None:
+    """Launch Cinema 4D and cancel an export from the no-output warning."""
+    cinema4d_gui_exe = resolve_c4d_exe(cinema4d_location, "Cinema 4D")
+    bundle_staging = Path(tempfile.mkdtemp(prefix="c4d-submitter-ui-"))
+    plugin_diag_log = bundle_staging / "plugin-diag.log"
+    log(f"bundle staging dir: {bundle_staging}; attempting export")
+    try:
+        env = _build_launch_env(scene_path, plugin_diag_log, deadline_farm["env_overlay"])
+        proc = _launch_cinema4d(cinema4d_gui_exe, scene_path, env)
+        try:
+            dialog_app = _resolve_dialog_app(proc)
+            dialog = _wait_for_submitter_dialog(dialog_app)
+            _wait_for_queue_environment_loading(dialog_app)
+            _start_local_bundle_export(dialog, dialog_app)
+            warning_handler(dialog_app)
         finally:
             kill_proc(proc)
             _dump_plugin_diag_log(plugin_diag_log)
@@ -629,6 +740,165 @@ def _run_integ_case(
 
     # Clean up if the test was successful
     rmtree(actual_dir, ignore_errors=True)
+
+
+def _continue_after_no_output_warning(dialog_app: xa11y.App) -> None:
+    """Assert the export warning is shown, then accept it explicitly."""
+    warning_dialog = dialog_app.locator(
+        'dialog[name="Issues Detected"], window[name="Issues Detected"]'
+    )
+    warning_dialog.wait_attached(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    warning_dump = warning_dialog.element().dump(max_depth=8)
+    assert "No output directories were detected for selected take(s)" in warning_dump
+
+    cancel_button = warning_dialog.descendant('button[name="Cancel Export"]')
+    cancel_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    continue_button = warning_dialog.descendant('button[name="Continue Anyway"]')
+    continue_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    continue_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    continue_button.press()
+
+
+def _cancel_after_no_output_submission_warning(dialog_app: xa11y.App) -> None:
+    """Assert the submission warning is shown, then cancel it explicitly."""
+    warning_dialog = dialog_app.locator(
+        'dialog[name="Issues Detected"], window[name="Issues Detected"]'
+    )
+    warning_dialog.wait_attached(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    warning_dump = warning_dialog.element().dump(max_depth=8)
+    assert "No output directories were detected for selected take(s)" in warning_dump
+
+    cancel_button = warning_dialog.descendant('button[name="Cancel Submission"]')
+    cancel_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    cancel_button.press()
+    warning_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    cancellation_dialog = dialog_app.locator(
+        'dialog[name="Cinema4D job submission"], window[name="Cinema4D job submission"]'
+    )
+    cancellation_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    assert "Submission cancelled" in cancellation_dialog.element().dump(max_depth=4)
+    cancellation_dialog.descendant('button[name="OK"]').press()
+    cancellation_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    submitter_dialog = dialog_app.locator(
+        f"dialog[name^='{_DIALOG_NAME_PREFIX}'], window[name^='{_DIALOG_NAME_PREFIX}']"
+    )
+    submitter_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    SharedSubmitterDialog(submitter_dialog, app_root=dialog_app).button("Submit").wait_enabled(
+        timeout=_DIALOG_VISIBLE_TIMEOUT_S
+    )
+
+
+def _cancel_after_no_output_export_warning(dialog_app: xa11y.App) -> None:
+    """Assert the export warning is shown, then cancel it without an error dialog."""
+    warning_dialog = dialog_app.locator(
+        'dialog[name="Issues Detected"], window[name="Issues Detected"]'
+    )
+    warning_dialog.wait_attached(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    warning_dump = warning_dialog.element().dump(max_depth=8)
+    assert "No output directories were detected for selected take(s)" in warning_dump
+
+    cancel_button = warning_dialog.descendant('button[name="Cancel Export"]')
+    cancel_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    cancel_button.press()
+    warning_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    submitter_dialog = dialog_app.locator(
+        f"dialog[name^='{_DIALOG_NAME_PREFIX}'], window[name^='{_DIALOG_NAME_PREFIX}']"
+    )
+    submitter_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    SharedSubmitterDialog(submitter_dialog, app_root=dialog_app).button(
+        "Save bundle as"
+    ).wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    export_failure_dialog = dialog_app.locator(
+        'dialog[name="Export failed"], window[name="Export failed"]'
+    )
+    export_failure_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+
+def test_integ_no_output_directory_warning(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """Warn before exporting a scene that has no enabled C4D output target."""
+    case = "no_output_directories"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+    scene_path = _build_cinema4d_scene(
+        cinema4d_location,
+        case_folder,
+        actual_dir,
+        case,
+    )
+
+    try:
+        _export_job_bundle_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            job_bundle_generated=actual_dir,
+            deadline_farm=deadline_farm,
+            warning_handler=_continue_after_no_output_warning,
+        )
+        assert_valid_job_bundle(actual_dir / "template.yaml")
+    finally:
+        rmtree(actual_dir, ignore_errors=True)
+
+
+def test_integ_no_output_directory_warning_cancel_export(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """Cancel export from the no-output warning without surfacing an export failure."""
+    case = "no_output_directories"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+    scene_path = _build_cinema4d_scene(
+        cinema4d_location,
+        case_folder,
+        actual_dir,
+        case,
+    )
+
+    try:
+        _attempt_export_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            deadline_farm=deadline_farm,
+            warning_handler=_cancel_after_no_output_export_warning,
+        )
+        assert deadline_farm["backend"].call_counts.get("CreateJob", 0) == 0
+    finally:
+        rmtree(actual_dir, ignore_errors=True)
+
+
+def test_integ_no_output_directory_warning_on_submission(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """Warn before submitting a scene that has no enabled C4D output target."""
+    case = "no_output_directories"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+    scene_path = _build_cinema4d_scene(
+        cinema4d_location,
+        case_folder,
+        actual_dir,
+        case,
+    )
+
+    try:
+        _attempt_submit_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            deadline_farm=deadline_farm,
+            warning_handler=_cancel_after_no_output_submission_warning,
+        )
+        assert deadline_farm["backend"].call_counts.get("CreateJob", 0) == 0
+    finally:
+        rmtree(actual_dir, ignore_errors=True)
 
 
 # Reliable Redshift rendering requires a GPU. Unlike standard runners, GPU

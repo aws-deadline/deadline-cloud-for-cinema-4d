@@ -1,5 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
+from enum import Enum
 from unittest import mock
 
 import yaml
@@ -10,16 +11,21 @@ from deadline.cinema4d_submitter._yaml_utils import _build_embedded_yaml
 from deadline.cinema4d_submitter.cinema4d_render_submitter import (
     TakeData,
     _get_job_template,
+    check_output_directory_warnings,
     check_take_token_warnings,
+    collect_submission_warnings,
     deduplicate_take_names,
     generate_take_parameter_names,
+    get_warning_cancel_label,
     warn_duplicate_take_names,
 )
 from deadline.cinema4d_submitter.data_classes import (
     RenderSubmitterUISettings,
     default_timeout_entries,
 )
+from deadline.cinema4d_submitter.takes import TakeSelection
 from deadline.cinema4d_submitter.warning_collector import warning_collector
+from deadline.client.ui.dialogs.submit_job_to_deadline_dialog import JobBundlePurpose
 
 
 class TestCinema4dRenderSubmitterDetailedLogging:
@@ -269,6 +275,133 @@ class TestCheckTakeTokenWarnings:
 
         assert warning_collector.has_warnings()
         assert "$take token" in warning_collector.get_warnings()[0]
+
+
+class TestCheckOutputDirectoryWarnings:
+    """Test cases for output-directory warnings."""
+
+    def setup_method(self):
+        warning_collector.clear_warnings()
+
+    @staticmethod
+    def _takes(*take_data: TakeData) -> dict[str, list[TakeData]]:
+        return {
+            "main_data_list": [take_data[0]],
+            "take_data_list": list(take_data),
+            "marked_data_list": [take for take in take_data if take.marked],
+            "current_data_list": [take_data[0]],
+        }
+
+    @staticmethod
+    def _take(name: str, output_directories: set[str], *, marked: bool = False) -> TakeData:
+        return TakeData(
+            name,
+            name,
+            "standard",
+            "",
+            None,
+            "1-10",
+            output_directories,
+            marked,
+        )
+
+    def test_warns_when_selected_take_has_no_output_directory(self):
+        settings = RenderSubmitterUISettings()
+        takes = self._takes(self._take("Main", set()))
+
+        check_output_directory_warnings(settings, takes)
+
+        assert warning_collector.get_warnings() == [
+            (
+                "No output directories were detected for selected take(s): Main. These takes may "
+                "render without producing output files. Enable Regular Image or Multi-Pass Image "
+                "saving in Cinema 4D, or continue only if output is intentionally handled elsewhere."
+            )
+        ]
+
+    def test_warns_only_for_selected_takes_without_output_directories(self):
+        settings = RenderSubmitterUISettings(take_selection=TakeSelection.ALL)
+        takes = self._takes(
+            self._take("Main", {"/renders"}),
+            self._take("NoOutput", set()),
+        )
+
+        check_output_directory_warnings(settings, takes)
+
+        assert warning_collector.get_warnings()[0].startswith(
+            "No output directories were detected for selected take(s): NoOutput."
+        )
+
+    def test_does_not_warn_for_unselected_take_without_output_directory(self):
+        settings = RenderSubmitterUISettings(take_selection=TakeSelection.MAIN)
+        takes = self._takes(
+            self._take("Main", {"/renders"}),
+            self._take("NoOutput", set()),
+        )
+
+        check_output_directory_warnings(settings, takes)
+
+        assert not warning_collector.has_warnings()
+
+    def test_output_path_override_does_not_hide_missing_output_directory(self):
+        settings = RenderSubmitterUISettings(
+            override_output_path=True,
+            output_path="/renders/override",
+        )
+        takes = self._takes(self._take("Main", set()))
+
+        check_output_directory_warnings(settings, takes)
+
+        assert warning_collector.has_warnings()
+
+
+class TestWarningCancelLabel:
+    """Test contextual warning-dialog cancel labels."""
+
+    def test_submission_uses_cancel_submission(self):
+        assert get_warning_cancel_label(JobBundlePurpose.SUBMISSION) == "Cancel Submission"
+
+    def test_export_uses_cancel_export(self):
+        assert get_warning_cancel_label(JobBundlePurpose.EXPORT) == "Cancel Export"
+
+    def test_export_uses_cancel_export_for_an_equivalent_enum(self):
+        class OtherJobBundlePurpose(Enum):
+            EXPORT = "export"
+
+        assert get_warning_cancel_label(OtherJobBundlePurpose.EXPORT) == "Cancel Export"
+
+
+class TestCollectSubmissionWarnings:
+    """Test warnings that are recomputed for each submit or export attempt."""
+
+    def setup_method(self):
+        warning_collector.clear_warnings()
+
+    def test_replaces_warnings_after_take_selection_changes(self):
+        settings = RenderSubmitterUISettings(take_selection=TakeSelection.ALL)
+        takes = {
+            "main_data_list": [
+                TakeData("Main", "Main", "standard", "", None, "1-10", {"/renders"}, False)
+            ],
+            "take_data_list": [
+                TakeData("Main", "Main", "standard", "", None, "1-10", {"/renders"}, False),
+                TakeData("NoOutput", "NoOutput", "standard", "", None, "1-10", set(), False),
+            ],
+            "marked_data_list": [],
+            "current_data_list": [
+                TakeData("Main", "Main", "standard", "", None, "1-10", {"/renders"}, False)
+            ],
+        }
+        warning_collector.add_warning("Asset warning")
+
+        submission_warning_source = object()
+        collect_submission_warnings(settings, takes, submission_warning_source)
+        assert any("NoOutput" in warning for warning in warning_collector.get_warnings())
+
+        settings.take_selection = TakeSelection.MAIN
+        collect_submission_warnings(settings, takes, submission_warning_source)
+
+        assert warning_collector.get_warnings() == ["Asset warning"]
 
 
 class TestDeduplicateTakeNames:

@@ -36,8 +36,11 @@ PYPROJECT = Path(__file__).parents[3] / "pyproject.toml"
 
 # Console sign-in landed in deadline 0.60.4 and nowhere earlier: 0.60.1 through
 # 0.60.3 have no AWS_CONSOLE_LOGIN credentials source and do not declare a
-# `console` extra at all. 0.60.3 is the highest version that must be excluded.
+# `console` extra at all. 0.60.4 lacks the export-cancellation API used by the
+# submitter. 0.60.5 is the first compatible release.
 HIGHEST_DEADLINE_WITHOUT_CONSOLE_SIGNIN = "0.60.3"
+HIGHEST_DEADLINE_WITHOUT_EXPORT_CANCELLATION = "0.60.4"
+LOWEST_COMPATIBLE_DEADLINE = "0.60.5"
 
 
 def _requirements(*table_path: str) -> list[Requirement]:
@@ -92,7 +95,7 @@ def test_base_dependencies_do_not_request_the_console_extra(base_dependencies):
 
 
 @pytest.mark.parametrize("table", ["base_dependencies", "gui_dependencies"])
-def test_deadline_floor_excludes_releases_without_console_signin(table, request):
+def test_deadline_floor_excludes_releases_without_required_features(table, request):
     """Guards the floor itself, not whatever a resolver happened to select.
 
     An installed-version check cannot do this: with a loosened ">= 0.60.1"
@@ -103,6 +106,14 @@ def test_deadline_floor_excludes_releases_without_console_signin(table, request)
         assert not req.specifier.contains(HIGHEST_DEADLINE_WITHOUT_CONSOLE_SIGNIN), (
             f"allows deadline {HIGHEST_DEADLINE_WITHOUT_CONSOLE_SIGNIN}, which has no "
             f"console sign-in support: {req}"
+        )
+        assert not req.specifier.contains(HIGHEST_DEADLINE_WITHOUT_EXPORT_CANCELLATION), (
+            f"allows deadline {HIGHEST_DEADLINE_WITHOUT_EXPORT_CANCELLATION}, which has no "
+            f"export-cancellation support: {req}"
+        )
+        assert req.specifier.contains(LOWEST_COMPATIBLE_DEADLINE), (
+            f"excludes the first compatible deadline release "
+            f"{LOWEST_COMPATIBLE_DEADLINE}: {req}"
         )
 
 
