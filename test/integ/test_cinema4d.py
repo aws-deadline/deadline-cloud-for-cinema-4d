@@ -774,13 +774,57 @@ def _cancel_after_no_output_submission_warning(dialog_app: xa11y.App) -> None:
     cancel_button.press()
     warning_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
 
-    cancellation_dialog = dialog_app.locator(
-        'dialog[name="Cinema4D job submission"], window[name="Cinema4D job submission"]'
+    # C4D exposes this confirmation dialog with different accessibility titles
+    # on Windows and macOS. The message itself is stable, so use it to identify
+    # the closest modal container and scope the OK action to that container.
+    cancellation_message = dialog_app.locator('static_text[name="Submission cancelled"]')
+    cancellation_message.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    cancellation_dialog: xa11y.Element | None = None
+    confirmation_button: xa11y.Element | None = None
+
+    def find_confirmation_button(element: xa11y.Element) -> xa11y.Element | None:
+        for child in element.children():
+            if child.role == "button" and child.name == "OK":
+                return child
+            descendant_button = find_confirmation_button(child)
+            if descendant_button is not None:
+                return descendant_button
+        return None
+
+    def cancellation_dialog_is_ready(message: xa11y.Element | None) -> bool:
+        nonlocal cancellation_dialog, confirmation_button
+        if message is None:
+            return False
+        try:
+            candidate = message.parent()
+            while candidate is not None:
+                if candidate.role in {"dialog", "window", "sheet"}:
+                    button = find_confirmation_button(candidate)
+                    if (
+                        candidate.visible
+                        and button is not None
+                        and button.visible
+                        and button.enabled
+                    ):
+                        cancellation_dialog = candidate
+                        confirmation_button = button
+                        return True
+                candidate = candidate.parent()
+        except xa11y.XA11yError:
+            # The preceding warning dialog can detach while the confirmation is
+            # appearing; let xa11y retry rather than failing on that transition.
+            return False
+        return False
+
+    cancellation_message.wait_until(
+        cancellation_dialog_is_ready,
+        timeout=_DIALOG_VISIBLE_TIMEOUT_S,
     )
-    cancellation_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
-    assert "Submission cancelled" in cancellation_dialog.element().dump(max_depth=4)
-    cancellation_dialog.descendant('button[name="OK"]').press()
-    cancellation_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    assert cancellation_dialog is not None
+    assert confirmation_button is not None
+    assert "Submission cancelled" in cancellation_dialog.dump(max_depth=4)
+    confirmation_button.press()
+    cancellation_message.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
 
     submitter_dialog = dialog_app.locator(
         f"dialog[name^='{_DIALOG_NAME_PREFIX}'], window[name^='{_DIALOG_NAME_PREFIX}']"
