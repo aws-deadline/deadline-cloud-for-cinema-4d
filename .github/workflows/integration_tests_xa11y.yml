@@ -6,10 +6,88 @@ on:
       - mainline
       # Restricted to developers with permission to approve pull requests.
       - feature/ci-tests
+  workflow_dispatch:
+    inputs:
+      ref_type:
+        description: Reference type to test
+        required: true
+        default: branch
+        type: choice
+        options:
+          - branch
+          - tag
+      branch:
+        description: Branch to test
+        required: false
+        default: mainline
+        type: string
+      tag:
+        description: Tag to test when ref_type is tag
+        required: false
+        type: string
+      test_filter:
+        description: Optional pytest -k expression to run instead of the full xa11y suite
+        required: false
+        type: string
 
 jobs:
+  validate_ref:
+    name: Validate manual test ref
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      ref: ${{ steps.validate.outputs.ref }}
+    steps:
+      - id: validate
+        env:
+          REF_TYPE: ${{ inputs.ref_type }}
+          BRANCH: ${{ inputs.branch }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          case "$REF_TYPE" in
+            branch)
+              ref_name="$BRANCH"
+              ref_prefix="refs/heads"
+              ;;
+            tag)
+              ref_name="$TAG"
+              ref_prefix="refs/tags"
+              ;;
+            *)
+              echo "Unsupported ref type: $REF_TYPE" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ -z "$ref_name" ]; then
+            echo "A $REF_TYPE name is required when ref_type is $REF_TYPE." >&2
+            exit 1
+          fi
+
+          case "$ref_name" in
+            refs/*)
+              echo "Enter a $REF_TYPE name without a refs/ prefix." >&2
+              exit 1
+              ;;
+          esac
+
+          if ! git check-ref-format "$ref_prefix/$ref_name"; then
+            echo "Invalid $REF_TYPE name: $ref_name" >&2
+            exit 1
+          fi
+
+          echo "ref=$ref_prefix/$ref_name" >> "$GITHUB_OUTPUT"
+
   windows:
-    name: Windows, Cinema 4D ${{ matrix.c4d_version }}
+    needs: validate_ref
+    if: >-
+      !cancelled() &&
+      (github.event_name != 'workflow_dispatch' ||
+      needs.validate_ref.result == 'success')
+    name: >-
+      Windows, Cinema 4D ${{ matrix.c4d_version }}${{
+      inputs.test_filter && format(' (-k {0})', inputs.test_filter) || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -17,6 +95,8 @@ jobs:
     uses: ./.github/workflows/integ_windows.yml
     with:
       c4d_version: ${{ matrix.c4d_version }}
+      ref: ${{ github.event_name == 'workflow_dispatch' && needs.validate_ref.outputs.ref || github.sha }}
+      test_filter: ${{ inputs.test_filter }}
     secrets:
       AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -30,7 +110,14 @@ jobs:
       contents: read
 
   macos:
-    name: macOS, Cinema 4D ${{ matrix.c4d_version }}
+    needs: validate_ref
+    if: >-
+      !cancelled() &&
+      (github.event_name != 'workflow_dispatch' ||
+      needs.validate_ref.result == 'success')
+    name: >-
+      macOS, Cinema 4D ${{ matrix.c4d_version }}${{
+      inputs.test_filter && format(' (-k {0})', inputs.test_filter) || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,6 +125,8 @@ jobs:
     uses: ./.github/workflows/integ_macos.yml
     with:
       c4d_version: ${{ matrix.c4d_version }}
+      ref: ${{ github.event_name == 'workflow_dispatch' && needs.validate_ref.outputs.ref || github.sha }}
+      test_filter: ${{ inputs.test_filter }}
     secrets:
       AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
