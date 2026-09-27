@@ -413,11 +413,11 @@ class TestCinema4DAdaptor_on_start:
         [
             ("Redshift", "Redshift Error: Maxon licensing error: License not found (6)"),
             ("Arnold", _ARNOLD_ABORT_LINE),
+            ("Arnold", "[rlm] abort_on_license_fail enabled"),
             ("Cinema 4D", "Invalid License"),
             ("Cinema 4D", "License Check error"),
             ("Cinema 4D", "Enter Registration Data"),
             ("Cinema 4D", "Enter the license method: 1) Maxon App"),
-            ("Cinema 4D", "[rlm] abort_on_license_fail enabled"),
             ("Cinema 4D", "17:44:34 No license found"),
             ("Cinema 4D", "18:38:54 No available licenses to choose"),
         ],
@@ -502,10 +502,24 @@ class TestCinema4DAdaptor_on_run:
         assert match is not None
         adaptor._handle_redshift_license_error(match)
 
-        with pytest.raises(RuntimeError) as exc_info:
-            adaptor.on_run(run_data)
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                adaptor.on_run(run_data)
+        finally:
+            # on_run enqueues into the class-level queue before it raises.
+            while len(adaptor._action_queue) > 0:
+                adaptor._action_queue.dequeue_action()
 
         assert "Redshift failed to acquire a license." in str(exc_info.value)
+
+    def test_unnamed_render_failure_respects_error_checking(self, init_data: dict) -> None:
+        """Tests that the unnamed render failure callback is off when error checking is."""
+        adaptor = Cinema4DAdaptor(init_data)
+        adaptor._activate_error_checking = 0
+
+        handlers = [c.callback for c in adaptor._get_regex_callbacks()]
+
+        assert adaptor._handle_unnamed_render_failure not in handlers
 
     @patch("time.sleep")
     @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)

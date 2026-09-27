@@ -314,6 +314,20 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 )
             )
 
+            # Render result 11 is Cinema 4D's unnamed failure, not a license signal, so it
+            # stays behind the error checking gate. V-Ray reports a failed license
+            # checkout only through it: nothing on stdout, no vendor log.
+            if self._activate_error_checking:
+                unnamed_render_failure_regexes = [
+                    re.compile(r".*unhandled render result: 11\b.*", re.IGNORECASE),
+                ]
+                callback_list.append(
+                    RegexCallback(
+                        unnamed_render_failure_regexes,
+                        self._handle_unnamed_render_failure,
+                    )
+                )
+
             # License failures cannot recover non-interactively and would otherwise
             # consume worker time until the initialization timeout.
             # The Redshift pattern is registered first so the failing product is named.
@@ -335,23 +349,12 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                     r"|this is a batch render and abort_on_license_fail option is enabled).*",
                     re.IGNORECASE,
                 ),
+                re.compile(r".*\[rlm\] abort_on_license_fail enabled.*", re.IGNORECASE),
             ]
             callback_list.append(
                 RegexCallback(
                     arnold_license_error_regexes,
                     self._handle_arnold_license_error,
-                )
-            )
-
-            # Cinema 4D does not name render result 11, and V-Ray reports a failed license
-            # checkout only through it: nothing on stdout, no vendor log.
-            unnamed_render_failure_regexes = [
-                re.compile(r".*unhandled render result: 11\b.*", re.IGNORECASE),
-            ]
-            callback_list.append(
-                RegexCallback(
-                    unnamed_render_failure_regexes,
-                    self._handle_unnamed_render_failure,
                 )
             )
 
@@ -361,7 +364,6 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 re.compile(r".*License Check error.*", re.IGNORECASE),
                 re.compile(r".*Enter Registration Data.*", re.IGNORECASE),
                 re.compile(r".*Enter the license method.*", re.IGNORECASE),
-                re.compile(r".*\[rlm\] abort_on_license_fail enabled.*", re.IGNORECASE),
                 re.compile(r".*No license found.*", re.IGNORECASE),
                 re.compile(r".*No available licenses to choose.*", re.IGNORECASE),
             ]
