@@ -316,11 +316,51 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
             # License failures cannot recover non-interactively and would otherwise
             # consume worker time until the initialization timeout.
+            # The Redshift pattern is registered first so the failing product is named.
+            redshift_license_error_regexes = [
+                re.compile(r".*Redshift Error: Maxon licensing error.*", re.IGNORECASE),
+            ]
+            callback_list.append(
+                RegexCallback(
+                    redshift_license_error_regexes,
+                    self._handle_redshift_license_error,
+                )
+            )
+
+            # Arnold emits this only when its abort_on_license_fail option is enabled.
+            # Without it Arnold watermarks by design, and this cannot match.
+            arnold_license_error_regexes = [
+                re.compile(
+                    r".*aborting render because (?:the abort_on_license_fail option was enabled"
+                    r"|this is a batch render and abort_on_license_fail option is enabled).*",
+                    re.IGNORECASE,
+                ),
+            ]
+            callback_list.append(
+                RegexCallback(
+                    arnold_license_error_regexes,
+                    self._handle_arnold_license_error,
+                )
+            )
+
+            # Cinema 4D does not name render result 11, and V-Ray reports a failed license
+            # checkout only through it: nothing on stdout, no vendor log.
+            unnamed_render_failure_regexes = [
+                re.compile(r".*unhandled render result: 11\b.*", re.IGNORECASE),
+            ]
+            callback_list.append(
+                RegexCallback(
+                    unnamed_render_failure_regexes,
+                    self._handle_unnamed_render_failure,
+                )
+            )
+
             license_error_regexes = [
                 re.compile(r".*Invalid License.*", re.IGNORECASE),
                 re.compile(r".*licensing error.*", re.IGNORECASE),
                 re.compile(r".*License Check error.*", re.IGNORECASE),
                 re.compile(r".*Enter Registration Data.*", re.IGNORECASE),
+                re.compile(r".*Enter the license method.*", re.IGNORECASE),
                 re.compile(r".*\[rlm\] abort_on_license_fail enabled.*", re.IGNORECASE),
                 re.compile(r".*No license found.*", re.IGNORECASE),
                 re.compile(r".*No available licenses to choose.*", re.IGNORECASE),
@@ -419,8 +459,35 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
     def _handle_license_error(self, match: re.Match) -> None:
         """Handle a fatal Cinema 4D licensing failure."""
+        self._record_license_error("Cinema 4D", match)
+
+    def _handle_redshift_license_error(self, match: re.Match) -> None:
+        """Handle a fatal Redshift licensing failure."""
+        self._record_license_error("Redshift", match)
+
+    def _handle_arnold_license_error(self, match: re.Match) -> None:
+        """Handle a fatal Arnold licensing failure."""
+        self._record_license_error("Arnold", match)
+
+    def _handle_unnamed_render_failure(self, match: re.Match) -> None:
+        """Handle a render failure Cinema 4D reports without naming a reason."""
+        if self._exc_info is not None:
+            return
+        self._exc_info = RuntimeError(
+            "The render failed and Cinema 4D did not report a reason.\n"
+            "If you are using V-Ray, this may be a license failure, which V-Ray reports "
+            "with no further diagnostic.\n"
+            "If you are using bring your own license (BYOL), check your license "
+            "configuration and availability.\n"
+            f"Error: {match.group(0)}"
+        )
+
+    def _record_license_error(self, product: str, match: re.Match) -> None:
+        """Record a licensing failure. First write wins, so the failing product is named."""
+        if self._exc_info is not None:
+            return
         message = (
-            "Cinema 4D failed to acquire a license.\n"
+            f"{product} failed to acquire a license.\n"
             "If you are using bring your own license (BYOL), check your license configuration "
             "and availability.\n"
             "If you are using usage-based licensing (UBL) from AWS Deadline Cloud and need a "
@@ -556,6 +623,10 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             time.sleep(0.1)  # busy wait for cinema4d to finish initialization
 
         if len(self._action_queue) > 0:
+            # The loop's `not self._has_exception` is skipped when Cinema4D exits
+            # first, so a recorded cause has to be raised here.
+            if self._exc_info is not None:
+                raise self._exc_info
             raise RuntimeError(
                 "Cinema4D encountered an error and was not able to complete initialization actions."
             )
@@ -596,6 +667,10 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         ):  # Client will always exist here.
             #  This is always an error case because the Cinema4D Client should still be running and
             #  waiting for the next command. If the thread finished, then we cannot continue
+            # The loop's `not self._has_exception` is skipped when Cinema4D exits
+            # first, so a recorded cause has to be raised here.
+            if self._exc_info is not None:
+                raise self._exc_info
             exit_code = self._cinema4d_client.returncode
             raise Cinema4DNotRunningError(
                 "Cinema4D exited early and did not render successfully, please check render logs. "
