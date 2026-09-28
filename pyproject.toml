@@ -173,8 +173,6 @@ fail_under = 23
 
 [tool.semantic_release]
 allow_zero_version = true
-# Can be removed or set to true once we are v1
-major_on_zero = false
 tag_format = "{version}"
 
 [tool.semantic_release.commit_parser_options]
@@ -190,10 +188,9 @@ allowed_tags = [
     "refactor",
     "test",
 ]
-minor_tags = []
+minor_tags = ["feat"]
 patch_tags = [
   "chore",
-  "feat",
   "fix",
   "refactor",
   "perf",
