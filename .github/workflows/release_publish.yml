@@ -90,9 +90,15 @@ jobs:
           TAG: ${{ needs.CheckConda.outputs.tag }}
         run: echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
+  # ApproveManifestOverride is expected to be skipped for normal releases.
+  # Explicit status checks prevent GitHub from propagating that skipped
+  # ancestor through the rest of the release dependency chain.
   ValidateRelease:
     needs: AuthorizePublish
-    if: needs.AuthorizePublish.outputs.tag != ''
+    if: >-
+      !cancelled() &&
+      needs.AuthorizePublish.result == 'success' &&
+      needs.AuthorizePublish.outputs.tag != ''
     uses: aws-deadline/.github/.github/workflows/reusable_tag_release.yml@mainline
     permissions:
       contents: read
@@ -102,7 +108,10 @@ jobs:
 
   PreRelease:
     needs: ValidateRelease
-    if: needs.ValidateRelease.outputs.tag != ''
+    if: >-
+      !cancelled() &&
+      needs.ValidateRelease.result == 'success' &&
+      needs.ValidateRelease.outputs.tag != ''
     uses: aws-deadline/.github/.github/workflows/reusable_prerelease.yml@mainline
     permissions:
       id-token: write
@@ -113,7 +122,11 @@ jobs:
 
   ReleaseInstaller:
     needs: [ValidateRelease, PreRelease]
-    if: needs.ValidateRelease.outputs.tag != ''
+    if: >-
+      !cancelled() &&
+      needs.ValidateRelease.result == 'success' &&
+      needs.PreRelease.result == 'success' &&
+      needs.ValidateRelease.outputs.tag != ''
     uses: aws-deadline/.github/.github/workflows/reusable_release_installers.yml@mainline
     secrets: inherit
     permissions:
@@ -128,7 +141,12 @@ jobs:
   # repeatedly release installers. Recover PyPI by rerunning this run's failed job.
   Release:
     needs: [ValidateRelease, PreRelease, ReleaseInstaller]
-    if: needs.ValidateRelease.outputs.tag != ''
+    if: >-
+      !cancelled() &&
+      needs.ValidateRelease.result == 'success' &&
+      needs.PreRelease.result == 'success' &&
+      needs.ReleaseInstaller.result == 'success' &&
+      needs.ValidateRelease.outputs.tag != ''
     uses: aws-deadline/.github/.github/workflows/reusable_release.yml@mainline
     secrets: inherit
     permissions:
@@ -141,7 +159,11 @@ jobs:
   # See https://github.com/pypi/warehouse/issues/11096
   PublishToPyPI:
     needs: [ValidateRelease, Release]
-    if: needs.ValidateRelease.outputs.tag != ''
+    if: >-
+      !cancelled() &&
+      needs.ValidateRelease.result == 'success' &&
+      needs.Release.result == 'success' &&
+      needs.ValidateRelease.outputs.tag != ''
     runs-on: ubuntu-latest
     environment: release
     permissions:
