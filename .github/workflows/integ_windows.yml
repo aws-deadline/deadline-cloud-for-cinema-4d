@@ -7,6 +7,16 @@ on:
         description: Cinema 4D major version to test
         required: true
         type: string
+      ref:
+        description: >-
+          Git ref to check out as the test repository tree; the reusable
+          workflow definition remains at the caller's ref
+        required: false
+        type: string
+      test_filter:
+        description: Optional pytest -k expression to run instead of the full xa11y suite
+        required: false
+        type: string
     secrets:
       AWS_OIDC_ROLE_ARN:
         required: true
@@ -27,7 +37,8 @@ jobs:
   IntegWindows:
     if: >-
       github.repository == 'aws-deadline/deadline-cloud-for-cinema-4d' &&
-      (github.ref == 'refs/heads/mainline' ||
+      (github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/mainline' ||
       github.ref == 'refs/heads/feature/ci-tests')
     name: Integration Tests (Windows, Cinema 4D ${{ inputs.c4d_version }})
     runs-on: ${{ inputs.c4d_version == '2026' && 'aws-deadline_windows-2025_gpu-t4-4-core' || 'windows-latest' }}
@@ -49,6 +60,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -78,6 +90,7 @@ jobs:
           RLM_PORT: ${{ secrets.RLM_PORT }}
           LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
           BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+          TEST_FILTER: ${{ inputs.test_filter }}
         run: |
           $rlmPort = $env:RLM_PORT.Trim()
           $region  = $env:AWS_REGION.Trim()
@@ -139,7 +152,11 @@ jobs:
           "SSM_SESSION_ID=$ssmSessionId" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           if ($ssmSessionId) { Write-Host "SSM session id: $ssmSessionId" } else { Write-Host "SSM session id: <not captured>" }
 
-          hatch run integ:test
+          if ($env:TEST_FILTER) {
+            hatch run integ:test test/integ -k "$env:TEST_FILTER"
+          } else {
+            hatch run integ:test
+          }
 
       - name: Upload render outputs
         if: always()
