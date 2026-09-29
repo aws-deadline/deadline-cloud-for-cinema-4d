@@ -414,7 +414,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         Raises:
             RuntimeError: Always raises a runtime error to halt the adaptor.
         """
-        self._exc_info = RuntimeError(f"Cinema4D Encountered an Error: {match.group(0)}")
+        self._record_exception(RuntimeError(f"Cinema4D Encountered an Error: {match.group(0)}"))
 
     def _handle_insufficient_ram(self, match: re.Match) -> None:
         """
@@ -433,7 +433,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             f"Error: {match.group(0)}"
         )
 
-        self._exc_info = RuntimeError(message)
+        self._record_exception(RuntimeError(message))
 
     def _handle_nvidia_driver_error(self, match: re.Match) -> None:
         """
@@ -457,7 +457,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             "Please update the NVIDIA drivers on your worker fleet. "
             f"Error: {match.group(0)}"
         )
-        self._exc_info = RuntimeError(message)
+        self._record_exception(RuntimeError(message))
 
     def _handle_license_error(self, match: re.Match) -> None:
         """Handle a fatal Cinema 4D licensing failure."""
@@ -473,21 +473,28 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
 
     def _handle_unnamed_render_failure(self, match: re.Match) -> None:
         """Handle a render failure Cinema 4D reports without naming a reason."""
-        if self._exc_info is not None:
-            return
-        self._exc_info = RuntimeError(
-            "The render failed and Cinema 4D did not report a reason.\n"
-            "If you are using V-Ray, this may be a license failure, which V-Ray reports "
-            "with no further diagnostic.\n"
-            "If you are using bring your own license (BYOL), check your license "
-            "configuration and availability.\n"
-            f"Error: {match.group(0)}"
+        self._record_exception(
+            RuntimeError(
+                "The render failed and Cinema 4D did not report a reason.\n"
+                "If you are using V-Ray, this may be a license failure, which V-Ray reports "
+                "with no further diagnostic.\n"
+                "If you are using bring your own license (BYOL), check your license "
+                "configuration and availability.\n"
+                f"Error: {match.group(0)}"
+            )
         )
 
+    def _record_exception(self, exc: Exception) -> None:
+        """
+        Records an exception for the main thread to raise. First write wins: a license failure
+        is followed by generic fallout that also matches error_regexes, and every matching
+        callback runs, so a later generic message must not replace the specific cause.
+        """
+        if self._exc_info is None:
+            self._exc_info = exc
+
     def _record_license_error(self, product: str, match: re.Match) -> None:
-        """Record a licensing failure. First write wins, so the failing product is named."""
-        if self._exc_info is not None:
-            return
+        """Record a licensing failure, naming the product that failed."""
         message = (
             f"{product} failed to acquire a license.\n"
             "If you are using bring your own license (BYOL), check your license configuration "
@@ -497,7 +504,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             "team to request an increase.\n"
             f"Error: {match.group(0)}"
         )
-        self._exc_info = RuntimeError(message)
+        self._record_exception(RuntimeError(message))
 
     def _add_deadline_openjd_paths(self) -> None:
         # Add the openjd namespace directory to PYTHONPATH, so that adaptor_runtime_client

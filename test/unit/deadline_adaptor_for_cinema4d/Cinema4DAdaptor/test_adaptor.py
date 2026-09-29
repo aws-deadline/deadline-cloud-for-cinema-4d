@@ -485,6 +485,18 @@ class TestCinema4DAdaptor_on_start:
         message = str(adaptor._exc_info)
         assert "V-Ray" in message and "license" in message
 
+    def test_generic_error_does_not_replace_a_license_error(self, init_data: dict) -> None:
+        """Tests that fallout after a license failure does not overwrite the named cause."""
+        adaptor = Cinema4DAdaptor(init_data)
+        licence = re.match(".*", "Redshift Error: Maxon licensing error: License not found (6)")
+        fallout = re.match(".*", "Rendering failed")
+        assert licence is not None and fallout is not None
+
+        adaptor._handle_redshift_license_error(licence)
+        adaptor._handle_error(fallout)
+
+        assert "Redshift failed to acquire a license." in str(adaptor._exc_info)
+
 
 @pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_on_run:
