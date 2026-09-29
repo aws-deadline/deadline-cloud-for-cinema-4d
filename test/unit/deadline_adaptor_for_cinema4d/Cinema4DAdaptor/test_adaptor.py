@@ -524,6 +524,28 @@ class TestCinema4DAdaptor_on_run:
 
         assert "Redshift failed to acquire a license." in str(exc_info.value)
 
+    def test_license_failure_survives_an_empty_action_queue(
+        self, init_data: dict, run_data: dict
+    ) -> None:
+        """Tests that a cause recorded during startup is preferred when Cinema 4D has exited.
+
+        The action queue empties when the client requests an action, not when it completes it,
+        so a failure while performing the last init action leaves on_start with nothing to
+        raise and on_run finding the process already gone.
+        """
+        adaptor = Cinema4DAdaptor(init_data)
+        client = Mock()
+        type(client).is_running = PropertyMock(return_value=False)
+        adaptor._cinema4d_client = client
+        match = re.match(".*", "Redshift Error: Maxon licensing error: License not found (6)")
+        assert match is not None
+        adaptor._handle_redshift_license_error(match)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            adaptor.on_run(run_data)
+
+        assert "Redshift failed to acquire a license." in str(exc_info.value)
+
     def test_unnamed_render_failure_respects_error_checking(self, init_data: dict) -> None:
         """Tests that the unnamed render failure callback is off when error checking is."""
         adaptor = Cinema4DAdaptor(init_data)

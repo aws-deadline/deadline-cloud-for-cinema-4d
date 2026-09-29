@@ -651,6 +651,11 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         self.validators.run_data.validate(run_data)
 
         if not self._cinema4d_is_running:
+            # Startup returns cleanly when the client had taken the last init action before
+            # failing, because the queue empties on request rather than on completion. A cause
+            # recorded then is still the specific one, so prefer it over the generic message.
+            if self._exc_info is not None:
+                raise self._exc_info
             raise Cinema4DNotRunningError("Cannot render because Cinema4D is not running.")
 
         self._is_rendering = True
