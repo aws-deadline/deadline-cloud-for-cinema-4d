@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   CheckForBump:
+    if: github.repository == 'aws-deadline/deadline-cloud-for-cinema-4d'
     runs-on: ubuntu-latest
     permissions:
       contents: read
