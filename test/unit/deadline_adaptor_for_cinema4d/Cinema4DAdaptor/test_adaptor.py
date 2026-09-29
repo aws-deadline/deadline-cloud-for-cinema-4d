@@ -80,14 +80,6 @@ def _regexes_for(regex_callbacks, handler):
 
 
 @pytest.mark.xdist_group(name="adaptor_tests")
-def _regexes_for(regex_callbacks, handler):
-    """Returns the regex list registered for a handler, so tests do not depend on order."""
-    for callback in regex_callbacks:
-        if callback.callback == handler:
-            return callback.regex_list
-    raise AssertionError(f"no RegexCallback registered for {handler}")
-
-
 class TestCinema4DAdaptor_errors_on_cleanup:
     @pytest.mark.parametrize(
         "stdout,error_expected",
