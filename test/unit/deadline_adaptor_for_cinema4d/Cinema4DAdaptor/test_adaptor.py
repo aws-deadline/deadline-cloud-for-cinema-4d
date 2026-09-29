@@ -72,6 +72,14 @@ def init_data() -> dict:
 
 
 @pytest.mark.xdist_group(name="adaptor_tests")
+def _regexes_for(regex_callbacks, handler):
+    """Returns the regex list registered for a handler, so tests do not depend on order."""
+    for callback in regex_callbacks:
+        if callback.callback == handler:
+            return callback.regex_list
+    raise AssertionError(f"no RegexCallback registered for {handler}")
+
+
 class TestCinema4DAdaptor_errors_on_cleanup:
     @pytest.mark.parametrize(
         "stdout,error_expected",
@@ -105,8 +113,8 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         # GIVEN
         adaptor = Cinema4DAdaptor(init_data)
         regex_callbacks = adaptor._get_regex_callbacks()
-        # Currently the callback for errors is at index 2
-        error_regexes = regex_callbacks[2].regex_list
+        # Located by handler, not position: the generic handler is registered last.
+        error_regexes = _regexes_for(regex_callbacks, adaptor._handle_error)
 
         # WHEN
         for regex in error_regexes:
@@ -134,8 +142,7 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         # GIVEN
         adaptor = Cinema4DAdaptor(init_data)
         regex_callbacks = adaptor._get_regex_callbacks()
-        # Currently the callback for insufficient RAM is at index 3
-        regexes = regex_callbacks[3].regex_list
+        regexes = _regexes_for(regex_callbacks, adaptor._handle_insufficient_ram)
 
         # WHEN
         for regex in regexes:
@@ -181,8 +188,7 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         # GIVEN
         adaptor = Cinema4DAdaptor(init_data)
         regex_callbacks = adaptor._get_regex_callbacks()
-        # Currently the callback for NVIDIA driver errors is at index 4
-        regexes = regex_callbacks[4].regex_list
+        regexes = _regexes_for(regex_callbacks, adaptor._handle_nvidia_driver_error)
 
         # WHEN
         for regex in regexes:
@@ -484,6 +490,14 @@ class TestCinema4DAdaptor_on_start:
         adaptor._handle_unnamed_render_failure(matches[0])
         message = str(adaptor._exc_info)
         assert "V-Ray" in message and "license" in message
+
+    def test_generic_handler_is_registered_last(self, init_data: dict) -> None:
+        """Tests that every specific handler records before the generic one."""
+        adaptor = Cinema4DAdaptor(init_data)
+
+        handlers = [c.callback for c in adaptor._get_regex_callbacks()]
+
+        assert handlers[-1] == adaptor._handle_error
 
     def test_generic_error_does_not_replace_a_license_error(self, init_data: dict) -> None:
         """Tests that fallout after a license failure does not overwrite the named cause."""

@@ -269,32 +269,6 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 re.compile(r".*Progress ([0-9]+)%.*"),
             ]
             callback_list.append(RegexCallback(progress_regexes, self._handle_progress))
-
-            error_regexes = [
-                re.compile(r".*Document not found.*", re.IGNORECASE),
-                re.compile(r".*Project not found.*", re.IGNORECASE),
-                re.compile(r".*Error rendering project.*", re.IGNORECASE),
-                re.compile(r".*Error loading project.*", re.IGNORECASE),
-                re.compile(r".*Error rendering document.*", re.IGNORECASE),
-                re.compile(r".*Error loading document.*", re.IGNORECASE),
-                re.compile(r".*Rendering failed.*", re.IGNORECASE),
-                re.compile(r".*Asset missing.*", re.IGNORECASE),
-                re.compile(r".*Asset Error.*", re.IGNORECASE),
-                re.compile(r".*Files cannot be written.*", re.IGNORECASE),
-                re.compile(r".*Unable to write file.*", re.IGNORECASE),
-                re.compile(r".*RenderDocument failed with return code.*", re.IGNORECASE),
-                re.compile(r".*Frame rendering aborted.*", re.IGNORECASE),
-                re.compile(r".*Rendering was internally aborted.*", re.IGNORECASE),
-                re.compile(r'.*Cannot find procedure "rsPreference".*', re.IGNORECASE),
-            ]
-
-            # Only add error regexes if error checking is activated
-            if self._activate_error_checking:
-                _logger.info("Adding error regexes to callback list")
-                callback_list.append(RegexCallback(error_regexes, self._handle_error))
-            else:
-                _logger.warning("NOT adding error regexes to callback list")
-
             insufficient_ram_regexes = re.compile(r".*Failed to allocate mem.*", re.IGNORECASE)
             callback_list.append(
                 RegexCallback(
@@ -373,6 +347,33 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                     self._handle_license_error,
                 )
             )
+
+            # Registered last so a more specific handler always records first: every
+            # matching callback runs, and _record_exception keeps the first exception.
+            error_regexes = [
+                re.compile(r".*Document not found.*", re.IGNORECASE),
+                re.compile(r".*Project not found.*", re.IGNORECASE),
+                re.compile(r".*Error rendering project.*", re.IGNORECASE),
+                re.compile(r".*Error loading project.*", re.IGNORECASE),
+                re.compile(r".*Error rendering document.*", re.IGNORECASE),
+                re.compile(r".*Error loading document.*", re.IGNORECASE),
+                re.compile(r".*Rendering failed.*", re.IGNORECASE),
+                re.compile(r".*Asset missing.*", re.IGNORECASE),
+                re.compile(r".*Asset Error.*", re.IGNORECASE),
+                re.compile(r".*Files cannot be written.*", re.IGNORECASE),
+                re.compile(r".*Unable to write file.*", re.IGNORECASE),
+                re.compile(r".*RenderDocument failed with return code.*", re.IGNORECASE),
+                re.compile(r".*Frame rendering aborted.*", re.IGNORECASE),
+                re.compile(r".*Rendering was internally aborted.*", re.IGNORECASE),
+                re.compile(r'.*Cannot find procedure "rsPreference".*', re.IGNORECASE),
+            ]
+
+            # Only add error regexes if error checking is activated
+            if self._activate_error_checking:
+                _logger.info("Adding error regexes to callback list")
+                callback_list.append(RegexCallback(error_regexes, self._handle_error))
+            else:
+                _logger.warning("NOT adding error regexes to callback list")
 
             self._regex_callbacks = callback_list
         return self._regex_callbacks
