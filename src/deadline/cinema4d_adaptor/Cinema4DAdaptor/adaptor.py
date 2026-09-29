@@ -269,7 +269,87 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 re.compile(r".*Progress ([0-9]+)%.*"),
             ]
             callback_list.append(RegexCallback(progress_regexes, self._handle_progress))
+            insufficient_ram_regexes = re.compile(r".*Failed to allocate mem.*", re.IGNORECASE)
+            callback_list.append(
+                RegexCallback(
+                    [re.compile(insufficient_ram_regexes)],
+                    self._handle_insufficient_ram,
+                )
+            )
 
+            nvidia_driver_regexes = re.compile(
+                r".*(?:Please make sure you have NVIDIA driver (\S+) or later installed|requires driver (\S+) but has (\S+)).*",
+                re.IGNORECASE,
+            )
+            callback_list.append(
+                RegexCallback(
+                    [nvidia_driver_regexes],
+                    self._handle_nvidia_driver_error,
+                )
+            )
+
+            # Render result 11 is Cinema 4D's unnamed failure, not a license signal, so it
+            # stays behind the error checking gate. V-Ray reports a failed license
+            # checkout only through it: nothing on stdout, no vendor log.
+            if self._activate_error_checking:
+                unnamed_render_failure_regexes = [
+                    re.compile(r".*unhandled render result: 11\b.*", re.IGNORECASE),
+                ]
+                callback_list.append(
+                    RegexCallback(
+                        unnamed_render_failure_regexes,
+                        self._handle_unnamed_render_failure,
+                    )
+                )
+
+            # License failures cannot recover non-interactively and would otherwise
+            # consume worker time until the initialization timeout.
+            # The Redshift pattern is registered first so the failing product is named.
+            redshift_license_error_regexes = [
+                re.compile(r".*Redshift Error: Maxon licensing error.*", re.IGNORECASE),
+            ]
+            callback_list.append(
+                RegexCallback(
+                    redshift_license_error_regexes,
+                    self._handle_redshift_license_error,
+                )
+            )
+
+            # Arnold emits this only when its abort_on_license_fail option is enabled.
+            # Without it Arnold watermarks by design, and this cannot match.
+            arnold_license_error_regexes = [
+                re.compile(
+                    r".*aborting render because (?:the abort_on_license_fail option was enabled"
+                    r"|this is a batch render and abort_on_license_fail option is enabled).*",
+                    re.IGNORECASE,
+                ),
+                re.compile(r".*\[rlm\] abort_on_license_fail enabled.*", re.IGNORECASE),
+            ]
+            callback_list.append(
+                RegexCallback(
+                    arnold_license_error_regexes,
+                    self._handle_arnold_license_error,
+                )
+            )
+
+            license_error_regexes = [
+                re.compile(r".*Invalid License.*", re.IGNORECASE),
+                re.compile(r".*licensing error.*", re.IGNORECASE),
+                re.compile(r".*License Check error.*", re.IGNORECASE),
+                re.compile(r".*Enter Registration Data.*", re.IGNORECASE),
+                re.compile(r".*Enter the license method.*", re.IGNORECASE),
+                re.compile(r".*No license found.*", re.IGNORECASE),
+                re.compile(r".*No available licenses to choose.*", re.IGNORECASE),
+            ]
+            callback_list.append(
+                RegexCallback(
+                    license_error_regexes,
+                    self._handle_license_error,
+                )
+            )
+
+            # Registered last so a more specific handler always records first: every
+            # matching callback runs, and _record_exception keeps the first exception.
             error_regexes = [
                 re.compile(r".*Document not found.*", re.IGNORECASE),
                 re.compile(r".*Project not found.*", re.IGNORECASE),
@@ -294,43 +374,6 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
                 callback_list.append(RegexCallback(error_regexes, self._handle_error))
             else:
                 _logger.warning("NOT adding error regexes to callback list")
-
-            insufficient_ram_regexes = re.compile(r".*Failed to allocate mem.*", re.IGNORECASE)
-            callback_list.append(
-                RegexCallback(
-                    [re.compile(insufficient_ram_regexes)],
-                    self._handle_insufficient_ram,
-                )
-            )
-
-            nvidia_driver_regexes = re.compile(
-                r".*(?:Please make sure you have NVIDIA driver (\S+) or later installed|requires driver (\S+) but has (\S+)).*",
-                re.IGNORECASE,
-            )
-            callback_list.append(
-                RegexCallback(
-                    [nvidia_driver_regexes],
-                    self._handle_nvidia_driver_error,
-                )
-            )
-
-            # License failures cannot recover non-interactively and would otherwise
-            # consume worker time until the initialization timeout.
-            license_error_regexes = [
-                re.compile(r".*Invalid License.*", re.IGNORECASE),
-                re.compile(r".*licensing error.*", re.IGNORECASE),
-                re.compile(r".*License Check error.*", re.IGNORECASE),
-                re.compile(r".*Enter Registration Data.*", re.IGNORECASE),
-                re.compile(r".*\[rlm\] abort_on_license_fail enabled.*", re.IGNORECASE),
-                re.compile(r".*No license found.*", re.IGNORECASE),
-                re.compile(r".*No available licenses to choose.*", re.IGNORECASE),
-            ]
-            callback_list.append(
-                RegexCallback(
-                    license_error_regexes,
-                    self._handle_license_error,
-                )
-            )
 
             self._regex_callbacks = callback_list
         return self._regex_callbacks
@@ -372,7 +415,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         Raises:
             RuntimeError: Always raises a runtime error to halt the adaptor.
         """
-        self._exc_info = RuntimeError(f"Cinema4D Encountered an Error: {match.group(0)}")
+        self._record_exception(RuntimeError(f"Cinema4D Encountered an Error: {match.group(0)}"))
 
     def _handle_insufficient_ram(self, match: re.Match) -> None:
         """
@@ -391,7 +434,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             f"Error: {match.group(0)}"
         )
 
-        self._exc_info = RuntimeError(message)
+        self._record_exception(RuntimeError(message))
 
     def _handle_nvidia_driver_error(self, match: re.Match) -> None:
         """
@@ -415,12 +458,46 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             "Please update the NVIDIA drivers on your worker fleet. "
             f"Error: {match.group(0)}"
         )
-        self._exc_info = RuntimeError(message)
+        self._record_exception(RuntimeError(message))
 
     def _handle_license_error(self, match: re.Match) -> None:
         """Handle a fatal Cinema 4D licensing failure."""
+        self._record_license_error("Cinema 4D", match)
+
+    def _handle_redshift_license_error(self, match: re.Match) -> None:
+        """Handle a fatal Redshift licensing failure."""
+        self._record_license_error("Redshift", match)
+
+    def _handle_arnold_license_error(self, match: re.Match) -> None:
+        """Handle a fatal Arnold licensing failure."""
+        self._record_license_error("Arnold", match)
+
+    def _handle_unnamed_render_failure(self, match: re.Match) -> None:
+        """Handle a render failure Cinema 4D reports without naming a reason."""
+        self._record_exception(
+            RuntimeError(
+                "The render failed and Cinema 4D did not report a reason.\n"
+                "If you are using V-Ray, this may be a license failure, which V-Ray reports "
+                "with no further diagnostic.\n"
+                "If you are using bring your own license (BYOL), check your license "
+                "configuration and availability.\n"
+                f"Error: {match.group(0)}"
+            )
+        )
+
+    def _record_exception(self, exc: Exception) -> None:
+        """
+        Records an exception for the main thread to raise. First write wins: a license failure
+        is followed by generic fallout that also matches error_regexes, and every matching
+        callback runs, so a later generic message must not replace the specific cause.
+        """
+        if self._exc_info is None:
+            self._exc_info = exc
+
+    def _record_license_error(self, product: str, match: re.Match) -> None:
+        """Record a licensing failure, naming the product that failed."""
         message = (
-            "Cinema 4D failed to acquire a license.\n"
+            f"{product} failed to acquire a license.\n"
             "If you are using bring your own license (BYOL), check your license configuration "
             "and availability.\n"
             "If you are using usage-based licensing (UBL) from AWS Deadline Cloud and need a "
@@ -428,7 +505,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             "team to request an increase.\n"
             f"Error: {match.group(0)}"
         )
-        self._exc_info = RuntimeError(message)
+        self._record_exception(RuntimeError(message))
 
     def _add_deadline_openjd_paths(self) -> None:
         # Add the openjd namespace directory to PYTHONPATH, so that adaptor_runtime_client
@@ -556,6 +633,10 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             time.sleep(0.1)  # busy wait for cinema4d to finish initialization
 
         if len(self._action_queue) > 0:
+            # The loop's `not self._has_exception` is skipped when Cinema4D exits
+            # first, so a recorded cause has to be raised here.
+            if self._exc_info is not None:
+                raise self._exc_info
             raise RuntimeError(
                 "Cinema4D encountered an error and was not able to complete initialization actions."
             )
@@ -571,6 +652,11 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         self.validators.run_data.validate(run_data)
 
         if not self._cinema4d_is_running:
+            # Startup returns cleanly when the client had taken the last init action before
+            # failing, because the queue empties on request rather than on completion. A cause
+            # recorded then is still the specific one, so prefer it over the generic message.
+            if self._exc_info is not None:
+                raise self._exc_info
             raise Cinema4DNotRunningError("Cannot render because Cinema4D is not running.")
 
         self._is_rendering = True
@@ -596,6 +682,10 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         ):  # Client will always exist here.
             #  This is always an error case because the Cinema4D Client should still be running and
             #  waiting for the next command. If the thread finished, then we cannot continue
+            # The loop's `not self._has_exception` is skipped when Cinema4D exits
+            # first, so a recorded cause has to be raised here.
+            if self._exc_info is not None:
+                raise self._exc_info
             exit_code = self._cinema4d_client.returncode
             raise Cinema4DNotRunningError(
                 "Cinema4D exited early and did not render successfully, please check render logs. "
