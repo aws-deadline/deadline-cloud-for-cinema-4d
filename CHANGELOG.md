@@ -1,3 +1,12 @@
+## 1.0.0 (2026-09-28)
+
+### Features
+* A warning is now displayed before submitting scenes that have no configured output, helping you avoid accidentally submitting jobs that won't produce render results. (#567)
+
+### Bug Fixes
+* Fixed incorrect colors in 32-bit float output (EXR, HDR, 32-bit TIFF) when the scene uses OCIO color management. Previously, farm renders applied an unwanted colorspace conversion, resulting in output that was not scene-linear. Renders now match local output. (#552)
+* Cinema 4D render progress is now correctly forwarded during job execution, so you can see accurate progress updates for your rendering tasks. (#565)
+* Fixed an issue where legacy Redshift GraphView textures were not being remapped correctly, which could cause missing textures when rendering on the farm. (#566)
 ## 0.12.3 (2026-09-23)
 
 ### Bug Fixes
