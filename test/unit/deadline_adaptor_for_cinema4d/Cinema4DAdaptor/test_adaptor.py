@@ -595,6 +595,8 @@ class TestCinema4DAdaptor_on_run:
         adaptor = Cinema4DAdaptor(init_data)
         client = Mock()
         # Cinema 4D exits after the render fails, short-circuiting the render loop.
+        # on_start reads this from init_data, and this test does not call on_start.
+        adaptor._activate_error_checking = int(error_checking)
         type(client).is_running = PropertyMock(side_effect=[True, False, False])
         adaptor._cinema4d_client = client
 
