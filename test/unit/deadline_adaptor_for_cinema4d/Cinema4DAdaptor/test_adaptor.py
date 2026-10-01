@@ -58,6 +58,28 @@ _REDSHIFT_MID_RENDER_LICENSE_FAILURES = {
     ],
 }
 
+
+def _redshift_render_license_abort_message(line: str) -> str:
+    return (
+        "Redshift aborted the render due to a license failure "
+        '(Cinema 4D reported this as "Not enough memory").\n'
+        "See the Redshift errors above this line for the reason, for example a license "
+        "mismatch, an unreachable license server, or a blocked IP address.\n"
+        f"Error: {line}"
+    )
+
+
+def _replay_output(adaptor: Cinema4DAdaptor, lines: list[str]) -> None:
+    """Feeds lines to the adaptor's callbacks the way its stdout handler does.
+
+    Every matching callback runs for each line, as in RegexHandler.emit.
+    """
+    for line in lines:
+        for regex_callback in adaptor._get_regex_callbacks():
+            if match := regex_callback.get_match(line):
+                regex_callback.callback(match)
+
+
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -455,8 +477,6 @@ class TestCinema4DAdaptor_on_start:
         [
             ("Redshift", "Redshift Error: Maxon licensing error: License not found (6)"),
             ("Redshift", "Redshift Error: \tMaxon licensing error: License not found (6)"),
-            ("Redshift", _REDSHIFT_RENDER_ABORTED_LINE),
-            ("Redshift", "Redshift Error: Rendering aborted due to license failure"),
             ("Arnold", _ARNOLD_ABORT_LINE),
             ("Arnold", "[rlm] abort_on_license_fail enabled"),
             ("Cinema 4D", "Invalid License"),
@@ -602,11 +622,7 @@ class TestCinema4DAdaptor_on_run:
         type(client).is_running = PropertyMock(side_effect=[True, False, False])
         adaptor._cinema4d_client = client
 
-        # Replay the output the way the stdout handler does: every matching callback runs.
-        for line in _REDSHIFT_MID_RENDER_LICENSE_FAILURES[variant]:
-            for regex_callback in adaptor._get_regex_callbacks():
-                if match := regex_callback.get_match(line):
-                    regex_callback.callback(match)
+        _replay_output(adaptor, _REDSHIFT_MID_RENDER_LICENSE_FAILURES[variant])
 
         try:
             with pytest.raises(RuntimeError) as exc_info:
@@ -616,10 +632,40 @@ class TestCinema4DAdaptor_on_run:
             while len(adaptor._action_queue) > 0:
                 adaptor._action_queue.dequeue_action()
 
-        message = str(exc_info.value)
-        assert message.startswith("Redshift failed to acquire a license.")
-        assert message.endswith(f"Error: {_REDSHIFT_RENDER_ABORTED_LINE}")
-        assert "memory" not in message.lower()
+        assert str(exc_info.value) == _redshift_render_license_abort_message(
+            _REDSHIFT_RENDER_ABORTED_LINE
+        )
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            _REDSHIFT_RENDER_ABORTED_LINE,
+            "Redshift Error: Rendering aborted due to license failure",
+        ],
+    )
+    def test_redshift_render_license_abort_accepts_space_or_tab(
+        self, init_data: dict, line: str
+    ) -> None:
+        """Tests that the abort line is recognised whichever separator Redshift uses."""
+        adaptor = Cinema4DAdaptor(init_data)
+
+        _replay_output(adaptor, [line])
+
+        assert str(adaptor._exc_info) == _redshift_render_license_abort_message(line)
+
+    def test_out_of_memory_without_redshift_license_line_is_unchanged(
+        self, init_data: dict
+    ) -> None:
+        """Tests that a render result alone is not attributed to licensing.
+
+        Cinema 4D reports several causes as RENDERRESULT_OUTOFMEMORY, so the license message
+        is only used when Redshift's own license abort line is present.
+        """
+        adaptor = Cinema4DAdaptor(init_data)
+
+        _replay_output(adaptor, ["RuntimeError: Error: render result: Not enough memory."])
+
+        assert adaptor._exc_info is None
 
     def test_license_failure_survives_an_empty_action_queue(
         self, init_data: dict, run_data: dict
