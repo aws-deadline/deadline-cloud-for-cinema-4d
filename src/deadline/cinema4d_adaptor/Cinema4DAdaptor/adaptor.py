@@ -307,6 +307,13 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             # The Redshift pattern is registered first so the failing product is named.
             redshift_license_error_regexes = [
                 re.compile(r".*Redshift Error: Maxon licensing error.*", re.IGNORECASE),
+                # Printed when a granted license is rejected mid-render, whether by a license
+                # mismatch, a lost license server or a blocked IP. Cinema 4D then reports the
+                # render as RENDERRESULT_OUTOFMEMORY, which is not the cause.
+                re.compile(
+                    r".*Redshift Error:\s*Rendering aborted due to license failure.*",
+                    re.IGNORECASE,
+                ),
             ]
             callback_list.append(
                 RegexCallback(

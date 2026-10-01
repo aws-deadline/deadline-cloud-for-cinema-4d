@@ -22,6 +22,42 @@ _ARNOLD_ABORT_LINE = (
     "and abort_on_license_fail option is enabled"
 )
 
+# Redshift prints this after a license is granted and then rejected mid-render, whatever the
+# reason. Cinema 4D then returns RENDERRESULT_OUTOFMEMORY. Note the tab after "Redshift Error:".
+_REDSHIFT_RENDER_ABORTED_LINE = "Redshift Error: \tRendering aborted due to license failure"
+
+# Real Cinema 4D output for the mid-render Redshift license failures seen on Deadline Cloud.
+# Every variant ends in _REDSHIFT_RENDER_ABORTED_LINE, then the client's render result error.
+_REDSHIFT_MID_RENDER_LICENSE_FAILURES = {
+    "license_mismatch": [
+        "[Redshift] License acquired",
+        (
+            "Redshift Error: \tLicense mismatch. Please contact support@redshift3d.com and "
+            "include this log file as well as your floating license file"
+        ),
+        _REDSHIFT_RENDER_ABORTED_LINE,
+        "RuntimeError: Error: render result: Not enough memory.",
+    ],
+    "server_unreachable": [
+        "Redshift Error: \tFailed to communicate with server! (11)",
+        (
+            "Redshift Error: \tPlease report this to your network/IT administrator or the "
+            "person who manages the Redshift floating licenses for your organization"
+        ),
+        _REDSHIFT_RENDER_ABORTED_LINE,
+        "RuntimeError: Error: render result: Not enough memory.",
+    ],
+    "blocked_ip": [
+        (
+            "Redshift Error: \tBlacklisted IP. Your IP address has been blacklisted due to too "
+            "many failed license verification attempts. Please contact support@redshift3d.com "
+            "and include your Redshift log file."
+        ),
+        _REDSHIFT_RENDER_ABORTED_LINE,
+        "RuntimeError: Error: render result: Not enough memory.",
+    ],
+}
+
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -418,6 +454,7 @@ class TestCinema4DAdaptor_on_start:
         "product, license_error",
         [
             ("Redshift", "Redshift Error: Maxon licensing error: License not found (6)"),
+            ("Redshift", _REDSHIFT_RENDER_ABORTED_LINE),
             ("Arnold", _ARNOLD_ABORT_LINE),
             ("Arnold", "[rlm] abort_on_license_fail enabled"),
             ("Cinema 4D", "Invalid License"),
@@ -537,6 +574,48 @@ class TestCinema4DAdaptor_on_run:
                 adaptor._action_queue.dequeue_action()
 
         assert "Redshift failed to acquire a license." in str(exc_info.value)
+
+    @pytest.mark.parametrize("error_checking", ["0", "1"])
+    @pytest.mark.parametrize("variant", sorted(_REDSHIFT_MID_RENDER_LICENSE_FAILURES))
+    @patch("time.sleep")
+    def test_redshift_mid_render_license_failure_is_not_reported_as_memory(
+        self,
+        mock_sleep: Mock,
+        init_data: dict,
+        run_data: dict,
+        variant: str,
+        error_checking: str,
+    ) -> None:
+        """Tests that Redshift aborting a render for licensing names the license failure.
+
+        Cinema 4D reports this abort as RENDERRESULT_OUTOFMEMORY, so without a license cause
+        the task fails as "exited early" with only "Not enough memory." in the log.
+        """
+        init_data["activate_error_checking"] = error_checking
+        adaptor = Cinema4DAdaptor(init_data)
+        client = Mock()
+        # Cinema 4D exits after the render fails, short-circuiting the render loop.
+        type(client).is_running = PropertyMock(side_effect=[True, False, False])
+        adaptor._cinema4d_client = client
+
+        # Replay the output the way the stdout handler does: every matching callback runs.
+        for line in _REDSHIFT_MID_RENDER_LICENSE_FAILURES[variant]:
+            for regex_callback in adaptor._get_regex_callbacks():
+                if match := regex_callback.get_match(line):
+                    regex_callback.callback(match)
+
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                adaptor.on_run(run_data)
+        finally:
+            # on_run enqueues into the class-level queue before it raises.
+            while len(adaptor._action_queue) > 0:
+                adaptor._action_queue.dequeue_action()
+
+        message = str(exc_info.value)
+        assert message.startswith("Redshift failed to acquire a license.")
+        assert message.endswith(f"Error: {_REDSHIFT_RENDER_ABORTED_LINE}")
+        assert "memory" not in message.lower()
 
     def test_license_failure_survives_an_empty_action_queue(
         self, init_data: dict, run_data: dict
