@@ -454,7 +454,9 @@ class TestCinema4DAdaptor_on_start:
         "product, license_error",
         [
             ("Redshift", "Redshift Error: Maxon licensing error: License not found (6)"),
+            ("Redshift", "Redshift Error: \tMaxon licensing error: License not found (6)"),
             ("Redshift", _REDSHIFT_RENDER_ABORTED_LINE),
+            ("Redshift", "Redshift Error: Rendering aborted due to license failure"),
             ("Arnold", _ARNOLD_ABORT_LINE),
             ("Arnold", "[rlm] abort_on_license_fail enabled"),
             ("Cinema 4D", "Invalid License"),
@@ -593,10 +595,10 @@ class TestCinema4DAdaptor_on_run:
         """
         init_data["activate_error_checking"] = error_checking
         adaptor = Cinema4DAdaptor(init_data)
-        client = Mock()
-        # Cinema 4D exits after the render fails, short-circuiting the render loop.
         # on_start reads this from init_data, and this test does not call on_start.
         adaptor._activate_error_checking = int(error_checking)
+        client = Mock()
+        # Cinema 4D exits after the render fails, short-circuiting the render loop.
         type(client).is_running = PropertyMock(side_effect=[True, False, False])
         adaptor._cinema4d_client = client
 
