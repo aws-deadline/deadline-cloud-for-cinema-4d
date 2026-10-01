@@ -22,15 +22,14 @@ _ARNOLD_ABORT_LINE = (
     "and abort_on_license_fail option is enabled"
 )
 
-# Redshift prints this after a license is granted and then rejected mid-render, whatever the
+# Redshift prints this when it stops a render because of a license failure, whatever the
 # reason. Cinema 4D then returns RENDERRESULT_OUTOFMEMORY. Note the tab after "Redshift Error:".
 _REDSHIFT_RENDER_ABORTED_LINE = "Redshift Error: \tRendering aborted due to license failure"
 
-# Real Cinema 4D output for the mid-render Redshift license failures seen on Deadline Cloud.
+# Real Cinema 4D output for the Redshift license aborts seen on Deadline Cloud.
 # Every variant ends in _REDSHIFT_RENDER_ABORTED_LINE, then the client's render result error.
 _REDSHIFT_MID_RENDER_LICENSE_FAILURES = {
     "license_mismatch": [
-        "[Redshift] License acquired",
         (
             "Redshift Error: \tLicense mismatch. Please contact support@redshift3d.com and "
             "include this log file as well as your floating license file"
