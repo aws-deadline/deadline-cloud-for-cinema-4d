@@ -491,8 +491,7 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
         """Handle Redshift rejecting an acquired license partway through a render."""
         self._record_exception(
             RuntimeError(
-                "Redshift aborted the render due to a license failure "
-                '(Cinema 4D reported this as "Not enough memory").\n'
+                "Redshift aborted the render due to a license failure.\n"
                 "See the Redshift errors above this line for the reason, for example a license "
                 "mismatch, an unreachable license server, or a blocked IP address.\n"
                 f"Error: {match.group(0)}"

@@ -61,8 +61,7 @@ _REDSHIFT_MID_RENDER_LICENSE_FAILURES = {
 
 def _redshift_render_license_abort_message(line: str) -> str:
     return (
-        "Redshift aborted the render due to a license failure "
-        '(Cinema 4D reported this as "Not enough memory").\n'
+        "Redshift aborted the render due to a license failure.\n"
         "See the Redshift errors above this line for the reason, for example a license "
         "mismatch, an unreachable license server, or a blocked IP address.\n"
         f"Error: {line}"
