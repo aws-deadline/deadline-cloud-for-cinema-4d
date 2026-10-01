@@ -1,6 +1,0 @@
-/* Image styling - curved corners and thin border */
-.md-typeset img {
-  border-radius: 8px;
-  border: 1px solid #000;
-}
-

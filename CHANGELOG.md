@@ -1,3 +1,52 @@
+## 1.0.0 (2026-09-28)
+
+### Features
+* A warning is now displayed before submitting scenes that have no configured output, helping you avoid accidentally submitting jobs that won't produce render results. (#567)
+
+### Bug Fixes
+* Fixed incorrect colors in 32-bit float output (EXR, HDR, 32-bit TIFF) when the scene uses OCIO color management. Previously, farm renders applied an unwanted colorspace conversion, resulting in output that was not scene-linear. Renders now match local output. (#552)
+* Cinema 4D render progress is now correctly forwarded during job execution, so you can see accurate progress updates for your rendering tasks. (#565)
+* Fixed an issue where legacy Redshift GraphView textures were not being remapped correctly, which could cause missing textures when rendering on the farm. (#566)
+## 0.12.3 (2026-09-23)
+
+### Bug Fixes
+* OCIO color transform is now correctly baked into the current output frame, ensuring rendered output matches the expected color profile. (#555)
+* Redundant identity path mapping requests are no longer sent, improving submission efficiency. (#557)
+* The submitter dependency bundle now ships the lowest-ABI `awscrt` copy, ensuring forward compatibility across all supported Python versions instead of potentially including an incompatible version from the build host. (#554)
+## 0.12.2 (2026-08-24)
+
+### Features
+* AWS Console sign-in is now supported in the submitter. Previously, attempting to use AWS Console sign-in would fail with a missing dependency error. The required `awscrt` dependency is now included automatically. (#525)
+
+### Bug Fixes
+* Fixed incorrect color tone when using tile rendering. (#535)
+* The adaptor now fails fast when Cinema 4D license failures are detected, providing clearer error messages instead of hanging or producing confusing output. (#530)
+
+## 0.12.1 (2026-08-13)
+
+### BREAKING CHANGES
+* Fixed OCIO color management in the adaptor during baking. This is a breaking change to adaptor behavior—renders that previously produced incorrect color output when baking will now apply OCIO correctly. (#517)
+
+### Features
+* The Cinema 4D render submitter now runs pre-GUI submission hooks before opening the submit dialog, allowing studios to pre-populate job name, description, queue parameters, and deadline job properties automatically. (#480)
+
+### Bug Fixes
+* Fixed an issue on macOS where opening the submitter for the first time would permanently replace Cinema 4D's application menu bar with Qt's default menu, causing the host menus to be lost for the rest of the session. (#523)
+* Fixed an issue where the OCIO view transform was not applied to non-tile renders of 8-bit display formats, causing images to appear dark/un-tone-mapped instead of using the scene's configured view (e.g. ACES 1.0 SDR-video). (#508)
+* Fixed an issue where submitting a render with a specific take required the Main take to be active first. The submitter now correctly traverses from the main take when locating sub-takes for rendering. (#509)
+* Fixed an issue where marked takes did not use the correct frame range. (#498)
+
+## 0.11.4 (2026-06-18)
+
+### Bug Fixes
+* Fixed incorrect frame time mapping by using RDATA_FRAMERATE instead of doc.GetFps() in both the submitter and handler, ensuring frames are correctly mapped during rendering. (#462)
+* The submitter now shows a categorized warning message when an unsupported renderer is selected, instead of silently crashing. (#460)
+* An error is now properly raised when attempting to set a take that does not exist, instead of failing silently. (#461)
+
+## 0.11.3 (2026-06-05)
+
+### Bug Fixes
+* Fixed an issue where the submitter dialog could lose focus and go behind the Cinema 4D main window when the parent window was clicked. (#457)
 
 ## 0.11.1 (2026-04-22)
 

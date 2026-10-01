@@ -1,9 +1,0 @@
-assetReferences:
-  inputs:
-    directories: []
-    filenames:
-    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\physical_multi_takes.c4d
-  outputs:
-    directories:
-    - PATH_TO_BE_REPLACED\deadline-cloud-for-cinema-4d\test\integ\test_scenes\physical_multi_takes\generated_bundle\renders
-  referencedPaths: []

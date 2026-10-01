@@ -19,24 +19,21 @@ class FileMissingCopyRight(Exception):
 
 def _check_file(filename: Path) -> None:
     with open(filename) as infile:
-        lines_read = 0
-        for line in infile:
+        for lines_read, line in enumerate(infile, start=1):
             if _copyright_header_re.search(line):
                 return  # success
-            lines_read += 1
             if lines_read > 10:
                 raise FileMissingCopyRight(
                     f"Could not find a valid Amazon.com copyright header in the top of {filename}."
                     " Please add one.",
                     Path(filename),
                 )
-        else:
-            # __init__.py files are usually empty, this is to catch that.
-            raise FileMissingCopyRight(
-                f"Could not find a valid Amazon.com copyright header in the top of {filename}."
-                " Please add one.",
-                Path(filename),
-            )
+        # __init__.py files are usually empty, this is to catch that.
+        raise FileMissingCopyRight(
+            f"Could not find a valid Amazon.com copyright header in the top of {filename}."
+            " Please add one.",
+            Path(filename),
+        )
 
 
 def _is_version_file(filename: Path) -> bool:
@@ -73,7 +70,7 @@ def test_copyright_headers():
 
     if failed_files:
         formatted_failed_files = "\n\t".join(str(filepath) for filepath in failed_files)
-        raise Exception(
+        raise AssertionError(
             f"Found {len(failed_files)} files without copyright headers:\n\t{formatted_failed_files}"
         )
 

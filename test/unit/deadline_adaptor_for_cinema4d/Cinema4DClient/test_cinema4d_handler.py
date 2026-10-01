@@ -1,10 +1,16 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, call, patch
+
 import pytest
-from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import Cinema4DHandler
-from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import progress_callback
-from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import USE_CACHED_TEXT_KEY
-import c4d
+
+from deadline.cinema4d_adaptor.Cinema4DClient import cinema4d_handler
+from deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler import (
+    USE_CACHED_TEXT_KEY,
+    Cinema4DHandler,
+    progress_callback,
+)
+
+c4d = cinema4d_handler.c4d
 
 
 def mock_map_path(path: str):
@@ -43,6 +49,26 @@ class TestCinema4DHandler:
         handler = Cinema4DHandler(mock_map_path)
         assert handler.take == "Main"
 
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetAllAssetsNew"
+    )
+    def test_remap_assets_maps_assets_when_paths_are_unchanged(self, mock_get_all_assets: Mock):
+        map_path = Mock(return_value="asset.png")
+        handler = Cinema4DHandler(map_path)
+        handler.doc = Mock()
+        owner = Mock()
+
+        def add_asset(_doc, allowDialogs, lastPath, assetList):
+            assetList.append({"owner": owner, "paramId": 1, "filename": "asset.png"})
+
+        mock_get_all_assets.side_effect = add_asset
+        with patch.object(handler, "_pathmap_recognized_types", return_value=True) as mock_remap:
+            handler._remap_assets()
+
+        mock_get_all_assets.assert_called_once()
+        map_path.assert_called_once_with("asset.png")
+        mock_remap.assert_called_once_with(owner, 1, "asset.png", None, None, "asset.png")
+
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
     def test_set_scene_file(self, mock_isfile: Mock):
         mock_isfile.return_value = True
@@ -64,6 +90,104 @@ class TestCinema4DHandler:
         handler = Cinema4DHandler(mock_map_path)
         with pytest.raises(RuntimeError, match="Failed to load the scene file"):
             handler.set_scene_file({"scene_file": "file.c4d"})
+
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_set_take_not_found_raises_error(self, mock_get_doc: Mock):
+        """Verify that set_take raises RuntimeError when the take name doesn't exist."""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Set up mock takes: "Main" and "A"
+        mock_main_take = Mock()
+        mock_main_take.GetName.return_value = "Main"
+        mock_main_take.GetChildren.return_value = []
+
+        mock_take_a = Mock()
+        mock_take_a.GetName.return_value = "A"
+        mock_take_a.GetChildren.return_value = []
+
+        mock_take_data = Mock()
+        mock_take_data.GetMainTake.return_value = mock_main_take
+        mock_main_take.GetChildren.return_value = [mock_take_a]
+
+        mock_doc = Mock()
+        mock_doc.GetTakeData.return_value = mock_take_data
+        mock_get_doc.return_value = mock_doc
+
+        with pytest.raises(RuntimeError, match="Take not found: NonExistentTake"):
+            handler.set_take({"take": "NonExistentTake"})
+
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_set_take_found_sets_take(self, mock_get_doc: Mock):
+        """Verify that set_take correctly sets the take when it exists."""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Set up mock takes: "Main" and "A"
+        mock_main_take = Mock()
+        mock_main_take.GetName.return_value = "Main"
+        mock_main_take.GetChildren.return_value = []
+
+        mock_take_a = Mock()
+        mock_take_a.GetName.return_value = "A"
+        mock_take_a.GetChildren.return_value = []
+
+        mock_take_data = Mock()
+        mock_take_data.GetMainTake.return_value = mock_main_take
+        mock_main_take.GetChildren.return_value = [mock_take_a]
+
+        mock_doc = Mock()
+        mock_doc.GetTakeData.return_value = mock_take_data
+        mock_get_doc.return_value = mock_doc
+
+        handler.set_take({"take": "A"})
+        mock_take_data.SetCurrentTake.assert_called_once_with(mock_take_a)
+
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetActiveDocument"
+    )
+    def test_set_take_from_non_parent_current_take(self, mock_get_doc: Mock):
+        """Verify that set_take finds and sets a take even if the active take is not an ancestor of the target take."""
+        handler = Cinema4DHandler(mock_map_path)
+
+        # Hierarchy:
+        #           Main
+        #          /    \
+        #     Take A   Take B
+        #       |
+        #    Take A1 (current active take)
+        mock_main_take = Mock()
+        mock_main_take.GetName.return_value = "Main"
+
+        mock_take_a = Mock()
+        mock_take_a.GetName.return_value = "Take A"
+
+        mock_take_a1 = Mock()
+        mock_take_a1.GetName.return_value = "Take A1"
+        mock_take_a1.GetChildren.return_value = []
+
+        mock_take_b = Mock()
+        mock_take_b.GetName.return_value = "Take B"
+        mock_take_b.GetChildren.return_value = []
+
+        mock_main_take.GetChildren.return_value = [mock_take_a, mock_take_b]
+        mock_take_a.GetChildren.return_value = [mock_take_a1]
+
+        mock_take_data = Mock()
+        # Current active take is Take A1 (which has no children)
+        mock_take_data.GetCurrentTake.return_value = mock_take_a1
+        # GetMainTake returns Main take, which roots the entire hierarchy
+        mock_take_data.GetMainTake.return_value = mock_main_take
+
+        mock_doc = Mock()
+        mock_doc.GetTakeData.return_value = mock_take_data
+        mock_get_doc.return_value = mock_doc
+
+        # Setting take to "Take B" should succeed because search starts from GetMainTake()
+        handler.set_take({"take": "Take B"})
+        mock_take_data.SetCurrentTake.assert_called_once_with(mock_take_b)
 
 
 class TestShouldCacheText:
@@ -686,7 +810,7 @@ class TestStartRenderWithTextCaching:
         # Set up mock document and render data
         mock_doc = Mock()
         mock_render_data = MagicMock()
-        mock_render_data.GetDataInstance = Mock()
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
@@ -714,7 +838,7 @@ class TestStartRenderWithTextCaching:
         # Set up mock document and render data
         mock_doc = Mock()
         mock_render_data = MagicMock()
-        mock_render_data.GetDataInstance = Mock()
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
@@ -742,7 +866,7 @@ class TestStartRenderWithTextCaching:
         # Set up mock document and render data
         mock_doc = Mock()
         mock_render_data = MagicMock()
-        mock_render_data.GetDataInstance = Mock()
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
         mock_doc.GetFps.return_value = 30
         handler.doc = mock_doc
@@ -799,9 +923,15 @@ class TestStartRenderChunkRange:
 
         mock_doc = Mock()
         mock_render_data = MagicMock()
-        mock_render_data.GetDataInstance = Mock()
+
+        def mock_getitem(self, key):
+            if key == c4d.RDATA_FRAMERATE:
+                return 24
+            return MagicMock()
+
+        mock_render_data.__getitem__ = mock_getitem
+        mock_render_data.GetDataInstance = Mock(return_value=MagicMock())
         mock_doc.GetActiveRenderData.return_value = mock_render_data
-        mock_doc.GetFps.return_value = 24
         handler.doc = mock_doc
 
         mock_render_document.return_value = c4d.RENDERRESULT_OK
@@ -810,11 +940,347 @@ class TestStartRenderChunkRange:
             handler.start_render({"frame": "10-20"})
 
         # FRAMEFROM should be called with start frame, FRAMETO with end frame
-        # BaseTime is called as BaseTime(frame, fps)
+        # BaseTime is called as BaseTime(frame, fps) using RDATA_FRAMERATE (24)
         start_frame, end_frame, fps = 10, 20, 24
         calls = mock_base_time.call_args_list
         assert (start_frame, fps) in [c.args for c in calls]
         assert (end_frame, fps) in [c.args for c in calls]
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_start_render_uses_single_range_for_unsupported_output_format(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Unsupported formats, including movies, must not be split into one render per frame."""
+        handler = Cinema4DHandler(mock_map_path)
+        values = {
+            c4d.RDATA_FRAMERATE: 24,
+            c4d.RDATA_PATH: "",
+            c4d.RDATA_MULTIPASS_SAVEIMAGE: False,
+            c4d.RDATA_XRES: 1920,
+            c4d.RDATA_YRES: 1080,
+            c4d.RDATA_SAVEIMAGE: True,
+            c4d.RDATA_FORMAT: c4d.FILTER_MOVIE,
+            c4d.RDATA_FORMATDEPTH: c4d.RDATA_FORMATDEPTH_8,
+        }
+        mock_render_data = MagicMock()
+        mock_render_data.__getitem__.side_effect = values.__getitem__
+        mock_render_data.__setitem__.side_effect = values.__setitem__
+        mock_render_data.GetDataInstance.return_value = MagicMock()
+
+        mock_doc = Mock()
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        handler.doc = mock_doc
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "10-20"})
+
+        mock_render_document.assert_called_once()
+        mock_bitmap.assert_called_once_with(1920, 1080, c4d.COLORMODE_RGB)
+        assert (10, 24) in [call.args for call in mock_base_time.call_args_list]
+        assert (20, 24) in [call.args for call in mock_base_time.call_args_list]
+
+
+class TestStartRenderFloatOcio:
+    """Tests the non-tile 32-bit float OCIO workaround in start_render (issue #540).
+
+    32-bit float renders run with RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER disabled
+    so RenderDocument's save keeps the output scene-linear, and the flag is
+    restored afterwards (the document is reused across renders in a session).
+    """
+
+    def _make_handler(self, format_depth=None, multipass=False):
+        handler = Cinema4DHandler(mock_map_path)
+        handler.cached_text_was_used_in_previous_frame = False
+        mock_doc = Mock()
+        mock_render_data = MagicMock()
+        depth = format_depth if format_depth is not None else c4d.RDATA_FORMATDEPTH_32
+
+        def mock_getitem(self, key):
+            if key == c4d.RDATA_FRAMERATE:
+                return 24
+            if key == c4d.RDATA_FORMATDEPTH:
+                return depth
+            if key == c4d.RDATA_FORMAT:
+                # a real, FORMAT_MAP-known format: the 8-bit per-frame path is
+                # gated on it since #555
+                return c4d.FILTER_PNG
+            if key == c4d.RDATA_MULTIPASS_SAVEIMAGE:
+                return multipass
+            return MagicMock()
+
+        mock_render_data.__getitem__ = mock_getitem
+        rd = MagicMock()
+        mock_render_data.GetDataInstance.return_value = rd
+        mock_doc.GetActiveRenderData.return_value = mock_render_data
+        handler.doc = mock_doc
+        return handler, rd
+
+    def _bake_flag_set_calls(self, rd):
+        return [
+            c.args
+            for c in rd.__setitem__.call_args_list
+            if c.args[0] == c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER
+        ]
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_disables_bake_flag_during_render_and_restores_it(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        handler, rd = self._make_handler()
+        orig_value = rd.GetBool.return_value
+        flag_at_render_time = {}
+
+        def render_doc(*args, **kwargs):
+            calls = self._bake_flag_set_calls(rd)
+            flag_at_render_time["value"] = calls[-1][1] if calls else "never set"
+            return c4d.RENDERRESULT_OK
+
+        mock_render_document.side_effect = render_doc
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5"})
+
+        # the render ran with the bake disabled...
+        assert flag_at_render_time["value"] is False
+        # ...and the original value was restored afterwards
+        assert self._bake_flag_set_calls(rd)[-1] == (
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER,
+            orig_value,
+        )
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_restores_bake_flag_when_render_raises(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        handler, rd = self._make_handler()
+        orig_value = rd.GetBool.return_value
+        mock_render_document.side_effect = RuntimeError("render exploded")
+
+        with (
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+            pytest.raises(RuntimeError, match="render exploded"),
+        ):
+            handler.start_render({"frame": "5"})
+
+        assert self._bake_flag_set_calls(rd)[-1] == (
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER,
+            orig_value,
+        )
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_restores_bake_flag_when_log_after_disable_raises(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """A failure between disabling the flag and the render (e.g. a broken
+        stdout pipe in the log line) must still restore the flag, or later
+        non-tile renders in the session write un-tone-mapped output."""
+        handler, rd = self._make_handler()
+        orig_value = rd.GetBool.return_value
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with (
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+            patch("builtins.print", side_effect=BrokenPipeError("stdout closed")),
+            pytest.raises(BrokenPipeError, match="stdout closed"),
+        ):
+            handler.start_render({"frame": "5"})
+
+        assert self._bake_flag_set_calls(rd)[-1] == (
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER,
+            orig_value,
+        )
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_noop_when_bake_flag_attribute_missing(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """Older Cinema 4D (pre-2025.2) has no RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER."""
+        handler, rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        saved = c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER
+        del c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER
+        try:
+            with patch.object(handler, "_cache_text_if_needed", return_value=False):
+                handler.start_render({"frame": "5"})
+        finally:
+            c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER = saved
+
+        rd.GetBool.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_16bit_output_does_not_trigger_float_workaround(
+        self, mock_base_time: Mock, mock_bitmap: Mock, mock_render_document: Mock
+    ):
+        """16-bit depth must not trigger the workaround (integer formats; C4D rejects 16-bit depth on EXR, so half EXR cannot reach this state)."""
+        handler, rd = self._make_handler(format_depth=c4d.RDATA_FORMATDEPTH_16)
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5"})
+
+        rd.GetBool.assert_not_called()
+        assert self._bake_flag_set_calls(rd) == []
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.ocio_bake")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_8bit_output_takes_bake_path_not_float_workaround(
+        self,
+        mock_base_time: Mock,
+        mock_bitmap: Mock,
+        mock_render_document: Mock,
+        mock_ocio_bake: Mock,
+    ):
+        """8-bit output takes the bake_ocio branch (manual re-bake), not this workaround."""
+        handler, _rd = self._make_handler(format_depth=c4d.RDATA_FORMATDEPTH_8)
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5"})
+
+        mock_ocio_bake.bake_full_frame_beauty.assert_called_once()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_tile_render_does_not_touch_bake_flag(
+        self, mock_base_time: Mock, mock_render_document: Mock, mock_tile_rendering: Mock
+    ):
+        """The float workaround must not fire for tile renders; the handler leaves
+        the flag untouched and delegates to tile_rendering."""
+        handler, rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        rd.GetBool.assert_not_called()
+        assert self._bake_flag_set_calls(rd) == []
+        mock_tile_rendering.setup_tile_render.assert_called_once()
+        mock_tile_rendering.finalize_tile_render.assert_called_once()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_float_tile_uses_cheap_rgb_sink(
+        self,
+        mock_base_time: Mock,
+        mock_render_document: Mock,
+        mock_tile_rendering: Mock,
+        mock_bitmap: Mock,
+    ):
+        """Float tile (internal_save_base set): the render bitmap is a write-only
+        sink, so use a cheap RGB MultipassBitmap, not the expensive RGBf one."""
+        handler, _rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+        mock_tile_rendering.setup_tile_render.return_value = Mock(internal_save_base="/tmp/x/tile_")
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_bitmap.assert_called_once_with(1, 1, c4d.COLORMODE_RGB)
+        mock_tile_rendering.create_tile_bitmap.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_float_tile_with_multipass_keeps_rich_bitmap(
+        self,
+        mock_base_time: Mock,
+        mock_render_document: Mock,
+        mock_tile_rendering: Mock,
+        mock_bitmap: Mock,
+    ):
+        """Float tile WITH multi-pass saving: C4D writes the multi-pass layers
+        from this bitmap, so keep create_tile_bitmap (RGBf+alpha) -- a plain RGB
+        sink would drop the alpha pass."""
+        handler, _rd = self._make_handler(multipass=True)
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+        mock_tile_rendering.setup_tile_render.return_value = Mock(internal_save_base="/tmp/x/tile_")
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_tile_rendering.create_tile_bitmap.assert_called_once_with(1, 1)
+        mock_bitmap.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.bitmaps.MultipassBitmap")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_non_float_tile_uses_create_tile_bitmap(
+        self,
+        mock_base_time: Mock,
+        mock_render_document: Mock,
+        mock_tile_rendering: Mock,
+        mock_bitmap: Mock,
+    ):
+        """8-bit tile (no internal_save_base): keep create_tile_bitmap, whose
+        RGBf+alpha bitmap the manual bake/crop path still needs."""
+        handler, _rd = self._make_handler()
+        mock_render_document.return_value = c4d.RENDERRESULT_OK
+        mock_tile_rendering.setup_tile_render.return_value = Mock(internal_save_base="")
+
+        with patch.object(handler, "_cache_text_if_needed", return_value=False):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_tile_rendering.create_tile_bitmap.assert_called_once_with(1, 1)
+        mock_bitmap.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_failed_tile_render_restores_setup_state(
+        self, mock_base_time: Mock, mock_render_document: Mock, mock_tile_rendering: Mock
+    ):
+        """A failed tile render must restore setup state since finalize never runs."""
+        handler, _rd = self._make_handler()
+        mock_render_document.return_value = MagicMock()  # not RENDERRESULT_OK
+
+        with (
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+            pytest.raises(RuntimeError),
+        ):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_tile_rendering.restore_tile_render_state.assert_called_once()
+        mock_tile_rendering.finalize_tile_render.assert_not_called()
+
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.tile_rendering")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.RenderDocument")
+    @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.BaseTime")
+    def test_tile_render_exception_restores_setup_state(
+        self, mock_base_time: Mock, mock_render_document: Mock, mock_tile_rendering: Mock
+    ):
+        """An exception out of RenderDocument itself must also restore setup state."""
+        handler, _rd = self._make_handler()
+        mock_render_document.side_effect = RuntimeError("render exploded")
+
+        with (
+            patch.object(handler, "_cache_text_if_needed", return_value=False),
+            pytest.raises(RuntimeError, match="render exploded"),
+        ):
+            handler.start_render({"frame": "5", "tile_action": "render"})
+
+        mock_tile_rendering.restore_tile_render_state.assert_called_once()
+        mock_tile_rendering.finalize_tile_render.assert_not_called()
 
 
 class TestSetFrameChunkRange:
@@ -1005,3 +1471,320 @@ class TestPathmapBaseObject:
         # (only for the first texture type that has a path)
         desc_id = mock_c4d.DescID.return_value
         mock_owner.__setitem__.assert_called_once_with(desc_id, mapped_path)
+
+
+class TestPathmapGraphView:
+    """Tests for legacy Redshift GraphView node path mapping."""
+
+    @staticmethod
+    def _create_mock_c4d(gv_node_type):
+        mock_c4d = Mock()
+        mock_c4d.BaseShader = type("BaseShader", (), {})
+        mock_c4d.BaseObject = type("BaseObject", (), {})
+        mock_c4d.documents.BaseVideoPost = type("BaseVideoPost", (), {})
+        mock_c4d.BaseMaterial = type("BaseMaterial", (), {})
+        mock_c4d.modules.graphview.GvNode = gv_node_type
+        mock_c4d.REDSHIFT_FILE_PATH = 2001
+        mock_c4d.DTYPE_STRING = 3001
+        mock_c4d.DescID = Mock(return_value=Mock())
+        mock_c4d.DescLevel = Mock(return_value=Mock())
+        return mock_c4d
+
+    @staticmethod
+    def _remap_single_gv_asset(handler, mock_c4d, owner, filename):
+        def get_all_assets(_, **kwargs):
+            kwargs["assetList"].append(
+                {
+                    "owner": owner,
+                    "paramId": -1,
+                    "filename": filename,
+                    "nodeSpace": None,
+                    "nodePath": None,
+                }
+            )
+
+        handler.doc = Mock()
+        mock_c4d.documents.GetAllAssetsNew.side_effect = get_all_assets
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            handler._remap_assets()
+
+    def test_pathmap_gv_node_maps_matching_relative_texture_path(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "albedo.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        original_path = r"C:\source\tex\albedo.jpg"
+        mapped_path = r"C:\Sessions\assetroot\tex\albedo.jpg"
+        texture_parameter_id = 10000
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 1
+        operator_container.GetIndexId.return_value = texture_parameter_id
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(owner, original_path, mapped_path)
+
+        assert result is True
+        owner.setitem.assert_called_once_with(mock_c4d.DescID.return_value, mapped_path)
+
+    def test_pathmap_gv_node_does_not_map_other_texture_data(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "roughness.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 1
+        operator_container.GetIndexId.return_value = 10000
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(
+                owner, r"C:\source\tex\albedo.jpg", r"C:\Sessions\assetroot\tex\albedo.jpg"
+            )
+
+        assert result is False
+        owner.setitem.assert_not_called()
+
+    def test_pathmap_gv_node_does_not_map_ambiguous_texture_basenames(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "albedo.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 2
+        operator_container.GetIndexId.side_effect = [10000, 10001]
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(
+                owner, r"C:\source\tex\albedo.jpg", r"C:\Sessions\assetroot\tex\albedo.jpg"
+            )
+
+        assert result is False
+        owner.setitem.assert_not_called()
+
+    def test_pathmap_gv_node_maps_all_parameters_with_an_identical_full_path(self):
+        class GvNode:
+            def __init__(self, operator_container, paths):
+                self.operator_container = operator_container
+                self.paths = paths
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return self.paths[key]
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        original_path = r"C:\source\tex\albedo.jpg"
+        mapped_path = r"C:\Sessions\assetroot\tex\albedo.jpg"
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 2
+        operator_container.GetIndexId.side_effect = [10000, 10001]
+        operator_container.GetType.return_value = 1036765
+        first_desc_id = Mock()
+        second_desc_id = Mock()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        mock_c4d.DescID.side_effect = [first_desc_id, second_desc_id]
+        owner = GvNode(
+            operator_container,
+            {first_desc_id: original_path, second_desc_id: original_path},
+        )
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(owner, original_path, mapped_path)
+
+        assert result is True
+        owner.setitem.assert_has_calls(
+            [call(first_desc_id, mapped_path), call(second_desc_id, mapped_path)]
+        )
+
+    def test_pathmap_gv_node_prefers_an_exact_path_over_ambiguous_basenames(self):
+        class GvNode:
+            def __init__(self, operator_container, paths):
+                self.operator_container = operator_container
+                self.paths = paths
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return self.paths[key]
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        original_path = r"C:\source\wood\albedo.jpg"
+        mapped_path = r"C:\Sessions\assetroot\wood\albedo.jpg"
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 2
+        operator_container.GetIndexId.side_effect = [10000, 10001]
+        operator_container.GetType.return_value = 1036765
+        wood_desc_id = Mock()
+        metal_desc_id = Mock()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        mock_c4d.DescID.side_effect = [wood_desc_id, metal_desc_id]
+        owner = GvNode(
+            operator_container,
+            {
+                wood_desc_id: original_path,
+                metal_desc_id: r"C:\source\metal\albedo.jpg",
+            },
+        )
+
+        handler = Cinema4DHandler(mock_map_path)
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._pathmap_gv_node(owner, original_path, mapped_path)
+
+        assert result is True
+        owner.setitem.assert_called_once_with(wood_desc_id, mapped_path)
+
+    def test_is_legacy_redshift_gv_node_handles_an_unavailable_graphview_type(self):
+        mock_c4d = Mock()
+        mock_c4d.modules.graphview = Mock(spec=[])
+        handler = Cinema4DHandler(mock_map_path)
+
+        with patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d):
+            result = handler._is_legacy_redshift_gv_node(Mock(), -1)
+
+        assert result is False
+
+    def test_remap_assets_does_not_write_param_minus_one_for_unmatched_gv_node(self):
+        class GvNode:
+            def __init__(self, operator_container):
+                self.operator_container = operator_container
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                return self.operator_container
+
+            def __getitem__(self, key):
+                return "other.jpg"
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        operator_container = MagicMock()
+        operator_container.__len__.return_value = 1
+        operator_container.GetIndexId.return_value = 10000
+        operator_container.GetType.return_value = 1036765
+        owner = GvNode(operator_container)
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(Mock(return_value=r"C:\Sessions\assetroot\tex\albedo.jpg"))
+
+        self._remap_single_gv_asset(handler, mock_c4d, owner, r"C:\source\tex\albedo.jpg")
+
+        owner.setitem.assert_not_called()
+
+    def test_remap_assets_does_not_write_param_minus_one_when_gv_node_inspection_fails(self):
+        class GvNode:
+            def __init__(self):
+                self.setitem = Mock()
+
+            def GetOperatorContainer(self):
+                raise RuntimeError("corrupt GraphView operator container")
+
+            def __setitem__(self, key, value):
+                self.setitem(key, value)
+
+        owner = GvNode()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(Mock(return_value=r"C:\Sessions\assetroot\tex\albedo.jpg"))
+
+        self._remap_single_gv_asset(handler, mock_c4d, owner, r"C:\source\tex\albedo.jpg")
+
+        owner.setitem.assert_not_called()
+
+    def test_pathmap_recognized_types_handles_gv_nodes(self):
+        class GvNode:
+            pass
+
+        owner = GvNode()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(mock_map_path)
+
+        with (
+            patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d),
+            patch.object(handler, "_pathmap_gv_node", return_value=True) as mock_pathmap_gv_node,
+        ):
+            result = handler._pathmap_recognized_types(
+                owner,
+                -1,
+                "tex/albedo.jpg",
+                None,
+                None,
+                "C:/Sessions/assetroot/tex/albedo.jpg",
+            )
+
+        assert result is True
+        mock_pathmap_gv_node.assert_called_once_with(
+            owner, "tex/albedo.jpg", "C:/Sessions/assetroot/tex/albedo.jpg"
+        )
+
+    def test_pathmap_recognized_types_does_not_handle_gv_node_with_parameter_id(self):
+        class GvNode:
+            pass
+
+        owner = GvNode()
+        mock_c4d = self._create_mock_c4d(GvNode)
+        handler = Cinema4DHandler(mock_map_path)
+
+        with (
+            patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d", mock_c4d),
+            patch.object(handler, "_pathmap_gv_node") as mock_pathmap_gv_node,
+        ):
+            result = handler._pathmap_recognized_types(
+                owner,
+                10000,
+                "tex/albedo.jpg",
+                None,
+                None,
+                "C:/Sessions/assetroot/tex/albedo.jpg",
+            )
+
+        assert result is False
+        mock_pathmap_gv_node.assert_not_called()

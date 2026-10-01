@@ -1,14 +1,13 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-from typing import List, Optional
 
 from qtpy.QtWidgets import (
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QTextEdit,
+    QVBoxLayout,
 )
 
 from ...style import HEADER_LABEL_STYLE
@@ -16,16 +15,21 @@ from ...style import HEADER_LABEL_STYLE
 
 class SubmissionWarningDialog(QDialog):
     """
-    Dialog to display warnings to users before job submission.
-    Allows users to review issues and decide whether to continue with submission.
+    Dialog to display warnings before creating a job bundle.
+    Allows users to review issues and decide whether to continue.
     """
 
     def __init__(
-        self, warnings: List[str], title: str = "Issues Detected", parent: Optional[QDialog] = None
+        self,
+        warnings: list[str],
+        title: str = "Issues Detected",
+        parent: QDialog | None = None,
+        cancel_label: str = "Cancel Submission",
     ):
         super().__init__(parent)
         self.warnings = warnings
         self.title = title
+        self.cancel_label = cancel_label
         self.continue_submission = False
         self._setup_ui()
 
@@ -65,7 +69,7 @@ class SubmissionWarningDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
 
-        cancel_button = QPushButton("Cancel Submission")
+        cancel_button = QPushButton(self.cancel_label)
         cancel_button.clicked.connect(self.reject)
 
         continue_button = QPushButton("Continue Anyway")
@@ -86,7 +90,10 @@ class SubmissionWarningDialog(QDialog):
 
     @staticmethod
     def show_warnings(
-        warnings: List[str], title: str = "Issues Detected", parent: Optional[QDialog] = None
+        warnings: list[str],
+        title: str = "Issues Detected",
+        parent: QDialog | None = None,
+        cancel_label: str = "Cancel Submission",
     ) -> bool:
         """
         Static method to show warnings dialog.
@@ -102,6 +109,6 @@ class SubmissionWarningDialog(QDialog):
         if not warnings:
             return True
 
-        dialog = SubmissionWarningDialog(warnings, title, parent)
+        dialog = SubmissionWarningDialog(warnings, title, parent, cancel_label)
         dialog.exec_()
         return dialog.continue_submission

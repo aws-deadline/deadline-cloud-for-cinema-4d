@@ -26,7 +26,7 @@ def _is_admin() -> bool:
 
     try:
         return ctypes.windll.shell32.IsUserAnAdmin() == 1
-    except Exception:
+    except (AttributeError, OSError):
         return False
 
 
@@ -90,8 +90,36 @@ def _validate_files(installation_path: Path) -> None:
     # Just check that we have dependencies in this folder
     assert "deadline" in top_level_dir
     assert "qtpy" in top_level_dir
-    assert "xxhash" in top_level_dir
     assert "psutil" in top_level_dir
+    # awscrt reaches the bundle via deadline's console extra, requested by deps_bundle.py.
+    # Without it botocore reports CRT as unavailable and AWS Console sign-in fails. Its abi3
+    # wheels install one shared, version-untagged artifact (_awscrt.abi3.so, or an untagged
+    # _awscrt.pyd on Windows) that serves every supported version, so there is no per-version
+    # name to check -- same for psutil above, which likewise ships a single abi3 wheel for
+    # all of them. Top-level presence is what these two can be checked for here.
+    assert "awscrt" in top_level_dir
+
+    # xxhash and pyyaml, unlike the abi3 pair above, ship a version-specific compiled
+    # extension per supported version, and a stale or wrong-interpreter artifact here is a
+    # real, silent failure: pyyaml falls back to its pure-Python parser with no error, and a
+    # missing xxhash artifact only surfaces as an ImportError inside whichever Cinema 4D
+    # version tries to load it. A directory-exists or any-one-artifact check would still
+    # pass with a single leftover artifact from _build_base_environment's host interpreter --
+    # the exact bug this bundle exists to prevent -- so check every supported version by name.
+    #
+    # Mirrors scripts/deps_bundle.py's SUPPORTED_PYTHON_VERSIONS; not imported since
+    # test/installer does not otherwise reach into scripts/.
+    supported_python_versions = ["3.10", "3.11", "3.12", "3.13"]
+    for package, module in (("xxhash", "_xxhash"), ("yaml", "_yaml")):
+        artifact_names = {f.name for f in (installation_path / package).glob("*")}
+        for version in supported_python_versions:
+            tag = version.replace(".", "")
+            # POSIX wheels name the module cpython-<tag>-<platform>.so; Windows wheels name
+            # it cp<tag>-<platform>.pyd -- CPython does not use the "cpython-" spelling there.
+            prefixes = (f"{module}.cpython-{tag}-", f"{module}.cp{tag}-")
+            assert any(
+                name.startswith(prefixes) for name in artifact_names
+            ), f"the bundle carries no compiled {module} artifact for Python {version}"
 
     # Verify PySide6/shiboken6 are bundled and stripped correctly
     assert "PySide6" in top_level_dir
@@ -170,7 +198,11 @@ def test_default_location(installer_path: Path):
     # Since windows doesn't have text mode, it'll pop-up a gui. We use the timeout to ensure it stops
     try:
         help_result = subprocess.run(
-            [installer_path, *text_mode, "--help"], capture_output=True, text=True, timeout=5
+            [installer_path, *text_mode, "--help"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
         )
         assert (
             help_result.returncode == 0
@@ -428,7 +460,8 @@ class TestUserInstall:
     def test_uninstall(self, per_test_user_installation: Path, uninstaller_path: Path):
         # GIVEN / WHEN
         result = subprocess.run(
-            [per_test_user_installation / uninstaller_path, "--mode", "unattended"]
+            [per_test_user_installation / uninstaller_path, "--mode", "unattended"],
+            check=False,
         )
 
         # THEN
@@ -456,6 +489,7 @@ class TestSystemInstall:
             [per_test_system_installation / uninstaller_path, "--mode", "unattended"],
             capture_output=True,
             text=True,
+            check=False,
         )
 
         # THEN
@@ -478,7 +512,7 @@ class TestSystemInstall:
 class TestVerifySigning:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only run on Windows")
     def test_windows_signing(self, installer_path):
-        """Assumes that the Windows SDK is installed so we can find signtool:
+        r"""Assumes that the Windows SDK is installed so we can find signtool:
             C:/Program Files*/Windows Kits/*/bin/*/x64/signtool.exe
         Example success:
 
@@ -507,7 +541,10 @@ class TestVerifySigning:
 
         # WHEN
         result = subprocess.run(
-            [signtool, "verify", "/pa", installer_path], capture_output=True, text=True
+            [signtool, "verify", "/pa", installer_path],
+            capture_output=True,
+            text=True,
+            check=False,
         )
 
         # THEN
@@ -527,6 +564,7 @@ class TestVerifySigning:
             [gpg, "--verify", f"{installer_path}.sig", installer_path],
             capture_output=True,
             text=True,
+            check=False,
         )
 
         # THEN
@@ -558,6 +596,7 @@ class TestVerifySigning:
             [codesign, "--verify", "--deep", "--verbose", installer_path],
             capture_output=True,
             text=True,
+            check=False,
         )
         assert (
             "code object is not signed at all" not in codesign_result.stdout
@@ -569,6 +608,7 @@ class TestVerifySigning:
             [spctl, "--verbose", "--assess", "--type", "execute", installer_path],
             capture_output=True,
             text=True,
+            check=False,
         )
         assert (
             "rejected" not in spctl_result.stderr

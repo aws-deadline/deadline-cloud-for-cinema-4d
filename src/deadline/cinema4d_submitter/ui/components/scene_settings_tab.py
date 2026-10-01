@@ -21,8 +21,8 @@ from qtpy.QtWidgets import (  # type: ignore
 
 from deadline.client.ui.widgets.job_timeouts_widget import TimeoutTableWidget
 
-from ...takes import TakeSelection
 from ...enums import ErrorChecking, TextCaching
+from ...takes import TakeSelection
 
 """
 UI widgets for the Scene Settings tab.

@@ -1,102 +1,63 @@
 ---
 name: c4d-dev
-description: Day-to-day development for deadline-cloud-for-cinema-4d. Use when building, testing, linting, debugging, or running integration tests with Cinema 4D, Redshift, Arnold, or V-Ray. Covers submitter iteration, adaptor debugging, and project structure.
-tags: [skill, deadline-cloud, deadline-cloud-for-cinema-4d, deadline-cloud-for-c4d, build, test, lint, integration, redshift, arnold, vray, adaptor, submitter]
+description: Develop deadline-cloud-for-cinema-4d, including building, linting, debugging, unit testing, and creating or running xa11y integration tests for Cinema 4D, Redshift, Arnold, and V-Ray. Use when changing the submitter or adaptor, generating a new integration test case, driving the submitter UI with xa11y, capturing golden job bundles or renders, or troubleshooting project tests.
 ---
 
 # Cinema 4D Dev
 
-## Overview
+## Start With Repository Context
 
-Development companion for building, testing, and debugging the `deadline-cloud-for-cinema-4d` project.
+Read the instructions that own the work before editing:
 
-This project provides:
-- **Cinema 4D Adaptor**: Runs Cinema 4D renders on Deadline Cloud workers (`cinema4d-openjd` CLI)
-- **Cinema 4D Submitter**: Extension for submitting jobs from Cinema 4D to Deadline Cloud
-- **Cinema4DClient**: Runs inside Cinema 4D, facilitating communication between the adaptor and Cinema 4D process
+- Repository overview: [`AGENTS.md`](../../AGENTS.md)
+- Submitter: [`src/deadline/cinema4d_submitter/AGENTS.md`](../../src/deadline/cinema4d_submitter/AGENTS.md)
+- Adaptor/client: [`src/deadline/cinema4d_adaptor/AGENTS.md`](../../src/deadline/cinema4d_adaptor/AGENTS.md)
+- Tests and xa11y case contract: [`test/AGENTS.md`](../../test/AGENTS.md)
 
-For project structure and component details, see:
-- [`AGENTS.md`](../../AGENTS.md) — High-level architecture and build commands
-- [`src/deadline/cinema4d_submitter/AGENTS.md`](../../src/deadline/cinema4d_submitter/AGENTS.md) — Submitter internals
-- [`src/deadline/cinema4d_adaptor/AGENTS.md`](../../src/deadline/cinema4d_adaptor/AGENTS.md) — Adaptor and client internals
-- [`test/AGENTS.md`](../../test/AGENTS.md) — Test structure and scenes
-
-## Usage
-
-Use this skill when:
-- Building, testing, or linting the project
-- Iterating on submitter or adaptor code
-- Running integration tests
-- Debugging renderer-specific issues (Redshift, Arnold, V-Ray)
-
-## Prerequisites
-
-- Python 3.10+ (Cinema 4D 2026 uses Python 3.11; 2024–2025 uses Python 3.10)
-- Cinema 4D 2024, 2025, or 2026 installed
-- Hatch: `pip install hatch`
-- Windows or macOS for submitter development
-- Windows or Linux for adaptor development
-- Windows for integration tests
+Use existing patterns from the closest implementation and current test case.
+Do not reconstruct behavior from deleted integration-test directories.
 
 ## Quick Commands
 
-### Build
 ```bash
 hatch build
-```
-
-### Lint & Format
-```bash
-hatch run fmt    # Format code (black + ruff)
-hatch run lint   # Run linter + type checker
-hatch run typing # Type checking only (mypy)
-```
-
-### Unit Tests
-```bash
-hatch run test                                    # All unit tests
-hatch run test test/unit/path/to/test.py          # Specific file
-hatch run test -k "test_redshift"                 # Pattern match
-hatch run all:test                                # All supported Python versions
-```
-
-### Integration Tests (Windows Only)
-
-Integration tests require Cinema 4D installed with licensing configured.
-
-```powershell
-$env:C4D_LOCATION = "C:\Program Files\Maxon Cinema 4D 2026\"
+hatch run fmt
+hatch run lint
+hatch run test
+hatch run test test/unit/path/to/test.py
+hatch run all:test
 hatch run integ:test
 ```
 
-See [references/integration-testing.md](references/integration-testing.md) for setup details and [`test/AGENTS.md`](../../test/AGENTS.md) for test structure.
+Always run tests through Hatch.
 
-### Build Installer
-```bash
-hatch run installer:build-installer --local-dev --platform <windows|macos>
-```
+## Create an xa11y Integration Test
+
+Read [references/integration-testing.md](references/integration-testing.md)
+before creating or changing a case, then:
+
+1. Select the nearest case under `test/integ/test_cases/`.
+2. Create a focused `input/scene.py` that saves `<case>.c4d` in the supplied
+   `actual/` directory.
+3. Add `input/configure.py` only when the case must change visible submitter
+   controls. Import `test.integ.submitter_ui` and reuse its helpers.
+4. Add a helper to `test/integ/submitter_ui.py` when necessary. Harvest live
+   selectors with `DIALOG_DUMP=1`; do not guess role/name pairs.
+5. Register ordinary cases in `_CASES` in `test/integ/test_cinema4d.py`. Use a
+   dedicated parametrized test only when one scene intentionally covers
+   multiple expected variants.
+6. Run the focused case with an explicit test path. Confirm it reaches the
+   expected missing-golden failure and leaves `actual/`.
+7. Normalize the generated bundle into the case's `expected/` directory,
+   review every golden diff, then rerun the focused case.
+8. Verify new UI selectors on both Windows and macOS. Verify renders on Windows.
+
+Never commit `actual/`. Keep a case focused on one behavior and pair it with
+unit tests for logic that does not require the real Cinema 4D UI.
 
 ## Detailed Guides
 
-- [references/build-and-test.md](references/build-and-test.md) — Complete build and test workflow
-- [references/dev-guide.md](references/dev-guide.md) — Development conventions and workflows
-- [references/integration-testing.md](references/integration-testing.md) — Running integration tests (Windows only)
-- [references/troubleshooting.md](references/troubleshooting.md) — Common issues and solutions
-
-## Supported Renderers
-
-| Renderer | OS Support | Notes |
-|----------|-----------|-------|
-| Redshift | Windows, Linux | Bundled with Cinema 4D 2024+, default renderer |
-| Arnold (C4DtoA) | Windows, Linux | Requires separate plugin install |
-| V-Ray | Windows, macOS | Requires separate plugin install |
-| Physical/Standard | Windows, Linux, macOS | Built-in Cinema 4D renderer |
-| Cargo | Windows, macOS | No special fleet config needed |
-| X-Particles (INSYDIUM) | Windows, macOS | Requires queue environment |
-| Red Giant | Windows | Requires host config scripts |
-
-## Known Issues
-
-- **Linux Adobe Substance Materials**: Crash at "Baking Substance Materials" step on Amazon Linux 2023. Works on RHEL 9/10.
-- **Linux Redshift Freezing**: Sporadic freezes during rendering. Workaround: set timeouts via submitter.
-- **C4DtoA Linux 2026**: Crashes due to GPU driver version mismatch. Requires c4dtoa 4.8.6.2+ with driver 580.127+.
+- [references/build-and-test.md](references/build-and-test.md)
+- [references/dev-guide.md](references/dev-guide.md)
+- [references/integration-testing.md](references/integration-testing.md)
+- [references/troubleshooting.md](references/troubleshooting.md)

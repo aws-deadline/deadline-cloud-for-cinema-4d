@@ -11,7 +11,6 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Set
 
 FONTS_DIR = "fonts"
 
@@ -48,7 +47,7 @@ def is_windows() -> bool:
     return sys.platform == "win32"
 
 
-def _collect_fonts_from_directory(fonts_dir: str) -> Set[str]:
+def _collect_fonts_from_directory(fonts_dir: str) -> set[str]:
     """
     Collect all valid font files from a given directory.
 
@@ -78,7 +77,7 @@ def _collect_fonts_from_directory(fonts_dir: str) -> Set[str]:
     return fonts
 
 
-def _find_fonts_recursive(session_dir: str) -> Set[str]:
+def _find_fonts_recursive(session_dir: str) -> set[str]:
     """
     Recursively search for fonts directory in session_dir.
 
@@ -117,7 +116,7 @@ def _find_fonts_recursive(session_dir: str) -> Set[str]:
     return fonts
 
 
-def _find_fonts_scene_based(scene_file_path: str) -> Set[str]:
+def _find_fonts_scene_based(scene_file_path: str) -> set[str]:
     """
     Search for fonts directory relative to the scene file path.
 
@@ -146,12 +145,12 @@ def _find_fonts_scene_based(scene_file_path: str) -> Set[str]:
         logger.info(f"Found {len(fonts)} fonts in scene-based {FONTS_DIR} directory")
         return fonts
 
-    except Exception as e:
+    except (OSError, TypeError) as e:
         logger.warning(f"Error accessing scene file path for font location: {e}")
         return set()
 
 
-def find_fonts(session_dir: str, scene_file_path: str) -> Set[str]:
+def find_fonts(session_dir: str, scene_file_path: str) -> set[str]:
     """
     Looks for all font files that were sent along with the job
 
@@ -272,7 +271,7 @@ def install_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> None:
         ) as key:
             winreg.SetValueEx(key, fontname, 0, winreg.REG_SZ, filename)  # type: ignore[attr-defined]
     except Exception as e:
-        raise RuntimeError(f"Failed to install font '{src_path}': {str(e)}") from e
+        raise RuntimeError(f"Failed to install font '{src_path}': {e!s}") from e
 
 
 def uninstall_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> None:
@@ -319,7 +318,7 @@ def uninstall_font(src_path: str, scope: str = INSTALL_SCOPE_USER) -> None:
         if os.path.exists(dst_path):
             os.remove(dst_path)
     except Exception as e:
-        raise RuntimeError(f"Failed to uninstall font '{src_path}': {str(e)}") from e
+        raise RuntimeError(f"Failed to uninstall font '{src_path}': {e!s}") from e
 
 
 def _notify_font_change() -> None:

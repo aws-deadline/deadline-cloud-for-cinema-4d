@@ -5,16 +5,22 @@ from __future__ import annotations
 # to run serially on the same worker. This is necessary because all tests share
 # the same Cinema4DAdaptor action queue, which can cause race conditions and
 # test failures when tests run in parallel across multiple workers.
-
 import json
+import logging
+import re
 from pathlib import Path
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from jsonschema.exceptions import ValidationError
 
-from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
 from deadline.cinema4d_adaptor._version import version as adaptor_version
+from deadline.cinema4d_adaptor.Cinema4DAdaptor import Cinema4DAdaptor
+
+_ARNOLD_ABORT_LINE = (
+    "[c4dtoa] 00:00:10  2801MB ERROR   |   aborting render because this is a batch render "
+    "and abort_on_license_fail option is enabled"
+)
 
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -65,6 +71,14 @@ def init_data() -> dict:
     }
 
 
+def _regexes_for(regex_callbacks, handler):
+    """Returns the regex list registered for a handler, so tests do not depend on order."""
+    for callback in regex_callbacks:
+        if callback.callback == handler:
+            return callback.regex_list
+    raise AssertionError(f"no RegexCallback registered for {handler}")
+
+
 @pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_errors_on_cleanup:
     @pytest.mark.parametrize(
@@ -72,8 +86,6 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         [
             # Critical stops should not fail the job.
             ("CRITICAL: Stop [ge_file.cpp(1172)]", False),
-            # Any string with substring "Error:" should fail the job
-            ("Redshift Error: Maxon licensing error: User not logged in (7)", True),
             # This error can be printed but the jobs are still successful.
             # Hence, this should not fail the job.
             ("CRITICAL: nullptr [text_object.cpp(1082)] [objectbase1.hxx(549)]", False),
@@ -85,12 +97,8 @@ class TestCinema4DAdaptor_errors_on_cleanup:
             ("Rendering failed", True),
             ("Asset missing", True),
             ("Asset Error", True),
-            ("Invalid License", True),
-            ("License Check error", True),
             ("Files cannot be written", True),
-            ("Enter Registration Data", True),
             ("Unable to write file", True),
-            ("[rlm] abort_on_license_fail enabled", True),
             ("RenderDocument failed with return code", True),
             ("Frame rendering aborted", True),
             ("Rendering was internally aborted", True),
@@ -105,8 +113,8 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         # GIVEN
         adaptor = Cinema4DAdaptor(init_data)
         regex_callbacks = adaptor._get_regex_callbacks()
-        # Currently the callback for errors is at index 2
-        error_regexes = regex_callbacks[2].regex_list
+        # Located by handler, not position: the generic handler is registered last.
+        error_regexes = _regexes_for(regex_callbacks, adaptor._handle_error)
 
         # WHEN
         for regex in error_regexes:
@@ -134,8 +142,7 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         # GIVEN
         adaptor = Cinema4DAdaptor(init_data)
         regex_callbacks = adaptor._get_regex_callbacks()
-        # Currently the callback for insufficient RAM is at index 3
-        regexes = regex_callbacks[3].regex_list
+        regexes = _regexes_for(regex_callbacks, adaptor._handle_insufficient_ram)
 
         # WHEN
         for regex in regexes:
@@ -158,15 +165,19 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         [
             (
                 "Redshift Error: Please make sure you have NVIDIA driver 551.78 or later installed.",
-                "Redshift requires NVIDIA driver version 551.78 or later. "
-                "Please update the NVIDIA drivers on your worker fleet. "
-                "Error: Redshift Error: Please make sure you have NVIDIA driver 551.78 or later installed.",
+                (
+                    "Redshift requires NVIDIA driver version 551.78 or later. "
+                    "Please update the NVIDIA drivers on your worker fleet. "
+                    "Error: Redshift Error: Please make sure you have NVIDIA driver 551.78 or later installed."
+                ),
             ),
             (
                 "Redshift Error: Tesla T4 requires driver 551.78 but has 539.64",
-                "The worker has driver 539.64 but Redshift requires 551.78 or later. "
-                "Please update the NVIDIA drivers on your worker fleet. "
-                "Error: Redshift Error: Tesla T4 requires driver 551.78 but has 539.64",
+                (
+                    "The worker has driver 539.64 but Redshift requires 551.78 or later. "
+                    "Please update the NVIDIA drivers on your worker fleet. "
+                    "Error: Redshift Error: Tesla T4 requires driver 551.78 but has 539.64"
+                ),
             ),
         ],
     )
@@ -177,8 +188,7 @@ class TestCinema4DAdaptor_errors_on_cleanup:
         # GIVEN
         adaptor = Cinema4DAdaptor(init_data)
         regex_callbacks = adaptor._get_regex_callbacks()
-        # Currently the callback for NVIDIA driver errors is at index 4
-        regexes = regex_callbacks[4].regex_list
+        regexes = _regexes_for(regex_callbacks, adaptor._handle_nvidia_driver_error)
 
         # WHEN
         for regex in regexes:
@@ -313,6 +323,49 @@ def test_activate_error_checking(init_data: dict, activate_error_checking: int) 
         ), "Error checking should be deactivated when activate_error_checking=0"
 
 
+@pytest.mark.xdist_group(name="adaptor_tests")
+class TestCinema4DAdaptor_progress:
+    @pytest.mark.parametrize(
+        "stdout,regex_index,expected_progress",
+        [
+            ("ALF_PROGRESS 50", 0, 50),
+            ("ALF_PROGRESS 50%", 0, 50),
+            ("ALF_PROGRESS 50.5", 0, 50),
+            ("ALF_PROGRESS 1e-05", 0, 0),
+            ("ALF_PROGRESS 100", 0, 100),
+            ("ALF_PROGRESS 101", 0, 100),
+            ("Progress 42%", 1, 42),
+        ],
+    )
+    @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.Cinema4DAdaptor.update_status")
+    def test_handle_progress(
+        self,
+        mock_update_status: Mock,
+        init_data: dict,
+        stdout: str,
+        regex_index: int,
+        expected_progress: int,
+    ) -> None:
+        adaptor = Cinema4DAdaptor(init_data)
+        progress_regex = adaptor._get_regex_callbacks()[1].regex_list[regex_index]
+
+        match = progress_regex.search(stdout)
+
+        assert match is not None
+        adaptor._handle_progress(match)
+
+        mock_update_status.assert_called_once_with(progress=expected_progress)
+
+    def test_progress_regex_does_not_match_human_readable_diagnostic(self, init_data: dict) -> None:
+        adaptor = Cinema4DAdaptor(init_data)
+        progress_regexes = adaptor._get_regex_callbacks()[1].regex_list
+
+        assert all(
+            progress_regex.search("Progress update (during rendering): 50.0%") is None
+            for progress_regex in progress_regexes
+        )
+
+
 @pytest.fixture()
 def run_data() -> dict:
     return {"frame": "42"}
@@ -361,9 +414,161 @@ class TestCinema4DAdaptor_on_start:
         # THEN
         assert mock_sleep.call_count == 3
 
+    @pytest.mark.parametrize(
+        "product, license_error",
+        [
+            ("Redshift", "Redshift Error: Maxon licensing error: License not found (6)"),
+            ("Arnold", _ARNOLD_ABORT_LINE),
+            ("Arnold", "[rlm] abort_on_license_fail enabled"),
+            ("Cinema 4D", "Invalid License"),
+            ("Cinema 4D", "License Check error"),
+            ("Cinema 4D", "Enter Registration Data"),
+            ("Cinema 4D", "Enter the license method: 1) Maxon App"),
+            ("Cinema 4D", "17:44:34 No license found"),
+            ("Cinema 4D", "18:38:54 No available licenses to choose"),
+        ],
+    )
+    def test_license_failure_from_stdout_interrupts_startup(
+        self, init_data: dict, product: str, license_error: str
+    ) -> None:
+        """Tests that a licensing prompt fails startup without waiting for the timeout."""
+        # General error checking is optional, but a licensing prompt cannot recover
+        # without interactive input and must always stop the worker.
+        init_data["activate_error_checking"] = "0"
+        adaptor = Cinema4DAdaptor(init_data)
+        expected_error = (
+            f"{product} failed to acquire a license.\n"
+            "If you are using bring your own license (BYOL), check your license configuration "
+            "and availability.\n"
+            "If you are using usage-based licensing (UBL) from AWS Deadline Cloud and need a "
+            "higher 'License sessions per license endpoint' limit, contact the AWS Deadline Cloud "
+            "team to request an increase.\n"
+            f"Error: {license_error}"
+        )
+
+        def emit_license_error(*args, **kwargs):
+            kwargs["stdout_handler"].emit(
+                logging.LogRecord(
+                    name="cinema4d",
+                    level=logging.ERROR,
+                    pathname="",
+                    lineno=0,
+                    msg=license_error,
+                    args=(),
+                    exc_info=None,
+                )
+            )
+            process = Mock()
+            process.is_running = True
+            return process
+
+        with (
+            patch.object(adaptor, "_initialize_maxon_assets_db_connection"),
+            patch.object(adaptor, "_start_cinema4d_server_thread"),
+            patch.object(adaptor, "_populate_action_queue"),
+            patch(
+                "deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.LoggingSubprocess",
+                side_effect=emit_license_error,
+            ),
+            pytest.raises(RuntimeError) as exc_info,
+        ):
+            adaptor.on_start()
+
+        assert str(exc_info.value) == expected_error
+
+    def test_unnamed_render_failure_alludes_to_vray_licensing(self, init_data: dict) -> None:
+        """Render result 11 is unnamed by Cinema 4D and is what a V-Ray license failure gives."""
+        adaptor = Cinema4DAdaptor(init_data)
+        line = "RuntimeError: Error: unhandled render result: 11"
+        matches = [
+            regex.match(line)
+            for callback in adaptor._get_regex_callbacks()
+            if callback.callback == adaptor._handle_unnamed_render_failure
+            for regex in callback.regex_list
+        ]
+        assert matches and matches[0] is not None
+        adaptor._handle_unnamed_render_failure(matches[0])
+        message = str(adaptor._exc_info)
+        assert "V-Ray" in message and "license" in message
+
+    def test_generic_handler_is_registered_last(self, init_data: dict) -> None:
+        """Tests that every specific handler records before the generic one."""
+        adaptor = Cinema4DAdaptor(init_data)
+
+        handlers = [c.callback for c in adaptor._get_regex_callbacks()]
+
+        assert handlers[-1] == adaptor._handle_error
+
+    def test_generic_error_does_not_replace_a_license_error(self, init_data: dict) -> None:
+        """Tests that fallout after a license failure does not overwrite the named cause."""
+        adaptor = Cinema4DAdaptor(init_data)
+        licence = re.match(".*", "Redshift Error: Maxon licensing error: License not found (6)")
+        fallout = re.match(".*", "Rendering failed")
+        assert licence is not None and fallout is not None
+
+        adaptor._handle_redshift_license_error(licence)
+        adaptor._handle_error(fallout)
+
+        assert "Redshift failed to acquire a license." in str(adaptor._exc_info)
+
 
 @pytest.mark.xdist_group(name="adaptor_tests")
 class TestCinema4DAdaptor_on_run:
+    @patch("time.sleep")
+    def test_license_failure_survives_early_exit(
+        self, mock_sleep: Mock, init_data: dict, run_data: dict
+    ) -> None:
+        """Tests that a license failure is reported when Cinema 4D exits during the render."""
+        adaptor = Cinema4DAdaptor(init_data)
+        client = Mock()
+        # Cinema 4D exits after the license failure, short-circuiting the render loop.
+        type(client).is_running = PropertyMock(side_effect=[True, False, False])
+        adaptor._cinema4d_client = client
+        match = re.match(".*", "Redshift Error: Maxon licensing error: License not found (6)")
+        assert match is not None
+        adaptor._handle_redshift_license_error(match)
+
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                adaptor.on_run(run_data)
+        finally:
+            # on_run enqueues into the class-level queue before it raises.
+            while len(adaptor._action_queue) > 0:
+                adaptor._action_queue.dequeue_action()
+
+        assert "Redshift failed to acquire a license." in str(exc_info.value)
+
+    def test_license_failure_survives_an_empty_action_queue(
+        self, init_data: dict, run_data: dict
+    ) -> None:
+        """Tests that a cause recorded during startup is preferred when Cinema 4D has exited.
+
+        The action queue empties when the client requests an action, not when it completes it,
+        so a failure while performing the last init action leaves on_start with nothing to
+        raise and on_run finding the process already gone.
+        """
+        adaptor = Cinema4DAdaptor(init_data)
+        client = Mock()
+        type(client).is_running = PropertyMock(return_value=False)
+        adaptor._cinema4d_client = client
+        match = re.match(".*", "Redshift Error: Maxon licensing error: License not found (6)")
+        assert match is not None
+        adaptor._handle_redshift_license_error(match)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            adaptor.on_run(run_data)
+
+        assert "Redshift failed to acquire a license." in str(exc_info.value)
+
+    def test_unnamed_render_failure_respects_error_checking(self, init_data: dict) -> None:
+        """Tests that the unnamed render failure callback is off when error checking is."""
+        adaptor = Cinema4DAdaptor(init_data)
+        adaptor._activate_error_checking = 0
+
+        handlers = [c.callback for c in adaptor._get_regex_callbacks()]
+
+        assert adaptor._handle_unnamed_render_failure not in handlers
+
     @patch("time.sleep")
     @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.ActionsQueue.__len__", return_value=0)
     @patch("deadline.cinema4d_adaptor.Cinema4DAdaptor.adaptor.LoggingSubprocess")

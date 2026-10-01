@@ -11,23 +11,23 @@ from unittest import mock
 import pytest
 
 from deadline.cinema4d_submitter.detailed_logging_scripts.print_logs import (
-    get_conda_prefix,
-    _get_redshift_log_paths_windows,
-    _get_redshift_log_paths_linux,
-    _get_redshift_log_paths,
+    _cleanup_environment_variables,
+    _cleanup_temporary_directory,
+    _find_bug_reports,
+    _find_c4d_detailed_log,
     _find_log_file,
     _find_redshift_log,
-    _get_c4d_detailed_log_paths,
-    _find_c4d_detailed_log,
     _get_bug_report_search_path,
-    _scan_for_bug_reports,
-    _find_bug_reports,
+    _get_c4d_detailed_log_paths,
+    _get_redshift_log_paths,
+    _get_redshift_log_paths_linux,
+    _get_redshift_log_paths_windows,
     _print_environment_info,
     _print_logs_by_type,
-    _cleanup_temporary_directory,
-    _cleanup_environment_variables,
-    print_log_file,
+    _scan_for_bug_reports,
+    get_conda_prefix,
     print_detailed_logs,
+    print_log_file,
 )
 
 
@@ -173,14 +173,16 @@ class TestGetRedshiftLogPathsLinux:
         # GIVEN
         home_dir = "/home/user"
         conda_prefix = os.path.join(home_dir, "redshift")
-        with mock.patch.dict(os.environ, {"CONDA_PREFIX": conda_prefix}, clear=True):
-            with mock.patch("os.path.expanduser", return_value=home_dir):
-                # WHEN
-                result = _get_redshift_log_paths_linux()
+        with (
+            mock.patch.dict(os.environ, {"CONDA_PREFIX": conda_prefix}, clear=True),
+            mock.patch("os.path.expanduser", return_value=home_dir),
+        ):
+            # WHEN
+            result = _get_redshift_log_paths_linux()
 
-                # THEN
-                # Should not have duplicates
-                assert len(result) == len(set(result))
+            # THEN
+            # Should not have duplicates
+            assert len(result) == len(set(result))
 
 
 class TestGetRedshiftLogPaths:
@@ -202,14 +204,16 @@ class TestGetRedshiftLogPaths:
     def test_calls_linux_function_on_linux(self):
         """Test that _get_redshift_log_paths_linux() is called on non-win32 platforms"""
         # GIVEN
-        with mock.patch.dict(os.environ, {}, clear=True):
-            with mock.patch("os.path.expanduser", return_value="/home/user"):
-                # WHEN
-                result = _get_redshift_log_paths()
+        with (
+            mock.patch.dict(os.environ, {}, clear=True),
+            mock.patch("os.path.expanduser", return_value="/home/user"),
+        ):
+            # WHEN
+            result = _get_redshift_log_paths()
 
-                # THEN
-                # Should include Linux default path
-                assert any("/home/user/redshift" in path for path in result)
+            # THEN
+            # Should include Linux default path
+            assert any("/home/user/redshift" in path for path in result)
 
 
 class TestFindLogFile:
@@ -306,29 +310,33 @@ class TestFindRedshiftLog:
             log_file = log_dir / "log.html"
             log_file.write_text("redshift log")
 
-            with mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}):
-                with mock.patch("sys.platform", "linux"):
-                    with mock.patch("os.path.expanduser", return_value=tmpdir):
-                        # WHEN
-                        result = _find_redshift_log()
+            with (
+                mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}),
+                mock.patch("sys.platform", "linux"),
+                mock.patch("os.path.expanduser", return_value=tmpdir),
+            ):
+                # WHEN
+                result = _find_redshift_log()
 
-                        # THEN
-                        assert len(result) == 1
-                        assert result[0] == str(log_file)
+                # THEN
+                assert len(result) == 1
+                assert result[0] == str(log_file)
 
     def test_returns_empty_list_when_not_found(self, capsys):
         """Test that empty list is returned when not found"""
         # GIVEN
-        with mock.patch.dict(os.environ, {}, clear=True):
-            with mock.patch("sys.platform", "linux"):
-                with mock.patch("os.path.expanduser", return_value="/home/user"):
-                    # WHEN
-                    result = _find_redshift_log()
-                    captured = capsys.readouterr()
+        with (
+            mock.patch.dict(os.environ, {}, clear=True),
+            mock.patch("sys.platform", "linux"),
+            mock.patch("os.path.expanduser", return_value="/home/user"),
+        ):
+            # WHEN
+            result = _find_redshift_log()
+            captured = capsys.readouterr()
 
-                    # THEN
-                    assert result == []
-                    assert "Redshift log not found in any expected location" in captured.out
+            # THEN
+            assert result == []
+            assert "Redshift log not found in any expected location" in captured.out
 
 
 class TestGetC4dDetailedLogPaths:
@@ -765,15 +773,17 @@ class TestCleanupTemporaryDirectory:
             temp_log_dir = os.path.join(tmpdir, "c4d_logs_test")
             os.makedirs(temp_log_dir)
 
-            with mock.patch.dict(os.environ, {"C4D_DETAILED_LOG_DIR": temp_log_dir}):
-                with mock.patch("shutil.rmtree", side_effect=PermissionError("Access denied")):
-                    # WHEN
-                    _cleanup_temporary_directory()
-                    captured = capsys.readouterr()
+            with (
+                mock.patch.dict(os.environ, {"C4D_DETAILED_LOG_DIR": temp_log_dir}),
+                mock.patch("shutil.rmtree", side_effect=PermissionError("Access denied")),
+            ):
+                # WHEN
+                _cleanup_temporary_directory()
+                captured = capsys.readouterr()
 
-                    # THEN
-                    assert "Note: Could not clean up temporary directory" in captured.out
-                    assert "Access denied" in captured.out
+                # THEN
+                assert "Note: Could not clean up temporary directory" in captured.out
+                assert "Access denied" in captured.out
 
 
 class TestPrintLogFile:
@@ -886,17 +896,19 @@ class TestPrintDetailedLogs:
             home_dir = Path(tmpdir) / "home"
             home_dir.mkdir()
 
-            with mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}):
-                with mock.patch("os.path.expanduser", return_value=str(home_dir)):
-                    with mock.patch("sys.platform", "linux"):
-                        # WHEN
-                        print_detailed_logs("1")
-                        captured = capsys.readouterr()
+            with (
+                mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}),
+                mock.patch("os.path.expanduser", return_value=str(home_dir)),
+                mock.patch("sys.platform", "linux"),
+            ):
+                # WHEN
+                print_detailed_logs("1")
+                captured = capsys.readouterr()
 
-                        # THEN
-                        assert "Searching for log files..." in captured.out
-                        assert "REDSHIFT DEBUG LOG" in captured.out
-                        assert "CINEMA 4D DETAILED LOG" in captured.out
+                # THEN
+                assert "Searching for log files..." in captured.out
+                assert "REDSHIFT DEBUG LOG" in captured.out
+                assert "CINEMA 4D DETAILED LOG" in captured.out
 
     def test_skips_when_deactivated(self, capsys):
         """Test that logging is skipped when deactivated"""
@@ -925,18 +937,20 @@ class TestPrintDetailedLogs:
             home_dir = Path(tmpdir) / "home"
             home_dir.mkdir()
 
-            with mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}):
-                with mock.patch("os.path.expanduser", return_value=str(home_dir)):
-                    with mock.patch("sys.platform", "linux"):
-                        # WHEN
-                        print_detailed_logs("1")
-                        captured = capsys.readouterr()
+            with (
+                mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}),
+                mock.patch("os.path.expanduser", return_value=str(home_dir)),
+                mock.patch("sys.platform", "linux"),
+            ):
+                # WHEN
+                print_detailed_logs("1")
+                captured = capsys.readouterr()
 
-                        # THEN
-                        assert "REDSHIFT DEBUG LOG" in captured.out
-                        assert "Redshift log content" in captured.out
-                        assert "CINEMA 4D DETAILED LOG" in captured.out
-                        assert "Cinema 4D detailed log content" in captured.out
+                # THEN
+                assert "REDSHIFT DEBUG LOG" in captured.out
+                assert "Redshift log content" in captured.out
+                assert "CINEMA 4D DETAILED LOG" in captured.out
+                assert "Cinema 4D detailed log content" in captured.out
 
     def test_cleans_up_environment_variables_when_enabled(self, capsys):
         """Test that environment variables are cleaned up after printing logs"""
@@ -945,17 +959,19 @@ class TestPrintDetailedLogs:
             home_dir = Path(tmpdir) / "home"
             home_dir.mkdir()
 
-            with mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}):
-                with mock.patch("os.path.expanduser", return_value=str(home_dir)):
-                    with mock.patch("sys.platform", "linux"):
-                        # WHEN
-                        print_detailed_logs("1")
-                        captured = capsys.readouterr()
+            with (
+                mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}),
+                mock.patch("os.path.expanduser", return_value=str(home_dir)),
+                mock.patch("sys.platform", "linux"),
+            ):
+                # WHEN
+                print_detailed_logs("1")
+                captured = capsys.readouterr()
 
-                        # THEN
-                        assert "openjd_unset_env: g_alloc" in captured.out
-                        assert "openjd_unset_env: g_logfile" in captured.out
-                        assert "Environment variables cleaned up" in captured.out
+                # THEN
+                assert "openjd_unset_env: g_alloc" in captured.out
+                assert "openjd_unset_env: g_logfile" in captured.out
+                assert "Environment variables cleaned up" in captured.out
 
     def test_does_not_clean_up_when_deactivated(self, capsys):
         """Test that environment variables are not cleaned up when logging is deactivated"""
@@ -974,23 +990,22 @@ class TestPrintDetailedLogs:
             home_dir = Path(tmpdir) / "home"
             home_dir.mkdir()
 
-            with mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}):
-                with mock.patch("os.path.expanduser", return_value=str(home_dir)):
-                    with mock.patch("sys.platform", "linux"):
-                        # WHEN
-                        print_detailed_logs("1")
-                        captured = capsys.readouterr()
+            with (
+                mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}),
+                mock.patch("os.path.expanduser", return_value=str(home_dir)),
+                mock.patch("sys.platform", "linux"),
+            ):
+                # WHEN
+                print_detailed_logs("1")
+                captured = capsys.readouterr()
 
-                        # THEN
-                        assert "No Redshift debug logs (log.html) found." in captured.out
-                        assert (
-                            "No Cinema 4D detailed log (c4d_detailed_logs.txt) found."
-                            in captured.out
-                        )
-                        assert "No Cinema 4D bug reports (*_BugReport.txt) found." in captured.out
-                        # Still cleans up environment variables
-                        assert "openjd_unset_env: g_alloc" in captured.out
-                        assert "openjd_unset_env: g_logfile" in captured.out
+                # THEN
+                assert "No Redshift debug logs (log.html) found." in captured.out
+                assert "No Cinema 4D detailed log (c4d_detailed_logs.txt) found." in captured.out
+                assert "No Cinema 4D bug reports (*_BugReport.txt) found." in captured.out
+                # Still cleans up environment variables
+                assert "openjd_unset_env: g_alloc" in captured.out
+                assert "openjd_unset_env: g_logfile" in captured.out
 
     def test_prints_bug_reports_when_found(self, capsys):
         """Test that bug reports are printed when found"""
@@ -1002,16 +1017,18 @@ class TestPrintDetailedLogs:
             bug_report = maxon_dir / "_BugReport.txt"
             bug_report.write_text("Bug report content")
 
-            with mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}):
-                with mock.patch("os.path.expanduser", return_value=str(home_dir)):
-                    with mock.patch("sys.platform", "linux"):
-                        # WHEN
-                        print_detailed_logs("1")
-                        captured = capsys.readouterr()
+            with (
+                mock.patch.dict(os.environ, {"CONDA_PREFIX": tmpdir}),
+                mock.patch("os.path.expanduser", return_value=str(home_dir)),
+                mock.patch("sys.platform", "linux"),
+            ):
+                # WHEN
+                print_detailed_logs("1")
+                captured = capsys.readouterr()
 
-                        # THEN
-                        assert "CINEMA 4D BUG REPORT" in captured.out
-                        assert "Bug report content" in captured.out
-                        # Still cleans up environment variables
-                        assert "openjd_unset_env: g_alloc" in captured.out
-                        assert "openjd_unset_env: g_logfile" in captured.out
+                # THEN
+                assert "CINEMA 4D BUG REPORT" in captured.out
+                assert "Bug report content" in captured.out
+                # Still cleans up environment variables
+                assert "openjd_unset_env: g_alloc" in captured.out
+                assert "openjd_unset_env: g_logfile" in captured.out

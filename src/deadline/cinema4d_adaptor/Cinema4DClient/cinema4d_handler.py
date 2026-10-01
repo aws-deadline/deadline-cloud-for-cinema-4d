@@ -3,14 +3,18 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import Any, Callable, Dict
+from collections.abc import Callable
+from typing import Any
 
 # The Cinema4D Adaptor adds the `deadline` namespace directory to PYTHONPATH,
 # so that importing just the cinema4d_adaptor should work.
 try:
-    from cinema4d_adaptor.Cinema4DClient import tile_rendering  # type: ignore[import]
+    from cinema4d_adaptor.Cinema4DClient import ocio_bake, tile_rendering  # type: ignore[import]
 except (ImportError, ModuleNotFoundError):
-    from deadline.cinema4d_adaptor.Cinema4DClient import tile_rendering  # type: ignore[import]
+    from deadline.cinema4d_adaptor.Cinema4DClient import (  # type: ignore[import]
+        ocio_bake,
+        tile_rendering,
+    )
 
 try:
     import c4d  # type: ignore
@@ -40,6 +44,7 @@ SCENE_FILE_KEY = "scene_file"
 START_RENDER_KEY = "start_render"
 ASSEMBLE_TILES_KEY = "assemble_tiles"
 TAKE_KEY = "take"
+REDSHIFT_TEXTURE_DATA_TYPE = 1036765
 
 
 def progress_callback(progress_percent, progress_type_int):
@@ -65,19 +70,22 @@ def progress_callback(progress_percent, progress_type_int):
     print(f"Progress update ({progress_type_text}): {min(progress_percent * 100.0, 100.0)}%")
 
     if progress_type_int == c4d.RENDERPROGRESSTYPE_DURINGRENDERING:
-        print("ALF_PROGRESS %g" % min(progress_percent * 100, 100))
+        print(f"ALF_PROGRESS {min(progress_percent * 100, 100):g}")
 
 
 class Cinema4DHandler:
-    action_dict: Dict[str, Callable[[Dict[str, Any]], None]] = {}
-    render_kwargs: Dict[str, Any]
+    action_dict: dict[str, Callable[[dict[str, Any]], None]]
+    render_kwargs: dict[str, Any]
     map_path: Callable[[str], str]
 
     C4D_FONT_INDEX = c4d.DescID(
         c4d.DescLevel(c4d.PRIM_TEXT_FONT, c4d.FONTCHOOSER_DATA, c4d.OBJECT_SPLINETEXT)
     )
 
-    def __init__(self, map_path: Callable[[str], str]) -> None:
+    def __init__(
+        self,
+        map_path: Callable[[str], str],
+    ) -> None:
         """
         Constructor for the c4dpy handler. Initializes action_dict and render variables
         """
@@ -102,7 +110,7 @@ class Cinema4DHandler:
         Asset references in the .c4d files are not automatically re-mapped if they are
         absolute paths. This function remaps the asset references to the new paths.
         """
-        asset_list: list[Dict[str, Any]] = []
+        asset_list: list[dict[str, Any]] = []
         c4d.documents.GetAllAssetsNew(
             self.doc, allowDialogs=False, lastPath="", assetList=asset_list
         )
@@ -119,33 +127,40 @@ class Cinema4DHandler:
             # note: we can't skip if mapped_path == filename because some internal
             # references in the owner nodes may need to be updated
 
+            is_legacy_redshift_gv_node = self._is_legacy_redshift_gv_node(owner, param_id)
             # whether we have done owner[param_id] = mapped_path
             attempted_basic_path_mapping_approach = False
             try:
                 success = self._pathmap_recognized_types(
-                    owner, param_id, node_space, node_path, mapped_path
+                    owner, param_id, filename, node_space, node_path, mapped_path
                 )
 
                 if not success:
+                    if is_legacy_redshift_gv_node:
+                        print(
+                            f"WARNING: legacy Redshift GraphView texture '{filename}' could not be "
+                            "path mapped because no matching texture parameter was found."
+                        )
+                        continue
                     print(
                         f"WARNING: asset wasn't recognized. Attempting to path map {owner}[{param_id}] = {mapped_path}"
                     )
                     attempted_basic_path_mapping_approach = True
                     owner[param_id] = mapped_path
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - continue remapping independent scene assets
                 print(
                     f"WARNING: asset with asset owner '{owner}', asset paramId {param_id}, filename "
                     f"'{filename}', nodeSpace '{node_space}', and nodePath '{node_path}' could not be path "
                     f"mapped. Error: {e} {traceback.format_exc()}"
                 )
-                if not attempted_basic_path_mapping_approach:
+                if not attempted_basic_path_mapping_approach and not is_legacy_redshift_gv_node:
                     print(
                         f"Attempting to use basic path mapping {owner}[{param_id}] = {mapped_path}"
                     )
                     try:
                         owner[param_id] = mapped_path
-                    except Exception as f:
+                    except Exception as f:  # noqa: BLE001 - C4D owners expose varying setters
                         print(
                             f"{owner}[{param_id}] = {mapped_path} failed. Error: {f} {traceback.format_exc()}"
                         )
@@ -160,7 +175,7 @@ class Cinema4DHandler:
             )
 
     def _pathmap_recognized_types(
-        self, owner, param_id, node_space, node_path, mapped_path
+        self, owner, param_id, filename, node_space, node_path, mapped_path
     ) -> bool:
         """
         Applies path mapping to recognized owner types.
@@ -184,6 +199,70 @@ class Cinema4DHandler:
             # Redshift node-based materials
             return self._pathmap_base_material(owner, node_space, node_path, mapped_path)
 
+        if self._is_legacy_redshift_gv_node(owner, param_id):
+            # Legacy Redshift GraphView materials store an image path in a
+            # texture-data DescID, but GetAllAssetsNew reports paramId=-1.
+            return self._pathmap_gv_node(owner, filename, mapped_path)
+
+        return False
+
+    @staticmethod
+    def _is_legacy_redshift_gv_node(owner, param_id) -> bool:
+        """Return whether an asset owner is a legacy Redshift GraphView node."""
+        if param_id != -1:
+            return False
+        try:
+            return isinstance(owner, c4d.modules.graphview.GvNode)
+        except (AttributeError, TypeError):
+            # GraphView is not available in every C4D configuration. Keep
+            # remapping other scene assets when its type cannot be inspected.
+            return False
+
+    def _pathmap_gv_node(self, owner, filename, mapped_path) -> bool:
+        """Path map a legacy Redshift GraphView texture node."""
+        operator_container = owner.GetOperatorContainer()
+        normalized_filename = str(filename).replace("\\", "/")
+        filename_basename = os.path.basename(normalized_filename)
+        exact_matches = []
+        basename_matches = []
+        for index in range(len(operator_container)):
+            parameter_id = operator_container.GetIndexId(index)
+            if operator_container.GetType(parameter_id) != REDSHIFT_TEXTURE_DATA_TYPE:
+                continue
+
+            desc_id = c4d.DescID(
+                c4d.DescLevel(parameter_id, REDSHIFT_TEXTURE_DATA_TYPE),
+                c4d.DescLevel(c4d.REDSHIFT_FILE_PATH, c4d.DTYPE_STRING, 0),
+            )
+            existing_path = owner[desc_id]
+            if not existing_path:
+                continue
+            normalized_existing_path = str(existing_path).replace("\\", "/")
+            if normalized_existing_path == normalized_filename:
+                exact_matches.append(desc_id)
+                continue
+
+            existing_basename = os.path.basename(normalized_existing_path)
+            if existing_basename == filename_basename:
+                basename_matches.append(desc_id)
+
+        if exact_matches:
+            for desc_id in exact_matches:
+                owner[desc_id] = mapped_path
+            return True
+
+        if len(basename_matches) == 1:
+            owner[basename_matches[0]] = mapped_path
+            return True
+
+        if len(basename_matches) > 1:
+            print(
+                f"WARNING: Unable to path map legacy Redshift GraphView texture '{filename}' "
+                "because multiple texture parameters have the same filename."
+            )
+            # Avoid the unsafe owner[-1] fallback.
+            return False
+
         return False
 
     def _pathmap_base_shader(self, owner, param_id, mapped_path) -> bool:
@@ -205,8 +284,7 @@ class Cinema4DHandler:
             # For each type of texture, we check if the texture is specified,
             # and if it is, we override the path
             desc_id = c4d.DescID(
-                # 1036765 is the data type for textures
-                c4d.DescLevel(item, 1036765),
+                c4d.DescLevel(item, REDSHIFT_TEXTURE_DATA_TYPE),
                 c4d.DescLevel(c4d.REDSHIFT_FILE_PATH, c4d.DTYPE_STRING, 0),
             )
             existing_path = owner[desc_id]
@@ -265,6 +343,14 @@ class Cinema4DHandler:
         frame = int(frame_str)
         return frame, frame
 
+    def _raise_on_render_error(self, result: int) -> None:
+        """Raise if a RenderDocument result is an error (or unrecognized)."""
+        result_description = _RENDERRESULT.get(result)
+        if result_description is None:
+            raise RuntimeError(f"Error: unhandled render result: {result}")
+        if result != c4d.RENDERRESULT_OK:
+            raise RuntimeError(f"Error: render result: {result_description}")
+
     def start_render(self, data: dict) -> None:
         if self.cached_text_was_used_in_previous_frame:
             # Close and then reload document since we collapsed some text in the previous frame
@@ -279,7 +365,7 @@ class Cinema4DHandler:
         start_frame, end_frame = self._parse_frame_range(frame_value)
         self.render_kwargs[FRAME_KEY] = start_frame
 
-        fps = self.doc.GetFps()
+        fps = self.render_data[c4d.RDATA_FRAMERATE]
         self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(start_frame, fps)
         self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(end_frame, fps)
         self.render_data[c4d.RDATA_FRAMESTEP] = 1
@@ -297,39 +383,127 @@ class Cinema4DHandler:
         # Set up tile rendering if this is a tile render action
         tile_action = data.get("tile_action", "")
         is_tile_render = tile_action == "render"
-        tile_ctx = None
-        if is_tile_render:
-            tile_ctx = tile_rendering.setup_tile_render(self.render_data, data)
+        tile_ctx = None  # created in the render branch below, just before rendering
 
         width = int(self.render_data[c4d.RDATA_XRES])
         height = int(self.render_data[c4d.RDATA_YRES])
-        if is_tile_render:
-            bm = tile_rendering.create_tile_bitmap(width, height)
-        else:
-            bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
         rd = self.render_data.GetDataInstance()
 
         self.cached_text_was_used_in_previous_frame = self._cache_text_if_needed(
             c4d.BaseTime(start_frame, fps)
         )
 
-        result = c4d.documents.RenderDocument(
-            self.doc,
-            rd,
-            bm,
-            c4d.RENDERFLAGS_EXTERNAL | c4d.RENDERFLAGS_SHOWERRORS,
-            prog=progress_callback,
+        render_flags = c4d.RENDERFLAGS_EXTERNAL | c4d.RENDERFLAGS_SHOWERRORS
+
+        # Non-tile OCIO workaround: RenderDocument's internal save does not bake the
+        # OCIO View Transform (a Cinema 4D SDK bug), so ordinary renders are written
+        # un-tone-mapped (dark/"Raw"). We disable the render-time bake and render ONE
+        # frame per RenderDocument call, so each frame's render-space bitmap can be
+        # OCIO-baked into its beauty file afterwards. (A single RenderDocument over a
+        # frame range leaves only the last frame in the bitmap, so the earlier frames
+        # could not be baked.) See tile_rendering.bake_full_frame_beauty.
+        # Only 8-bit display output needs the view transform baked (float/EXR stays
+        # scene-linear), so restrict the per-frame path to that case -- other outputs
+        # keep the original single range render.
+        bake_ocio = (
+            not is_tile_render
+            and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
+            and self.render_data[c4d.RDATA_SAVEIMAGE]
+            and self.render_data[c4d.RDATA_FORMAT] in tile_rendering.FORMAT_MAP
+            and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_8
         )
-
-        result_description = _RENDERRESULT.get(result)
-        if result_description is None:
-            raise RuntimeError("Error: unhandled render result: %s" % result)
-        if result != c4d.RENDERRESULT_OK:
-            raise RuntimeError("Error: render result: %s" % result_description)
-
-        # Post-render tile processing: OCIO bake, crop, save tile, restore paths
-        if is_tile_render and tile_ctx is not None:
-            tile_rendering.finalize_tile_render(bm, rd, tile_ctx, self.render_data, start_frame)
+        if bake_ocio:
+            # Disable the render-time bake, restoring it afterwards (the document is
+            # reused across renders in a session) -- mirrors the tile path, which saves
+            # and restores this flag in finalize_tile_render.
+            orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
+            rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
+            try:
+                for frame in range(start_frame, end_frame + 1):
+                    self.render_data[c4d.RDATA_FRAMEFROM] = c4d.BaseTime(frame, fps)
+                    self.render_data[c4d.RDATA_FRAMETO] = c4d.BaseTime(frame, fps)
+                    frame_rd = self.render_data.GetDataInstance()
+                    # Render into a float bitmap so the OCIO view transform is baked from
+                    # full-precision render-space data (baking 8-bit data would band the
+                    # gradients) -- same rationale as the tile path's create_tile_bitmap.
+                    frame_bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGBf)
+                    result = c4d.documents.RenderDocument(
+                        self.doc, frame_rd, frame_bm, render_flags, prog=progress_callback
+                    )
+                    self._raise_on_render_error(result)
+                    ocio_bake.bake_full_frame_beauty(
+                        frame_bm, frame_rd, self.render_data, self.doc, frame
+                    )
+            finally:
+                rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
+        else:
+            if is_tile_render:
+                # setup_tile_render restores its own mutations if it raises;
+                # the try/finally below covers everything after it returns.
+                tile_ctx = tile_rendering.setup_tile_render(self.render_data, data)
+            # 32-bit float OCIO workaround (issue #540): RenderDocument's save
+            # applies a colorspace conversion to float output (EXR, HDR, 32-bit
+            # TIFF) that local renders do not, shifting colors. This conversion
+            # is distinct from the view-transform tone-mapping the 8-bit path
+            # re-applies. Disable the render-time bake so the save writes the
+            # same data as a local render (verified byte-identical for EXR, HDR,
+            # and 32-bit TIFF; a measured no-op for 8/16-bit PNG, including
+            # 8-bit multi-pass files alongside a float beauty). Tile renders
+            # manage this flag in tile_rendering.setup/finalize_tile_render, so
+            # the handler must not touch it here; float tiles route through
+            # C4D's internal save with the bake disabled (same mechanism).
+            disable_ocio_bake = (
+                not is_tile_render
+                and hasattr(c4d, "RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER")
+                and self.render_data[c4d.RDATA_FORMATDEPTH] == c4d.RDATA_FORMATDEPTH_32
+            )
+            # Sentinel so the finally can tell "never disabled" from "disabled to
+            # a real value"; keeps the mutation and its restore in one try block.
+            orig_bake_flag = None
+            try:
+                if disable_ocio_bake:
+                    orig_bake_flag = rd.GetBool(c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER)
+                    rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = False
+                    print(
+                        "Disabling render-time OCIO bake for 32-bit float output "
+                        "(see issue #540)"
+                    )
+                if is_tile_render:
+                    if (
+                        tile_ctx is not None
+                        and tile_ctx.internal_save_base
+                        and not self.render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]
+                    ):
+                        # Float tile, beauty only: C4D writes the tile from its
+                        # own internal save, so this bitmap is a write-only sink
+                        # whose pixels are never read (finalize crops from the
+                        # saved file). A cheap RGB bitmap is ~5x smaller than the
+                        # RGBf+alpha one and produces byte-identical output
+                        # (verified on 2026 + Redshift). NOT used when multi-pass
+                        # saving is on: C4D writes the multi-pass layers FROM this
+                        # bitmap, and a plain RGB bitmap drops the alpha pass.
+                        bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
+                    else:
+                        bm = tile_rendering.create_tile_bitmap(width, height)
+                else:
+                    bm = bitmaps.MultipassBitmap(width, height, c4d.COLORMODE_RGB)
+                result = c4d.documents.RenderDocument(
+                    self.doc, rd, bm, render_flags, prog=progress_callback
+                )
+                self._raise_on_render_error(result)
+                if is_tile_render and tile_ctx is not None:
+                    # Post-render tile processing: OCIO bake, crop, save tile
+                    tile_rendering.finalize_tile_render(
+                        bm, rd, tile_ctx, self.render_data, start_frame
+                    )
+            finally:
+                if orig_bake_flag is not None:
+                    rd[c4d.RDATA_BAKE_OCIO_VIEW_TRANSFORM_RENDER] = orig_bake_flag
+                if tile_ctx is not None:
+                    # Safe to call again after a successful finalize (no-op);
+                    # covers every exception path (allocation, render, finalize)
+                    # so mutated state cannot leak into the next task.
+                    tile_rendering.restore_tile_render_state(self.render_data, rd, tile_ctx)
 
         print("Finished Rendering")
 
@@ -375,16 +549,19 @@ class Cinema4DHandler:
                     all_takes.extend(get_child_takes(child_take))
             return all_takes
 
-        main_take = take_data.GetCurrentTake()
+        main_take = take_data.GetMainTake()
         all_takes = [main_take] + get_child_takes(main_take)
 
-        take = None
+        matched_take = None
         for take in all_takes:
             if take.GetName() == take_name:
+                matched_take = take
                 break
-        if take is None:
-            print("Error: take not found: %s" % take_name)
-        take_data.SetCurrentTake(take)
+
+        if matched_take is None:
+            raise RuntimeError(f"Take not found: {take_name}")
+
+        take_data.SetCurrentTake(matched_take)
 
     def use_cached_text(self, data: dict) -> None:
         """

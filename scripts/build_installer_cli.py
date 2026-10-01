@@ -2,11 +2,11 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import os
 import platform
+from collections.abc import Callable, Iterable
+from pathlib import Path
+from typing import Any
 
 import click
-
-from pathlib import Path
-from typing import Any, Callable, Iterable, Optional
 from build_installer import main
 
 
@@ -52,11 +52,10 @@ def _dependency(dependency: str) -> Callable[[click.Context, click.Option, Any],
     """
 
     def _callback(ctx: click.Context, param: click.Option, value: Any) -> Any:
-        if value:
-            if not ctx.params.get(dependency):
-                raise click.BadParameter(
-                    f"Must specify --{_snake_to_kebab(dependency)} when specifying --{param.name}"
-                )
+        if value and not ctx.params.get(dependency):
+            raise click.BadParameter(
+                f"Must specify --{_snake_to_kebab(dependency)} when specifying --{param.name}"
+            )
         return value
 
     return _callback
@@ -70,11 +69,10 @@ def _require_if_false_or_unspecified(
     """
 
     def _callback(ctx: click.Context, param: click.Option, value: Any) -> Any:
-        if not ctx.params.get(other):
-            if not value:
-                raise click.BadParameter(
-                    f"Must specify --{param.name} when --{_snake_to_kebab(other)} is not specified"
-                )
+        if not ctx.params.get(other) and not value:
+            raise click.BadParameter(
+                f"Must specify --{param.name} when --{_snake_to_kebab(other)} is not specified"
+            )
         return value
 
     return _callback
@@ -103,7 +101,7 @@ def _require_if_all_false_or_unspecified(
 
 
 def _current_platform_as_default(
-    _ctx: click.Context, _param: click.Option, value: Optional[str]
+    _ctx: click.Context, _param: click.Option, value: str | None
 ) -> str:
     """
     A callback that dynamically sets the default to the current platform
@@ -192,16 +190,16 @@ def _not_allowed_if_env_var_set(
 )
 @click.option("--override-installer-version", type=str, help="Use this as the installer version.")
 def cli(
-    install_builder_path: Optional[Path],
-    install_builder_s3_bucket: Optional[str],
-    install_builder_s3_key: Optional[str],
-    install_builder_license_path: Optional[Path],
+    install_builder_path: Path | None,
+    install_builder_s3_bucket: str | None,
+    install_builder_s3_key: str | None,
+    install_builder_license_path: Path | None,
     dev: bool,
     local_dev: bool,
     platform: str,
-    output_dir: Optional[Path],
+    output_dir: Path | None,
     installer_source_path: Path,
-    override_installer_version: Optional[str],
+    override_installer_version: str | None,
 ) -> None:
     cli_body(
         install_builder_path,
@@ -218,16 +216,16 @@ def cli(
 
 
 def cli_body(
-    install_builder_path: Optional[Path],
-    install_builder_s3_bucket: Optional[str],
-    install_builder_s3_key: Optional[str],
-    install_builder_license_path: Optional[Path],
+    install_builder_path: Path | None,
+    install_builder_s3_bucket: str | None,
+    install_builder_s3_key: str | None,
+    install_builder_license_path: Path | None,
     dev: bool,
     local_dev: bool,
     platform: str,
-    output_dir: Optional[Path],
+    output_dir: Path | None,
     installer_source_path: Path,
-    override_installer_version: Optional[str],
+    override_installer_version: str | None,
 ) -> None:
     """
     Separate from the command function so we can mock the body out

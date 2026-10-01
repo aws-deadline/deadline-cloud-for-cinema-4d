@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
-
-from deadline.client.api import UpdateCheckResult, UpdateCheckStatus
+from unittest.mock import MagicMock, patch
 
 from deadline.cinema4d_submitter.update_utils import (
     _check_for_update,
     check_and_show_update_dialog,
 )
+from deadline.client.api import UpdateCheckResult, UpdateCheckStatus
 
 
 class TestCheckForUpdate:

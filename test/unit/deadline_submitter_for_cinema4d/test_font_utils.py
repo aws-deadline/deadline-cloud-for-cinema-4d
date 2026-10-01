@@ -3,13 +3,12 @@
 import os
 from unittest import mock
 
-
 from deadline.cinema4d_submitter.font_utils import (
-    get_system_font_directories,
-    copy_font_to_scene_folder,
-    get_font_manager_environment,
     FONTS_DIR,
+    copy_font_to_scene_folder,
     get_font_location,
+    get_font_manager_environment,
+    get_system_font_directories,
 )
 
 

@@ -23,9 +23,9 @@ After cleaning:
     [Log message content]
 """
 
+import os
 import re
 import sys
-import os
 
 
 def extract_redshift_log(log_file_path):
@@ -48,7 +48,7 @@ def extract_redshift_log(log_file_path):
     except FileNotFoundError:
         print(f"Error: File '{log_file_path}' not found.")
         return None
-    except Exception as e:
+    except (OSError, UnicodeError) as e:
         print(f"Error reading file: {e}")
         return None
 
@@ -144,7 +144,7 @@ def main():
         with open(output_file, "w", encoding="utf-8") as file:
             file.write(cleaned_content)
         print(f"\nSuccess! Cleaned log saved to: {output_file}")
-    except Exception as e:
+    except (OSError, UnicodeError) as e:
         print(f"Error writing output file: {e}")
         sys.exit(1)
 

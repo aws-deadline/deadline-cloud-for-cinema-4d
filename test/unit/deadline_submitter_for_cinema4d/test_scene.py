@@ -1,11 +1,20 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-from typing import Optional
 from unittest import mock
 
 import pytest
 
-from deadline.cinema4d_submitter.scene import Animation, FrameRange, RendererNames, Scene
+from deadline.cinema4d_submitter.scene import (
+    THIRD_PARTY_PLUGIN_RENDERERS,
+    UNSUPPORTED_RENDERERS,
+    VERIFIED_RENDERERS,
+    VIEWPORT_RENDERERS,
+    Animation,
+    FrameRange,
+    RendererNames,
+    Scene,
+    get_renderer_warning,
+)
 
 
 def test_renderer_names():
@@ -37,6 +46,59 @@ def test_renderer():
     assert renderer == "standard"
 
 
+@mock.patch("c4d.RDATA_RENDERENGINE", 0)
+def test_renderer_viewport():
+    """Verify that Viewport Renderer returns its name without crashing."""
+    render_data = {0: 300001061}
+    renderer = Scene.renderer(render_data=render_data)
+    assert renderer == "viewport_renderer"
+
+
+@mock.patch("c4d.RDATA_RENDERENGINE", 0)
+def test_renderer_unknown_id_returns_string():
+    """Verify that an unknown renderer ID returns the ID as a string."""
+    render_data = {0: 9999999}
+    renderer = Scene.renderer(render_data=render_data)
+    assert renderer == "9999999"
+
+
+def test_get_renderer_warning_verified_renderer_returns_none():
+    """Verified renderers should not produce a warning."""
+    for renderer in VERIFIED_RENDERERS:
+        assert get_renderer_warning(renderer.value) is None
+
+
+def test_get_renderer_warning_third_party_renderer():
+    """Third-party renderers should produce a plugin installation warning."""
+    for renderer in THIRD_PARTY_PLUGIN_RENDERERS:
+        warning = get_renderer_warning(renderer.value)
+        assert warning is not None
+        assert "third-party" in warning.lower() or "plugin" in warning.lower()
+
+
+def test_get_renderer_warning_unsupported_renderer():
+    """Unsupported renderers should produce a not-supported warning."""
+    for renderer in UNSUPPORTED_RENDERERS:
+        warning = get_renderer_warning(renderer.value)
+        assert warning is not None
+        assert "not supported" in warning.lower()
+
+
+def test_get_renderer_warning_viewport_renderer():
+    """Viewport Renderer should produce a quality warning."""
+    for renderer in VIEWPORT_RENDERERS:
+        warning = get_renderer_warning(renderer.value)
+        assert warning is not None
+        assert "viewport" in warning.lower()
+
+
+def test_get_renderer_warning_unknown_renderer():
+    """Unknown renderers should produce an unverified warning."""
+    warning = get_renderer_warning(9999999)
+    assert warning is not None
+    assert "not been verified" in warning.lower()
+
+
 class TestAnimation:
 
     class MockC4d:
@@ -50,6 +112,7 @@ class TestAnimation:
         MOCK_RDATA_FRAMESTEP = 1007
         MOCK_RDATA_FRAME_RANGE_STRING = 1008
         MOCK_RDATA_FRAMESEQUENCE = 1009
+        MOCK_RDATA_FRAMERATE = 1010
 
     class MockGetFrame:
         def __init__(self, value):
@@ -73,6 +136,7 @@ class TestAnimation:
                 TestAnimation.MockC4d.MOCK_RDATA_FRAMESTEP: "2",
                 TestAnimation.MockC4d.MOCK_RDATA_FRAME_RANGE_STRING: "3,6-10:2,15-17",
                 TestAnimation.MockC4d.MOCK_RDATA_FRAMESEQUENCE: self.frame_spec_type,
+                TestAnimation.MockC4d.MOCK_RDATA_FRAMERATE: 30,
             }[key]
 
     @pytest.fixture
@@ -96,6 +160,7 @@ class TestAnimation:
             mock_c4d.RDATA_FRAMEFROM = TestAnimation.MockC4d.MOCK_RDATA_FRAMEFROM
             mock_c4d.RDATA_FRAMETO = TestAnimation.MockC4d.MOCK_RDATA_FRAMETO
             mock_c4d.RDATA_FRAMESTEP = TestAnimation.MockC4d.MOCK_RDATA_FRAMESTEP
+            mock_c4d.RDATA_FRAMERATE = TestAnimation.MockC4d.MOCK_RDATA_FRAMERATE
             mock_c4d.RDATA_FRAME_RANGE_STRING = TestAnimation.MockC4d.MOCK_RDATA_FRAME_RANGE_STRING
             mock_c4d.RDATA_FRAMESEQUENCE = TestAnimation.MockC4d.MOCK_RDATA_FRAMESEQUENCE
             yield mock_c4d
@@ -177,7 +242,7 @@ class TestFrameRange:
         ],
     )
     def test_frame_range_repr(
-        self, start: int, stop: Optional[int], step: Optional[int], expected_string: str
+        self, start: int, stop: int | None, step: int | None, expected_string: str
     ) -> None:
         # GIVEN
         frame_range = FrameRange(start, stop, step)

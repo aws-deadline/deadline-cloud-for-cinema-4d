@@ -1,0 +1,9 @@
+assetReferences:
+  inputs:
+    directories: []
+    filenames:
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/ocio_render_consistency/actual/ocio_render_consistency.c4d
+  outputs:
+    directories:
+    - PATH_TO_BE_REPLACED/deadline-cloud-for-cinema-4d/test/integ/test_cases/ocio_render_consistency/actual/renders
+  referencedPaths: []

@@ -5,7 +5,7 @@
 import logging
 from dataclasses import dataclass
 
-from deadline.client.api import safe_check_for_updates, UpdateCheckResult, UpdateCheckStatus
+from deadline.client.api import UpdateCheckResult, UpdateCheckStatus, safe_check_for_updates
 from deadline.client.ui.dialogs.update_available_dialog import UpdateAvailableDialog
 
 from ._version import version_tuple as adaptor_version_tuple

@@ -1,9 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 import subprocess
 import sys
-
 from os import PathLike
-from typing import Union, Dict, Optional, List
 
 
 class BadExitCodeError(Exception):
@@ -19,9 +17,9 @@ class UnsupportedOSError(Exception):
 
 
 def run(
-    cmd: Union[PathLike, str, List[Union[str, PathLike]]],
-    cwd: Optional[Union[str, PathLike]] = None,
-    env: Optional[Dict[str, str]] = None,
+    cmd: PathLike | str | list[str | PathLike],
+    cwd: str | PathLike | None = None,
+    env: dict[str, str] | None = None,
     echo: bool = True,
 ) -> str:
     if echo:
@@ -35,34 +33,34 @@ def run(
 
     if p.returncode != 0:
         raise BadExitCodeError(
-            f"Process '{str(cmd)}' failed with exit code {p.returncode} and output: {output}"
+            f"Process '{cmd!s}' failed with exit code {p.returncode} and output: {output}"
         )
 
     return output
 
 
-def get_latest_git_tag(cwd: Optional[Union[PathLike, str]] = None) -> str:
+def get_latest_git_tag(cwd: PathLike | str | None = None) -> str:
     result = run(["git", "describe", "--tags", "--abbrev=0"], cwd=cwd, echo=False).strip()
     return result
 
 
-def get_latest_commit_hash(cwd: Optional[Union[PathLike, str]] = None) -> str:
+def get_latest_commit_hash(cwd: PathLike | str | None = None) -> str:
     result = run(["git", "rev-parse", "HEAD"], cwd=cwd, echo=False).strip()
     return result
 
 
-def get_latest_git_tag_hash(cwd: Optional[Union[PathLike, str]] = None) -> str:
+def get_latest_git_tag_hash(cwd: PathLike | str | None = None) -> str:
     tag = get_latest_git_tag(cwd)
     result = run(["git", "rev-list", "-n", "1", tag], cwd=cwd, echo=False).strip()
     return result
 
 
-def get_latest_commit_short_hash(cwd: Optional[Union[PathLike, str]] = None) -> str:
+def get_latest_commit_short_hash(cwd: PathLike | str | None = None) -> str:
     result = run(["git", "rev-parse", "--short", "HEAD"], cwd=cwd, echo=False).strip()
     return result
 
 
-def get_version_string(cwd: Optional[Union[PathLike, str]] = None) -> str:
+def get_version_string(cwd: PathLike | str | None = None) -> str:
     latest_tag = get_latest_git_tag(cwd)
     latest_commit_hash = get_latest_commit_hash(cwd)
     latest_tag_hash = get_latest_git_tag_hash(cwd)

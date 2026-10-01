@@ -2,17 +2,16 @@
 
 from unittest import mock
 
-
 from deadline.cinema4d_submitter.font_installer import (
+    FONTS_DIR,
     _collect_fonts_from_directory,
     _find_fonts_recursive,
     _find_fonts_scene_based,
+    _install_fonts,
+    _remove_fonts,
     find_fonts,
     install_font,
     uninstall_font,
-    _install_fonts,
-    _remove_fonts,
-    FONTS_DIR,
 )
 
 

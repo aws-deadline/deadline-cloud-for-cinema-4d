@@ -7,7 +7,7 @@ import sys
 from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Optional
+from typing import Any
 
 ADAPTOR_ONLY_DEPENDENCIES = {"openjd-adaptor-runtime"}
 
@@ -18,7 +18,7 @@ class CPUArch(Enum):
     AMD64: str = "amd64"
 
 
-def get_project_dict(project_path: Optional[Path] = None) -> dict[str, Any]:
+def get_project_dict(project_path: Path | None = None) -> dict[str, Any]:
     if sys.version_info < (3, 11):
         with TemporaryDirectory() as toml_env:
             toml_install_pip_args = ["pip", "install", "--target", toml_env, "toml"]
@@ -52,9 +52,9 @@ class Dependency:
 
 def get_dependencies(pyproject_dict: dict[str, Any], exclude_adaptor_only=True) -> list[Dependency]:
     if "project" not in pyproject_dict:
-        raise Exception("pyproject.toml is missing project section")
+        raise ValueError("pyproject.toml is missing project section")
     if "dependencies" not in pyproject_dict["project"]:
-        raise Exception("pyproject.toml is missing dependencies section")
+        raise ValueError("pyproject.toml is missing dependencies section")
 
     return [
         Dependency(dep_str)

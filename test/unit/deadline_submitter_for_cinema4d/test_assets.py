@@ -14,10 +14,9 @@ TEST_SCENE_FILE_LOCATION = "C:\\Users\\test-user\\physical.c4d"
 
 
 def append_asset_list(asset_list_to_append: list, asset_list_input_to_get_all_assets_new: list):
-    for asset in asset_list_to_append:
-        # append the mocked asset list to the input asset list,
-        # just like c4d.documents.GetAllAssetsNew does
-        asset_list_input_to_get_all_assets_new.append(asset)
+    # append the mocked asset list to the input asset list,
+    # just like c4d.documents.GetAllAssetsNew does
+    asset_list_input_to_get_all_assets_new.extend(asset_list_to_append)
 
 
 @pytest.mark.parametrize(
@@ -128,7 +127,7 @@ class TestAssetIntrospectorFonts:
     )
     def test_font_handling_by_platform(self, tmp_path, is_windows, should_copy, font_in_assets):
         """Test font handling differs by platform"""
-        scene_dir, scene_file, fonts_dir, font_file = self._setup_scene(tmp_path)
+        scene_dir, scene_file, _fonts_dir, font_file = self._setup_scene(tmp_path)
         font_asset = self._create_font_asset()
 
         with (
@@ -172,7 +171,7 @@ class TestAssetIntrospectorFonts:
 
     def test_no_fonts_directory(self, tmp_path):
         """Test behavior when no fonts directory exists"""
-        scene_dir, scene_file, _, _ = self._setup_scene(tmp_path, create_fonts_dir=False)
+        _scene_dir, scene_file, _, _ = self._setup_scene(tmp_path, create_fonts_dir=False)
 
         with (
             mock.patch.object(Scene, "name", return_value=str(scene_file)),
@@ -188,7 +187,7 @@ class TestAssetIntrospectorFonts:
 
     def test_mixed_font_and_regular_assets(self, tmp_path):
         """Test parsing scene with both font and regular assets"""
-        scene_dir, scene_file, fonts_dir, font_file = self._setup_scene(
+        scene_dir, scene_file, _fonts_dir, font_file = self._setup_scene(
             tmp_path, font_name="TestFont"
         )
 

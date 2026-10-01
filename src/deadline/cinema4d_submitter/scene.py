@@ -4,7 +4,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Optional, Tuple
 
 import c4d
 
@@ -21,7 +20,7 @@ class RendererNames(IntEnum):
     # native
     standard = 0
     physical = 1023342
-    # previewhardware = 300001061  # Not supported for submission
+    viewport_renderer = 300001061
 
     # 3rd party, now acquired as maxon default
     redshift = 1036219
@@ -32,6 +31,85 @@ class RendererNames(IntEnum):
     corona = 1030480
     cycles = 1035287
     octane = 1029525
+
+
+# Renderers that are fully verified to work on Deadline Cloud
+VERIFIED_RENDERERS = {
+    RendererNames.standard,
+    RendererNames.physical,
+    RendererNames.redshift,
+}
+
+# 3rd party renderers that require plugins installed on workers
+THIRD_PARTY_PLUGIN_RENDERERS = {
+    RendererNames.arnold,
+    RendererNames.vray,
+}
+
+# Renderers not supported on Deadline Cloud
+UNSUPPORTED_RENDERERS = {
+    RendererNames.octane,
+    RendererNames.corona,
+    RendererNames.cycles,
+}
+
+# Renderers that work but produce viewport-quality output (not a full render)
+VIEWPORT_RENDERERS = {
+    RendererNames.viewport_renderer,
+}
+
+
+def _get_renderer_display_name(render_id: int) -> str:
+    """Gets the renderer's display name from Cinema 4D's plugin registry.
+    Falls back to the numeric ID if the plugin can't be found."""
+    try:
+        plugin = c4d.plugins.FindPlugin(render_id, c4d.PLUGINTYPE_VIDEOPOST)
+        if plugin:
+            return plugin.GetName()
+    except Exception:  # noqa: BLE001 - C4D may raise SDK-specific errors during startup
+        # FindPlugin may fail if the plugin isn't loaded or C4D is not fully initialized.
+        return str(render_id)
+    return str(render_id)
+
+
+def get_renderer_warning(render_id: int) -> str | None:
+    """
+    Returns a warning message for the given renderer ID, or None if no warning is needed.
+    """
+    renderer_name = _get_renderer_display_name(render_id)
+
+    try:
+        renderer = RendererNames(render_id)
+    except ValueError:
+        # Unknown renderer not in enum
+        return (
+            f'The selected renderer "{renderer_name}" has not been verified for '
+            f"Deadline Cloud rendering. It may not produce expected results."
+        )
+
+    if renderer in VERIFIED_RENDERERS:
+        return None
+
+    if renderer in THIRD_PARTY_PLUGIN_RENDERERS:
+        return (
+            f'The selected renderer "{renderer_name}" is a third-party '
+            f"plugin. Ensure it is installed and licensed on your Deadline Cloud workers."
+        )
+
+    if renderer in UNSUPPORTED_RENDERERS:
+        return (
+            f'The selected renderer "{renderer_name}" is not supported '
+            f"on Deadline Cloud. Please change your renderer in Render Settings before submitting."
+        )
+
+    if renderer in VIEWPORT_RENDERERS:
+        return (
+            f'The selected renderer "{renderer_name}" produces viewport-quality output, '
+            f"not a full render. The output will look like a viewport screenshot "
+            f"rather than a production render."
+        )
+
+    return None
 
 
 class Animation:
@@ -45,24 +123,21 @@ class Animation:
         """
         Returns the current frame number from Cinema 4D.
         """
-        doc = c4d.documents.GetActiveDocument()
-        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(doc.GetFps()))
+        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(int(data[c4d.RDATA_FRAMERATE])))
 
     @staticmethod
     def start_frame(data) -> int:
         """
         Returns the start frame for the scenes render
         """
-        doc = c4d.documents.GetActiveDocument()
-        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(doc.GetFps()))
+        return int(data[c4d.RDATA_FRAMEFROM].GetFrame(int(data[c4d.RDATA_FRAMERATE])))
 
     @staticmethod
     def end_frame(data) -> int:
         """
         Returns the End frame for the scenes Render
         """
-        doc = c4d.documents.GetActiveDocument()
-        return int(data[c4d.RDATA_FRAMETO].GetFrame(doc.GetFps()))
+        return int(data[c4d.RDATA_FRAMETO].GetFrame(int(data[c4d.RDATA_FRAMERATE])))
 
     @staticmethod
     def frame_step(data) -> int:
@@ -120,13 +195,20 @@ class Scene:
     @staticmethod
     def renderer(render_data=None) -> str:
         """
-        Returns the name of the current renderer as defined in the scene
+        Returns the name of the current renderer as defined in the scene.
+        For unknown renderers not in the RendererNames enum, returns the string
+        representation of the renderer ID.
         """
         if render_data is None:
             doc = c4d.documents.GetActiveDocument()
             render_data = doc.GetActiveRenderData()
         render_id = render_data[c4d.RDATA_RENDERENGINE]
-        return RendererNames(render_id).name
+        try:
+            return RendererNames(render_id).name
+        except ValueError:
+            # Renderer ID not in enum — return the ID as a string so the submitter
+            # can still open. The warning is handled separately by get_renderer_warning().
+            return str(render_id)
 
     @staticmethod
     def get_output_directories(render_data=None, take=None) -> set[str]:
@@ -147,8 +229,7 @@ class Scene:
                 path, doc=doc, take=take, render_data=render_data
             )
             if not os.path.isabs(xpath):
-                if xpath.startswith("./"):
-                    xpath = xpath[2:]
+                xpath = xpath.removeprefix("./")
                 xpath = os.path.join(doc_path, xpath)
             image_paths.add(os.path.dirname(os.path.normpath(xpath)))
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
@@ -157,8 +238,7 @@ class Scene:
                 path, doc=doc, take=take, render_data=render_data
             )
             if not os.path.isabs(xpath):
-                if xpath.startswith("./"):
-                    xpath = xpath[2:]
+                xpath = xpath.removeprefix("./")
                 xpath = os.path.join(doc_path, xpath)
             image_paths.add(os.path.dirname(os.path.normpath(xpath)))
         return image_paths
@@ -200,7 +280,7 @@ class Scene:
         return c4d.modules.tokensystem.FilenameConvertTokens(path, render_path_data)
 
     @staticmethod
-    def get_output_paths(take=None) -> Tuple[str, str]:
+    def get_output_paths(take=None) -> tuple[str, str]:
         """
         Returns the default and multi-pass output paths.
         """
@@ -216,8 +296,7 @@ class Scene:
                 path, doc=doc, take=take, render_data=render_data
             )
             if not os.path.isabs(xpath):
-                if xpath.startswith("./"):
-                    xpath = xpath[2:]
+                xpath = xpath.removeprefix("./")
                 xpath = os.path.join(doc_path, xpath)
             default_out = os.path.normpath(xpath)
         if render_data[c4d.RDATA_MULTIPASS_SAVEIMAGE]:
@@ -226,8 +305,7 @@ class Scene:
                 path, doc=doc, take=take, render_data=render_data
             )
             if not os.path.isabs(xpath):
-                if xpath.startswith("./"):
-                    xpath = xpath[2:]
+                xpath = xpath.removeprefix("./")
                 xpath = os.path.join(doc_path, xpath)
             multi_out = os.path.normpath(xpath)
         return default_out, multi_out
@@ -240,8 +318,8 @@ class FrameRange:
     """
 
     start: int
-    stop: Optional[int] = None
-    step: Optional[int] = None
+    stop: int | None = None
+    step: int | None = None
 
     def __repr__(self) -> str:
         if self.stop is None or self.stop == self.start:

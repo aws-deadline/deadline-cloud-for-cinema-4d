@@ -1,12 +1,13 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-import c4d
 import logging
 import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Any
+from typing import Any
+
+import c4d
 
 from .platform_utils import is_windows
 from .warning_logging_handler import WarningCollectorHandler
@@ -32,13 +33,13 @@ class FontMetadata:
     """
 
     file_path: str
-    family_name: Optional[str] = None
-    style: Optional[str] = None
-    full_name: Optional[str] = None
-    postscript_name: Optional[str] = None
+    family_name: str | None = None
+    style: str | None = None
+    full_name: str | None = None
+    postscript_name: str | None = None
 
 
-def get_font_metadata(font_path: str) -> Optional[FontMetadata]:
+def get_font_metadata(font_path: str) -> FontMetadata | None:
     """
     Extract font metadata from a font file using fontTools.
 
@@ -72,30 +73,30 @@ def get_font_metadata(font_path: str) -> Optional[FontMetadata]:
         try:
             if len(names_table) > TTF_FAMILY_NAME:
                 metadata.family_name = str(names_table[TTF_FAMILY_NAME])
-        except (IndexError, Exception) as e:
+        except Exception as e:  # noqa: BLE001 - malformed font metadata
             logger.debug(f"Could not extract family name from {font_path}: {e}")
 
         try:
             if len(names_table) > TTF_STYLE:
                 metadata.style = str(names_table[TTF_STYLE])
-        except (IndexError, Exception) as e:
+        except Exception as e:  # noqa: BLE001 - malformed font metadata
             logger.debug(f"Could not extract style from {font_path}: {e}")
 
         try:
             if len(names_table) > TTF_FULL_NAME:
                 metadata.full_name = str(names_table[TTF_FULL_NAME])
-        except (IndexError, Exception) as e:
+        except Exception as e:  # noqa: BLE001 - malformed font metadata
             logger.debug(f"Could not extract full name from {font_path}: {e}")
 
         try:
             if len(names_table) > TTF_POSTSCRIPT_NAME:
                 metadata.postscript_name = str(names_table[TTF_POSTSCRIPT_NAME])
-        except (IndexError, Exception) as e:
+        except Exception as e:  # noqa: BLE001 - malformed font metadata
             logger.debug(f"Could not extract PostScript name from {font_path}: {e}")
 
         return metadata
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - fontTools errors vary by malformed font structure
         logger.debug(f"Failed to extract metadata from {font_path}: {e}")
         return None
 
@@ -105,7 +106,7 @@ def is_asset_a_font(asset: dict) -> bool:
     Check if Cinema 4D considers the asset is a font.
     """
     pid: int = asset.get("paramId", c4d.NOTOK)
-    owner: Optional[c4d.BaseList2D] = asset.get("owner", None)
+    owner: c4d.BaseList2D | None = asset.get("owner", None)
     if pid == c4d.NOTOK or owner is None:
         return False
     # We check the type of the parameter value.
@@ -114,7 +115,7 @@ def is_asset_a_font(asset: dict) -> bool:
     return isinstance(value, c4d.FontData)
 
 
-def get_font_location(font_name: str) -> Optional[str]:
+def get_font_location(font_name: str) -> str | None:
     """
     Scan font directories for Windows and Mac to find the location of a font.
 
@@ -199,13 +200,10 @@ def _is_font_match(font_name: str, filename: str, file_path: str) -> bool:
         return True
 
     # Check if filename is contained in font name
-    if name_without_ext in font_name_lower:
-        return True
-
-    return False
+    return name_without_ext in font_name_lower
 
 
-def get_system_font_directories() -> List[str]:
+def get_system_font_directories() -> list[str]:
     """
     Get the font directories based on the operating system.
     Includes Adobe font directories and user-installed fonts.
@@ -281,7 +279,7 @@ def is_font_file(file_path: str) -> bool:
         # If we can access the name table, it's likely a valid font
         _ = font["name"]
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - fontTools errors vary by malformed font structure
         logger.debug(f"Font validation failed for {file_path}: {e}")
         return False
 
@@ -322,7 +320,7 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     try:
         fonts_dir.mkdir(exist_ok=True, parents=True)
     except OSError as e:
-        logger.warning(f"Failed to create fonts directory '{fonts_dir}': {str(e)}")
+        logger.warning(f"Failed to create fonts directory '{fonts_dir}': {e!s}")
         return
 
     # Copy the font file to the fonts directory
@@ -350,9 +348,9 @@ def copy_font_to_scene_folder(font_name: str, scene_location: Path) -> None:
     try:
         shutil.copy2(font_location, destination)
         logger.debug(f"Successfully copied font from {font_location} to {destination}")
-    except (OSError, IOError, shutil.Error) as e:
+    except (OSError, shutil.Error) as e:
         logger.warning(
-            f"Failed to copy font '{font_name}' from '{font_location}' to '{destination}': {str(e)}"
+            f"Failed to copy font '{font_name}' from '{font_location}' to '{destination}': {e!s}"
         )
         return
 

@@ -8,6 +8,17 @@ print('system paths:')
 for n in sys.path:
     print(n)
 
+_adaptor_testing = os.environ.get("CINEMA4D_ADAPTOR_TESTING", "false").lower() == "true"
+
+# Integration tests inject pywin32 from a Hatch environment without Conda activation.
+# Keep this handle alive so win32file can load pywintypes311.dll in that test environment.
+_dll_directory_handles = []
+if sys.platform == "win32" and _adaptor_testing:
+    for python_path in sys.path:
+        pywin32_dll_directory = os.path.join(python_path, "pywin32_system32")
+        if os.path.isdir(pywin32_dll_directory):
+            _dll_directory_handles.append(os.add_dll_directory(pywin32_dll_directory))
+
 import c4d
 
 # The Cinema4D Adaptor adds the `deadline` namespace directory to PYTHONPATH,
@@ -33,5 +44,5 @@ def PluginMessage(id, data):
 # TODO: Investigate if this file is still needed. 
 # Currently, PluginMessage function is not called when the plugin is loaded in adaptor tests.
 # To unblock for tests, we check if the environment variable is set and if so, run the main function.
-if os.environ.get("CINEMA4D_ADAPTOR_TESTING", "false").lower() == "true":
+if _adaptor_testing:
     main()

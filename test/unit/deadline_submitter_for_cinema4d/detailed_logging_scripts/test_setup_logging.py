@@ -6,13 +6,13 @@ import os
 from unittest import mock
 
 from deadline.cinema4d_submitter.detailed_logging_scripts.setup_logging import (
-    get_conda_prefix,
-    setup_debug_environment_variables,
-    _verify_redshift_debug_enabled,
-    _set_cinema4d_debug_mode,
     _create_secure_temp_directory,
     _get_log_directory,
+    _set_cinema4d_debug_mode,
     _set_cinema4d_log_file,
+    _verify_redshift_debug_enabled,
+    get_conda_prefix,
+    setup_debug_environment_variables,
 )
 
 

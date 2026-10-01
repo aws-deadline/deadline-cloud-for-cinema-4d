@@ -1,0 +1,105 @@
+name: "Release: Prepare"
+run-name: "Release: Prepare ${{ github.event.head_commit.message || inputs.tag }}"
+
+on:
+  push:
+    branches:
+      - mainline
+    paths:
+      - CHANGELOG.md
+  workflow_dispatch:
+    inputs:
+      tag:
+        required: true
+        type: string
+        description: Specify a tag to re-run a release.
+
+concurrency:
+  group: release
+
+permissions:
+  contents: read
+
+jobs:
+  TagRelease:
+    if: >-
+      github.repository == 'aws-deadline/deadline-cloud-for-cinema-4d' &&
+      github.ref == 'refs/heads/mainline'
+    uses: aws-deadline/.github/.github/workflows/reusable_tag_release.yml@mainline
+    secrets: inherit
+    with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || '' }}
+
+  UnitTests:
+    needs: [TagRelease]
+    name: Unit Tests
+    uses: ./.github/workflows/code_quality.yml
+    with:
+      tag: ${{ needs.TagRelease.outputs.tag }}
+
+  Xa11yWindows:
+    needs: [TagRelease, UnitTests]
+    name: xa11y Integration Tests (Windows, Cinema 4D ${{ matrix.c4d_version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        c4d_version: ["2024", "2025", "2026"]
+    uses: ./.github/workflows/integ_windows.yml
+    with:
+      c4d_version: ${{ matrix.c4d_version }}
+    secrets:
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      RLM_PORT: ${{ secrets.RLM_PORT }}
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+      LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+      BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+    permissions:
+      id-token: write
+      contents: read
+
+  Xa11yMacOS:
+    needs: [TagRelease, UnitTests]
+    name: xa11y Integration Tests (macOS, Cinema 4D ${{ matrix.c4d_version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        c4d_version: ["2024", "2025", "2026"]
+    uses: ./.github/workflows/integ_macos.yml
+    with:
+      c4d_version: ${{ matrix.c4d_version }}
+    secrets:
+      AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      RLM_PORT: ${{ secrets.RLM_PORT }}
+      INSTALLER_BUCKET: ${{ secrets.INSTALLER_BUCKET }}
+      INSTALLER_BUCKET_EXPECTED_OWNER: ${{ secrets.INSTALLER_BUCKET_EXPECTED_OWNER }}
+      LICENSE_ROLE_ARN: ${{ secrets.LICENSE_ROLE_ARN }}
+      BASTION_INSTANCE_TAG: ${{ secrets.BASTION_INSTANCE_TAG }}
+    permissions:
+      id-token: write
+      contents: read
+
+  BuildInstaller:
+    needs: [TagRelease, UnitTests, Xa11yWindows, Xa11yMacOS]
+    uses: aws-deadline/.github/.github/workflows/reusable_build_installers.yml@mainline
+    secrets: inherit
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      ref_type: tags
+      ref: ${{ needs.TagRelease.outputs.tag }}
+      oses: "['Windows', 'MacOS']"
+      environment: release
+      project_name: ${{ github.event.repository.name }}
+
+  PublishToCodeArtifact:
+    needs: [TagRelease, BuildInstaller]
+    uses: aws-deadline/.github/.github/workflows/reusable_publish_python.yml@mainline
+    permissions:
+      id-token: write
+    secrets: inherit
+    with:
+      tag: ${{ needs.TagRelease.outputs.tag }}

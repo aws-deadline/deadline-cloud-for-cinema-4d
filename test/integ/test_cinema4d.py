@@ -1,101 +1,1203 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-from pathlib import Path
+import importlib.util
 import os
+import subprocess
+import sys
+import tempfile
+import time
+from collections.abc import Callable
+from pathlib import Path
+from shutil import copy2, rmtree
+
+import pytest
+import xa11y
+from deadline_test_fixtures.job_bundle import (
+    JobBundleCase,
+    assert_valid_job_bundle,
+    find_complete_job_bundle,
+)
+from deadline_test_fixtures.xa11y import (
+    SharedSubmitterDialog,
+    dismiss_bundle_saved_popup,
+    find_accessibility_app,
+)
+from yaml import safe_dump, safe_load
+
 from .utils import (
-    create_c4d_job_bundle,
-    assert_is_valid_job_bundle,
+    assert_all_images_close,
     assert_expected_job_bundle_and_generated_job_bundle_are_equal,
     assert_openjd_run_with_cinema4d_successful,
-    assert_all_images_close,
+    build_cinema4d_scene,
+    build_submitter_pythonpath,
+    kill_proc,
+    log,
+    resolve_c4d_exe,
+    resolve_expected_render_directory,
 )
 
-from shutil import rmtree
-import pytest
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_REAL_PLUGIN_DIR = _REPO_ROOT / "deadline_cloud_extension"
+
+# Test-only sidecar plugin loaded alongside the real plugin (see its docstring).
+# Its presence on g_additionalModulePath is what auto-opens the submitter; the
+# shipped DeadlineCloud.pyp carries no test hook of its own.
+_AUTO_OPEN_PLUGIN_DIR = Path(__file__).parent / "fixtures" / "auto_open_submitter"
+
+# Selector strings pinned by inspecting the live UIA tree at runtime
+# (see commit history for tree dumps). UIA on Windows surfaces the Qt
+# QApplication display name as the dialog's accessible name — *not*
+# Qt's windowTitle. The Submit/Save-bundle-as buttons keep their visible
+# labels as accessible names.
+#
+# Save button: deadline-cloud/src/deadline/client/ui/dialogs/
+#                    submit_job_to_deadline_dialog.py:250
+# Both the UIA App hosting the dialog and the dialog window itself surface this
+# same name (the QApplication display name + version), so it serves as the
+# prefix for matching either one.
+_DIALOG_NAME_PREFIX = "Deadline Cloud Cinema4D Submitter"
+
+_C4D_BOOT_TIMEOUT_S = 180.0
+_DIALOG_VISIBLE_TIMEOUT_S = 60.0
+
+# Most cases save `<case>.c4d` directly under actual/. These two deliberately
+# differ to exercise path handling and therefore need explicit relative paths.
+_SCENE_RELATIVE_PATHS = {
+    "phy_apos_path": Path("it's") / "phy_apos_path.c4d",
+    "physical_nonascii": Path("physical-\u20bf\u0119\u00f1.c4d"),
+}
+
+# A per-scene hook to drive the submitter dialog (switch tabs, set parameters,
+# toggle options) after it has loaded but before Save bundle as is pressed. It
+# receives the dialog locator; use dialog.descendant("role[name='...']") to
+# reach widgets and .set_value()/.press()/.toggle()/.select() to interact. A
+# scene with no configurator exports with the dialog's default settings.
+#
+# Whatever a configurator changes must be reflected in that scene's
+# expected/job_bundle/, since the golden comparison is exact.
+DialogConfigurator = Callable[[xa11y.Locator], None]
+SubmissionWarningHandler = Callable[[xa11y.App], None]
 
 
-@pytest.mark.parametrize(
-    "test_name",
-    [
-        "physical",
-        "physical_textured",
-        "redshift",
-        "redshift_takes",
-        # TODO: Currently, there is an issue with multipass
-        # not producing outputs.
-        # So we should investigate that separately.
-        # "redshift_multipass",
-        "redshift_textured",
-        pytest.param(
-            "redshift_textured_nonascii",
-            marks=pytest.mark.xfail(
-                reason="YAML line wrapping corrupts unicode paths on CodeBuild due to long base path"
-            ),
-        ),
-        "physical_multi_takes",
-        "physical_tiles",
-        "redshift_tiles",
-        "phy_apos_path",
-        "physical_chunking",
-    ],
-)
-def test_integ(
+def _prepend(new: str, existing: str, sep: str) -> str:
+    """Prepend `new` to `existing` using `sep`, without leaving a dangling
+    separator when `existing` is empty.
+
+    Cinema 4D parses g_additionalModulePath strictly — a trailing separator
+    leaves the last path interpreted as `<path>:` and fails to resolve.
+    """
+    return f"{new}{sep}{existing}" if existing else new
+
+
+def _dump_plugin_diag_log(log_path: Path) -> None:
+    """Echo the sidecar plugin's diagnostic log into the test output. C4D's
+    stdout is detached from pytest's, so this is how the plugin's traces (scene
+    load, CallCommand result, any exceptions) reach a failing run's report.
+    Called before the staging dir is removed."""
+    if not log_path.is_file():
+        log(f"no plugin diag log at {log_path}")
+        return
+    log(f"--- sidecar plugin diag log ({log_path}) ---")
+    print(log_path.read_text(encoding="utf-8", errors="replace"))
+    log("--- end sidecar plugin diag log ---")
+
+
+def _prepare_actual_dir(test_cases_folder_location: Path, case: str) -> tuple[Path, Path]:
+    """Resolve the case folder and its (freshly emptied) actual/ output dir.
+
+    Returns (case_folder, actual_dir). actual/ is the runtime working area: the
+    scene is built into it and the exported bundle is copied flat into it, then
+    actual/ is compared against expected/. We rmtree it first so a prior failed
+    run (which leaves actual/ behind for inspection) can't leak stale files into
+    this run."""
+    bundle_case = JobBundleCase(test_cases_folder_location / case)
+    return bundle_case.root, bundle_case.prepare_actual_dir()
+
+
+def _build_cinema4d_scene(
     cinema4d_location: Path,
-    test_scenes_folder_location: Path,
-    test_name: str,
+    case_folder: Path,
+    actual_dir: Path,
+    case: str,
+    scene_args: tuple[str, ...] = (),
+) -> Path:
+    """Build the case's scene with c4dpy and return the saved scene path.
+
+    The scene script lives at <case>/input/scene.py and is expected to save the
+    scene as <case>.c4d. It is saved into actual/ (not input/) so that
+    render_data RDATA_PATH = "renders/$prj" (resolved against
+    doc.GetDocumentPath()) lands renders inside actual/renders/, where the
+    render comparison looks.
+    """
+    c4dpy_location = resolve_c4d_exe(cinema4d_location, "c4dpy")
+    scene_script = case_folder / "input" / "scene.py"
+    scene_relative_path = _SCENE_RELATIVE_PATHS.get(case, Path(f"{case}.c4d"))
+    return build_cinema4d_scene(
+        c4dpy_location,
+        scene_script,
+        actual_dir,
+        str(scene_relative_path),
+        scene_args,
+    )
+
+
+def _build_launch_env(
+    scene_path: Path,
+    plugin_diag_log: Path,
+    mock_env_overlay: dict,
+    extra_env: dict | None = None,
+) -> dict:
+    """Build the environment for the Cinema 4D subprocess.
+
+    Starts from ``mock_env_overlay`` (built by the ``deadline_farm`` fixture):
+    that overlay already carries this process's environment plus the redirect to
+    the mock Deadline backend -- endpoint override, dummy credentials, telemetry
+    opt-out, isolated HOME, the temp deadline config path, and the mock-mode flag
+    that switches on the sidecar's ``management.`` getaddrinfo redirect. So the
+    submitter talks to the local mock, never real AWS.
+
+    ``extra_env`` overlays case-specific variables (e.g. ``DEADLINE_HOOKS_DIR`` for
+    the pre-GUI hook case) last, so a case can add to — or deliberately override —
+    the base launch env.
+    """
+    env = {
+        **mock_env_overlay,
+        # Point C4D at two plugin dirs: the real submitter plugin checked into
+        # this repo, and the test-only sidecar that auto-opens the submitter.
+        # C4D loads every .pyp on this path at startup; the sidecar dispatches
+        # into the real, unmodified plugin via CallCommand. Same env var the
+        # InstallBuilder installer sets. C4D uses ';' as the separator on every
+        # platform (it is not the OS pathsep).
+        "g_additionalModulePath": _prepend(
+            str(_AUTO_OPEN_PLUGIN_DIR),
+            _prepend(
+                str(_REAL_PLUGIN_DIR),
+                os.environ.get("g_additionalModulePath", ""),
+                ";",
+            ),
+            ";",
+        ),
+        # C4D's bundled Python uses this for extra package resolution.
+        # We need the editable submitter source plus the venv site-packages
+        # (PySide6 / qtpy / deadline-client all live there).
+        "C4DPYTHONPATH311": _prepend(
+            build_submitter_pythonpath(_REPO_ROOT),
+            os.environ.get("C4DPYTHONPATH311", ""),
+            os.pathsep,
+        ),
+        # Where the sidecar plugin writes its diagnostics (read back on
+        # failure once the subprocess is killed).
+        "DEADLINE_CLOUD_DIAG_LOG": str(plugin_diag_log),
+        # Pass the scene path via env var on all platforms so the sidecar
+        # plugin loads it with LoadDocument before opening the submitter.
+        # C4DPL_PROGRAM_STARTED fires before C4D processes argv files, so
+        # without this the active document has no path when the submitter
+        # opens.
+        "DEADLINE_CLOUD_SCENE_PATH": str(scene_path),
+    }
+    if extra_env:
+        env.update(extra_env)
+    return env
+
+
+def _enable_environment_hooks(env_overlay: dict) -> None:
+    """Turn on the two settings the pre-GUI hook path needs, in the deadline config
+    the ``deadline_farm`` fixture wrote.
+
+    ``run_pre_gui_hooks`` only sources ``DEADLINE_HOOKS_DIR`` when
+    ``settings.allow_environment_hooks`` is ``true``; both default to ``false``.
+    ``settings.auto_accept`` = ``true`` makes ``_pre_gui_hook_confirm_callback``
+    return ``None`` so hooks run without the Qt confirmation prompt — the prompt's
+    behaviour is covered by the unit tests, and skipping it keeps this UI test
+    focused on the export-output contract.
+
+    We write through ``deadline.client.config.set_setting`` rather than editing the
+    INI by hand: it resolves the correct (possibly profile-scoped) section for each
+    setting, validates the setting name against the installed deadline-cloud, and
+    avoids ``ConfigParser``'s default ``%`` interpolation mangling unrelated values
+    on rewrite. ``set_setting`` targets the file named by ``DEADLINE_CONFIG_FILE_PATH``,
+    so we point that at the overlay's config for the duration of the writes.
+    """
+    from deadline.client import config
+
+    config_path = env_overlay["DEADLINE_CONFIG_FILE_PATH"]
+    prev = os.environ.get("DEADLINE_CONFIG_FILE_PATH")
+    os.environ["DEADLINE_CONFIG_FILE_PATH"] = str(config_path)
+    try:
+        config.set_setting("settings.allow_environment_hooks", "true")
+        config.set_setting("settings.auto_accept", "true")
+    finally:
+        if prev is None:
+            os.environ.pop("DEADLINE_CONFIG_FILE_PATH", None)
+        else:
+            os.environ["DEADLINE_CONFIG_FILE_PATH"] = prev
+    log(f"enabled allow_environment_hooks + auto_accept in {config_path}")
+
+
+def _launch_cinema4d(cinema4d_gui_exe: Path, scene_path: Path, env: dict) -> subprocess.Popen:
+    """Launch Cinema 4D with the submitter + sidecar plugins.
+
+    On macOS we don't pass the scene on argv (the sidecar loads it via
+    DEADLINE_CLOUD_SCENE_PATH); on Windows we pass it on argv too.
+    """
+    if sys.platform == "darwin":
+        proc = subprocess.Popen(
+            [str(cinema4d_gui_exe)],
+            env=env,
+        )
+    else:
+        proc = subprocess.Popen(
+            [str(cinema4d_gui_exe), str(scene_path)],
+            env=env,
+        )
+    return proc
+
+
+def _dump_dialog_discovery_failure(app) -> None:
+    """Dump the C4D app tree and the full running-app list when the submitter
+    dialog never registers as its own UIA app (Windows). Diagnostics only."""
+    log("dialog never registered as a UIA app; debugging info:")
+    try:
+        log("Cinema 4D app tree:")
+        print(app.dump())
+    except Exception as e:  # noqa: BLE001 - diagnostics must not mask the original failure
+        # Best-effort diagnostics; the dump itself failing must not mask the
+        # original failure this function is reporting.
+        log(f"Cinema 4D app tree dump failed: {e!r}")
+    try:
+        log("All running apps:")
+        for a in xa11y.App.list():
+            print(f"  - {a.name!r} (pid={a.pid})")
+    except Exception as e:  # noqa: BLE001 - diagnostics must not mask the original failure
+        log(f"App.list() failed: {e!r}")
+
+
+def _resolve_dialog_app(proc: subprocess.Popen):
+    """Attach xa11y to the launched Cinema 4D process and return the
+    accessibility app that hosts the submitter dialog.
+
+    The sidecar plugin opens the submitter automatically once C4D finishes
+    starting (C4DPL_PROGRAM_STARTED). Where the dialog appears in the
+    accessibility tree is platform-specific:
+      - Windows UIA: Qt registers each dialog as a separate top-level UIA
+        app sharing the C4D pid.
+      - macOS AX: dialogs are child windows of the host app.
+    """
+    log(f"waiting up to {_C4D_BOOT_TIMEOUT_S:.0f}s for xa11y to attach by pid")
+    if sys.platform == "win32":
+        try:
+            dialog_app = find_accessibility_app(
+                proc.pid,
+                timeout=_C4D_BOOT_TIMEOUT_S + _DIALOG_VISIBLE_TIMEOUT_S,
+                name_prefix=_DIALOG_NAME_PREFIX,
+            )
+        except TimeoutError:
+            try:
+                host_app = find_accessibility_app(proc.pid, timeout=2.0)
+                _dump_dialog_discovery_failure(host_app)
+            except TimeoutError:
+                # Host-app discovery is diagnostics-only; preserve the original
+                # submitter-dialog timeout when the host is also unavailable.
+                pass
+            raise AssertionError(
+                "Submitter dialog did not register with UIA "
+                f"(expected app name prefix {_DIALOG_NAME_PREFIX!r})"
+            )
+        log(f"submitter dialog UIA app: {dialog_app.name!r}")
+    else:
+        # On macOS the dialog is a child window of the C4D app.
+        dialog_app = find_accessibility_app(
+            proc.pid,
+            timeout=_C4D_BOOT_TIMEOUT_S,
+        )
+        log("macOS: using C4D app handle for dialog discovery")
+    log("xa11y attached to Cinema 4D")
+
+    # Dump the tree for diagnostics on first run / failures.
+    try:
+        log("dialog app tree (depth=8):")
+        print(dialog_app.dump(max_depth=8))
+    except Exception as e:  # noqa: BLE001 - diagnostics must not fail dialog discovery
+        log(f"dialog_app.dump() failed: {e!r}")
+
+    return dialog_app
+
+
+def _wait_for_submitter_dialog(dialog_app):
+    """Wait for the submitter dialog to become visible and return its locator.
+
+    On Windows UIA: role=dialog, name=QApplication display name.
+    On macOS AX: role=window, name=window title. Try both selectors.
+    """
+    log(f"waiting for dialog: {_DIALOG_NAME_PREFIX!r}")
+    dialog = dialog_app.locator(
+        f"dialog[name^='{_DIALOG_NAME_PREFIX}'], " f"window[name^='{_DIALOG_NAME_PREFIX}']"
+    )
+    try:
+        dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    except Exception:
+        log("dialog selector failed; final tree:")
+        try:
+            print(dialog_app.dump())
+        except Exception as e:  # noqa: BLE001 - preserve the original dialog error
+            # Best-effort diagnostic dump; if it fails we still re-raise the
+            # original error below.
+            log(f"Final dialog tree dump failed: {e!r}")
+        raise
+    log("submitter dialog visible")
+    return dialog
+
+
+def _wait_for_queue_environment_loading(dialog_app) -> None:
+    """Wait for the queue-environment loading caption to clear. Non-fatal if it
+    times out — Save bundle as may still be clickable.
+
+    The mock returns no queue environments, so the caption ("Loading Queue
+    Environments...") should appear briefly and clear almost immediately; we
+    still wait for it to confirm the dialog has settled before saving.
+    """
+    log("waiting for queue environment loading to finish")
+    loading = dialog_app.locator(
+        "static_text[name^='Loading Queue Environments'], "
+        "static_text[name^='Reloading Queue Environments'], "
+        "static_text[name^='Error loading queue environments']"
+    )
+    try:
+        loading.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+        log("queue environment loading finished (loading caption hidden)")
+    except Exception as e:  # noqa: BLE001 - this readiness check is intentionally non-fatal
+        log(f"loading-text wait failed (non-fatal): {e!r}")
+
+
+def _save_bundle_locally(
+    dialog,
+    dialog_app,
+    warning_handler: SubmissionWarningHandler | None = None,
 ) -> None:
-    """
-    Performs integration testing for Cinema 4D rendering.
+    """Open Save bundle as, choose Local, and confirm the modal save."""
+    log("saving bundle locally through Save bundle as")
+    if warning_handler is not None:
+        _start_local_bundle_export(dialog, dialog_app)
+        warning_handler(dialog_app)
+        return
 
-    This function tests the complete workflow of creating, validating, and executing a Cinema 4D job bundle,
-    followed by comparing the rendered output with expected results. It includes the following steps:
-    1. Creates a job bundle from a test scene
-    2. Validates the generated job bundle
-    3. Compares generated bundle with expected bundle
-    4. Executes the rendering job using OpenJD with Cinema 4D
-    5. Compares rendered images with expected output
-    6. Cleans up generated files on successful completion
+    try:
+        SharedSubmitterDialog(dialog, app_root=dialog_app).save_bundle_locally(
+            timeout=_DIALOG_VISIBLE_TIMEOUT_S
+        )
+    except Exception:
+        log("Save bundle as flow failed; final dialog tree:")
+        try:
+            print(dialog_app.dump())
+        except Exception as e:  # noqa: BLE001 - preserve the original export error
+            # Best-effort diagnostic dump; if it fails we still re-raise the
+            # original error below.
+            log(f"Final dialog tree dump failed: {e!r}")
+        raise
 
-    Args:
-        cinema4d_location (Path): Path to the Cinema 4D installation directory
-        test_scenes_folder_location (Path): Path to the root directory containing test scenes
 
-    Raises:
-        AssertionError: If any validation step fails, including:
-            - non valid job bundle structure
-            - Mismatch between generated and expected job bundles
-            - Rendering job execution failure
-            - Rendered image differences exceed tolerance
+def _start_local_bundle_export(dialog, dialog_app) -> None:
+    """Open Save bundle as, choose Local, and begin bundle generation."""
+    submitter_dialog = SharedSubmitterDialog(dialog, app_root=dialog_app)
+    open_button = submitter_dialog.button("Save bundle as")
+    open_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    open_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    open_button.press()
 
-    """
-
-    c4dpy_location = cinema4d_location / "c4dpy"
-    test_scene_folder_location = test_scenes_folder_location / test_name
-
-    test_scene_script_location = test_scene_folder_location / "scene" / "scene.py"
-    job_bundle_generated = test_scene_folder_location / "generated_bundle"
-    os.makedirs(job_bundle_generated, exist_ok=True)
-
-    create_c4d_job_bundle(c4dpy_location, test_scene_script_location, job_bundle_generated)
-
-    assert_is_valid_job_bundle(job_bundle_generated / "template.yaml")
-
-    expected_job_bundle = test_scene_folder_location / "expected_job_bundle"
-    assert_expected_job_bundle_and_generated_job_bundle_are_equal(
-        expected_job_bundle, job_bundle_generated
+    save_dialog = dialog_app.locator(
+        'dialog[name="Save bundle as"], window[name="Save bundle as"], sheet[name="Save bundle as"]'
+    )
+    save_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    SharedSubmitterDialog._select_radio(
+        save_dialog,
+        "Local",
+        timeout=_DIALOG_VISIBLE_TIMEOUT_S,
     )
 
-    assert_openjd_run_with_cinema4d_successful(
+    save_button = save_dialog.descendant('button[name="Save bundle as"]')
+    save_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    save_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    save_button.press()
+
+
+def _dump_settings_tabs(dialog) -> None:
+    """Dump each settings tab's accessibility tree (DIALOG_DUMP=1 diagnostic).
+
+    Switches to the Shared and Job-specific tabs and prints each subtree, so a
+    contributor can read the live role + accessible names to build selectors --
+    these differ between macOS AX and Windows UIA, so they must be harvested per
+    platform rather than guessed. See "Finding selectors" in test/AGENTS.md for
+    the one-command workflow."""
+    from . import submitter_ui as ui
+
+    for tab in (ui.TAB_SHARED, ui.TAB_JOB_SPECIFIC):
+        log(f"=== DIALOG_DUMP: {tab} tab (depth 15) ===")
+        try:
+            ui.switch_to_tab(dialog, tab)
+            print(dialog.element().dump(max_depth=15))
+        except Exception as e:  # noqa: BLE001 - this diagnostic dump is best-effort
+            log(f"dump of {tab!r} failed: {e!r}")
+        log(f"=== DIALOG_DUMP: end {tab} tab ===")
+
+
+def _copy_bundle_files(staged_bundle: Path, dest: Path) -> None:
+    """Copy the exported bundle files flat into `dest`."""
+    log(f"copying bundle files {staged_bundle} -> {dest}")
+    for src in staged_bundle.iterdir():
+        if src.is_file():
+            copy2(src, dest / src.name)
+            log(f"  copied {src.name}")
+
+
+def _drive_submitter_ui(
+    proc: subprocess.Popen,
+    history_dir: Path,
+    configure: DialogConfigurator | None = None,
+    warning_handler: SubmissionWarningHandler | None = None,
+) -> Path:
+    """Drive the running submitter dialog via xa11y and return the exported
+    bundle directory.
+
+    Waits for the dialog, lets queue-environment loading settle (the mock
+    returns no queue environments, so there are no Conda parameter widgets to
+    rebuild and thus no reload race), runs the optional per-scene `configure`
+    hook to adjust the dialog (tabs, parameters), saves the bundle locally,
+    dismisses the success popup, then reads the completed bundle from
+    `history_dir`.
+
+    `configure` runs after the dialog settles and before the save flow. When it
+    is None the dialog is exported with its default settings.
+    """
+    dialog_app = _resolve_dialog_app(proc)
+    dialog = _wait_for_submitter_dialog(dialog_app)
+    _wait_for_queue_environment_loading(dialog_app)
+    # Diagnostic harvest: DIALOG_DUMP=1 dumps each settings tab's tree and raises,
+    # so you can capture the live accessibility names (which differ across macOS
+    # AX and Windows UIA) without hand-editing a configurator. Skips saving.
+    if os.environ.get("DIALOG_DUMP") == "1":
+        _dump_settings_tabs(dialog)
+        raise AssertionError("DIALOG_DUMP=1: dumped settings tabs, skipping save")
+    if configure is not None:
+        log("running per-scene dialog configurator")
+        configure(dialog)
+    _save_bundle_locally(dialog, dialog_app, warning_handler=warning_handler)
+
+    # The submitter writes the bundle files before showing the success popup,
+    # so once the popup is up the bundle is complete on disk.
+    log("dismissing success popup ('Bundle saved to:')")
+    if dismiss_bundle_saved_popup(proc.pid):
+        log("success popup dismissed (OK)")
+    else:
+        log("success popup not found within 5s (non-fatal, bundle already exported)")
+    # Note: on Windows the submitter would normally open the bundle folder in
+    # File Explorer (os.startfile); the sidecar plugin suppresses that in mock
+    # mode, so there's no Explorer window to clean up here.
+
+    staged_bundle = find_complete_job_bundle(history_dir)
+    assert staged_bundle is not None, f"no complete bundle found under {history_dir}"
+    log(f"bundle found: {staged_bundle}")
+    return staged_bundle
+
+
+def _export_job_bundle_via_submitter(
+    cinema4d_location: Path,
+    scene_path: Path,
+    job_bundle_generated: Path,
+    deadline_farm: dict,
+    configure: DialogConfigurator | None = None,
+    warning_handler: SubmissionWarningHandler | None = None,
+    extra_env: dict | None = None,
+) -> None:
+    """Launch Cinema 4D, drive the real submitter UI to export a job bundle,
+    and copy the bundle files flat into `job_bundle_generated`.
+
+    ``extra_env`` is overlaid onto the C4D launch environment (see
+    ``_build_launch_env``); the pre-GUI hook case uses it to set
+    ``DEADLINE_HOOKS_DIR``.
+
+    The temp Deadline config uses ``job_history_dir`` as the default local
+    bundle directory. The test selects Local in the Save bundle as dialog, so
+    the bundle lands under that directory; we then copy its files flat into
+    `job_bundle_generated` for validation.
+
+    Owns all cleanup: the C4D subprocess is always killed and its diagnostic
+    log echoed before the staging dir is removed, even on failure.
+    """
+    cinema4d_gui_exe = resolve_c4d_exe(cinema4d_location, "Cinema 4D")
+
+    history_dir = deadline_farm["job_history_dir"]
+    bundle_staging = Path(tempfile.mkdtemp(prefix="c4d-submitter-ui-"))
+    plugin_diag_log = bundle_staging / "plugin-diag.log"
+    log(f"bundle staging dir: {bundle_staging}; job history dir: {history_dir}")
+    try:
+        env = _build_launch_env(
+            scene_path, plugin_diag_log, deadline_farm["env_overlay"], extra_env=extra_env
+        )
+        proc = _launch_cinema4d(cinema4d_gui_exe, scene_path, env)
+        try:
+            staged_bundle = _drive_submitter_ui(
+                proc,
+                history_dir,
+                configure=configure,
+                warning_handler=warning_handler,
+            )
+            _copy_bundle_files(staged_bundle, job_bundle_generated)
+        finally:
+            kill_proc(proc)
+            _dump_plugin_diag_log(plugin_diag_log)
+    finally:
+        rmtree(bundle_staging, ignore_errors=True)
+        log(f"removed staging dir: {bundle_staging}")
+
+
+def _attempt_submit_via_submitter(
+    cinema4d_location: Path,
+    scene_path: Path,
+    deadline_farm: dict,
+    warning_handler: SubmissionWarningHandler,
+    configure: DialogConfigurator | None = None,
+) -> None:
+    """Launch Cinema 4D and press Submit in the real submitter dialog.
+
+    This helper is intentionally used with a warning handler that cancels the
+    warning. It verifies that a warning is shown before a job can be submitted,
+    without sending a job to the mock backend.
+    """
+    cinema4d_gui_exe = resolve_c4d_exe(cinema4d_location, "Cinema 4D")
+    bundle_staging = Path(tempfile.mkdtemp(prefix="c4d-submitter-ui-"))
+    plugin_diag_log = bundle_staging / "plugin-diag.log"
+    log(f"bundle staging dir: {bundle_staging}; attempting submission")
+    try:
+        env = _build_launch_env(scene_path, plugin_diag_log, deadline_farm["env_overlay"])
+        proc = _launch_cinema4d(cinema4d_gui_exe, scene_path, env)
+        try:
+            dialog_app = _resolve_dialog_app(proc)
+            dialog = _wait_for_submitter_dialog(dialog_app)
+            _wait_for_queue_environment_loading(dialog_app)
+            if configure is not None:
+                log("running per-scene dialog configurator")
+                configure(dialog)
+
+            submit_button = SharedSubmitterDialog(dialog, app_root=dialog_app).button("Submit")
+            submit_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+            submit_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+            submit_button.press()
+
+            warning_handler(dialog_app)
+        finally:
+            kill_proc(proc)
+            _dump_plugin_diag_log(plugin_diag_log)
+    finally:
+        rmtree(bundle_staging, ignore_errors=True)
+        log(f"removed staging dir: {bundle_staging}")
+
+
+def _attempt_export_via_submitter(
+    cinema4d_location: Path,
+    scene_path: Path,
+    deadline_farm: dict,
+    warning_handler: SubmissionWarningHandler,
+) -> None:
+    """Launch Cinema 4D and cancel an export from the no-output warning."""
+    cinema4d_gui_exe = resolve_c4d_exe(cinema4d_location, "Cinema 4D")
+    bundle_staging = Path(tempfile.mkdtemp(prefix="c4d-submitter-ui-"))
+    plugin_diag_log = bundle_staging / "plugin-diag.log"
+    log(f"bundle staging dir: {bundle_staging}; attempting export")
+    try:
+        env = _build_launch_env(scene_path, plugin_diag_log, deadline_farm["env_overlay"])
+        proc = _launch_cinema4d(cinema4d_gui_exe, scene_path, env)
+        try:
+            dialog_app = _resolve_dialog_app(proc)
+            dialog = _wait_for_submitter_dialog(dialog_app)
+            _wait_for_queue_environment_loading(dialog_app)
+            _start_local_bundle_export(dialog, dialog_app)
+            warning_handler(dialog_app)
+        finally:
+            kill_proc(proc)
+            _dump_plugin_diag_log(plugin_diag_log)
+    finally:
+        rmtree(bundle_staging, ignore_errors=True)
+        log(f"removed staging dir: {bundle_staging}")
+
+
+def _load_configurator(
+    case: str,
+    configure_kwargs: dict[str, str] | None = None,
+) -> DialogConfigurator | None:
+    """Load a case's optional input/configure.py and return its `configure`
+    callable, or None if the case has no configurator.
+
+    A configure.py must define a top-level `configure(dialog, ...)` function.
+    Keyword arguments let a parametrized case reuse one configurator for
+    multiple settings. If the file is malformed or missing that function, we
+    raise -- a broken configurator should fail loudly, not be silently skipped.
+    """
+    # `case` comes from the _CASES registry, but guard against a name that would
+    # escape test_cases/ (path separators or ..) so a typo can't load arbitrary
+    # files.
+    cases_root = (Path(__file__).parent / "test_cases").resolve()
+    config_path = (cases_root / case / "input" / "configure.py").resolve()
+    if not config_path.is_relative_to(cases_root):
+        raise ValueError(f"case {case!r} resolves outside test_cases/")
+    if not config_path.is_file():
+        if configure_kwargs:
+            raise FileNotFoundError(f"{config_path} is required when configure arguments are set")
+        return None
+    spec = importlib.util.spec_from_file_location(f"_configure_{case}", config_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"could not load configurator at {config_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    configure = getattr(module, "configure", None)
+    if not callable(configure):
+        raise TypeError(f"{config_path} must define a top-level configure(dialog) function")
+    if configure_kwargs:
+        return lambda dialog: configure(dialog, **configure_kwargs)
+    return configure
+
+
+def _run_integ_case(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+    case: str,
+    *,
+    expected_variant: str | None = None,
+    configure_kwargs: dict[str, str] | None = None,
+    scene_args: tuple[str, ...] = (),
+) -> None:
+    """Build, export, validate, and optionally render one case configuration."""
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+    configure = _load_configurator(case, configure_kwargs)
+
+    scene_path = _build_cinema4d_scene(
         cinema4d_location,
-        job_bundle_generated / "template.yaml",
-        job_bundle_generated / "parameter_values.yaml",
+        case_folder,
+        actual_dir,
+        case,
+        scene_args,
     )
 
-    expected_job_output = test_scene_folder_location / "expected_job_output"
-
-    assert_all_images_close(
-        expected_job_output / "renders",
-        job_bundle_generated / "renders",
+    _export_job_bundle_via_submitter(
+        cinema4d_location=cinema4d_location,
+        scene_path=scene_path,
+        job_bundle_generated=actual_dir,
+        deadline_farm=deadline_farm,
+        configure=configure,
     )
+
+    # The submitter ran against the mock backend, not real AWS. Prove its calls
+    # reached our server and nothing hit an unmocked route. The out-of-process
+    # mock exposes these counters through its admin endpoint.
+    backend = deadline_farm["backend"]
+    log(f"mock backend call_counts: {dict(backend.call_counts)}")
+    assert (
+        backend.unmatched_requests == []
+    ), f"submitter hit routes the mock doesn't implement: {backend.unmatched_requests}"
+    for op in ("ListFarms", "ListQueueEnvironments"):
+        assert (
+            backend.call_counts.get(op, 0) >= 1
+        ), f"expected the submitter to call {op}; saw {dict(backend.call_counts)}"
+    assert any(
+        backend.call_counts.get(op, 0) >= 1 for op in ("GetQueue", "ListQueues")
+    ), f"expected a queue lookup; saw {dict(backend.call_counts)}"
+
+    assert_valid_job_bundle(actual_dir / "template.yaml")
+
+    expected_dir = case_folder / "expected"
+    if expected_variant is not None:
+        expected_dir /= expected_variant
+    assert_expected_job_bundle_and_generated_job_bundle_are_equal(
+        expected_dir / "job_bundle", actual_dir
+    )
+
+    # Run the bundle via openjd and compare rendered output. This adaptor
+    # portion only runs on Windows; on macOS the test is submitter-only (the
+    # render path needs Conda-managed cinema4d-openjd, which we don't ship for
+    # darwin yet). Every case keeps its output directory at actual/renders;
+    # output-path cases vary only the filename.
+    if sys.platform != "darwin":
+        assert_openjd_run_with_cinema4d_successful(
+            cinema4d_location,
+            actual_dir / "template.yaml",
+            actual_dir / "parameter_values.yaml",
+        )
+        assert_all_images_close(
+            resolve_expected_render_directory(
+                expected_dir,
+                os.environ.get("C4D_VERSION"),
+            ),
+            actual_dir / "renders",
+        )
+
+    # ARTIFACT_REVIEW_DELAY_S pauses here — after all assertions, before
+    # cleanup — so the exported bundle and renders in actual/ can be inspected
+    # manually. Pairs with DIALOG_CONFIG_OBSERVE_DELAY_S for watching the
+    # dialog interactions themselves.
+    review_delay = float(os.environ.get("ARTIFACT_REVIEW_DELAY_S", "0"))
+    if review_delay > 0:
+        log(f"pausing {review_delay:.0f}s for manual review of artifacts in {actual_dir}")
+        time.sleep(review_delay)
 
     # Clean up if the test was successful
-    rmtree(job_bundle_generated, ignore_errors=True)
+    rmtree(actual_dir, ignore_errors=True)
+
+
+def _continue_after_no_output_warning(dialog_app: xa11y.App) -> None:
+    """Assert the export warning is shown, then accept it explicitly."""
+    warning_dialog = dialog_app.locator(
+        'dialog[name="Issues Detected"], window[name="Issues Detected"]'
+    )
+    warning_dialog.wait_attached(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    warning_dump = warning_dialog.element().dump(max_depth=8)
+    assert "No output directories were detected for selected take(s)" in warning_dump
+
+    cancel_button = warning_dialog.descendant('button[name="Cancel Export"]')
+    cancel_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    continue_button = warning_dialog.descendant('button[name="Continue Anyway"]')
+    continue_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    continue_button.wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    continue_button.press()
+
+
+def _cancel_after_no_output_submission_warning(dialog_app: xa11y.App) -> None:
+    """Assert the submission warning is shown, then cancel it explicitly."""
+    warning_dialog = dialog_app.locator(
+        'dialog[name="Issues Detected"], window[name="Issues Detected"]'
+    )
+    warning_dialog.wait_attached(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    warning_dump = warning_dialog.element().dump(max_depth=8)
+    assert "No output directories were detected for selected take(s)" in warning_dump
+
+    cancel_button = warning_dialog.descendant('button[name="Cancel Submission"]')
+    cancel_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    cancel_button.press()
+    warning_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    # C4D exposes this confirmation dialog with different accessibility titles
+    # on Windows and macOS. The message itself is stable, so use it to identify
+    # the closest modal container and scope the OK action to that container.
+    cancellation_message = dialog_app.locator('static_text[name="Submission cancelled"]')
+    cancellation_message.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    cancellation_dialog: xa11y.Element | None = None
+    confirmation_button: xa11y.Element | None = None
+
+    def find_confirmation_button(element: xa11y.Element) -> xa11y.Element | None:
+        for child in element.children():
+            if child.role == "button" and child.name == "OK":
+                return child
+            descendant_button = find_confirmation_button(child)
+            if descendant_button is not None:
+                return descendant_button
+        return None
+
+    def cancellation_dialog_is_ready(message: xa11y.Element | None) -> bool:
+        nonlocal cancellation_dialog, confirmation_button
+        if message is None:
+            return False
+        try:
+            candidate = message.parent()
+            while candidate is not None:
+                if candidate.role in {"dialog", "window", "sheet"}:
+                    button = find_confirmation_button(candidate)
+                    if (
+                        candidate.visible
+                        and button is not None
+                        and button.visible
+                        and button.enabled
+                    ):
+                        cancellation_dialog = candidate
+                        confirmation_button = button
+                        return True
+                candidate = candidate.parent()
+        except xa11y.XA11yError:
+            # The preceding warning dialog can detach while the confirmation is
+            # appearing; let xa11y retry rather than failing on that transition.
+            return False
+        return False
+
+    cancellation_message.wait_until(
+        cancellation_dialog_is_ready,
+        timeout=_DIALOG_VISIBLE_TIMEOUT_S,
+    )
+    assert cancellation_dialog is not None
+    assert confirmation_button is not None
+    assert "Submission cancelled" in cancellation_dialog.dump(max_depth=4)
+    confirmation_button.press()
+    cancellation_message.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    submitter_dialog = dialog_app.locator(
+        f"dialog[name^='{_DIALOG_NAME_PREFIX}'], window[name^='{_DIALOG_NAME_PREFIX}']"
+    )
+    submitter_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    SharedSubmitterDialog(submitter_dialog, app_root=dialog_app).button("Submit").wait_enabled(
+        timeout=_DIALOG_VISIBLE_TIMEOUT_S
+    )
+
+
+def _cancel_after_no_output_export_warning(dialog_app: xa11y.App) -> None:
+    """Assert the export warning is shown, then cancel it without an error dialog."""
+    warning_dialog = dialog_app.locator(
+        'dialog[name="Issues Detected"], window[name="Issues Detected"]'
+    )
+    warning_dialog.wait_attached(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    warning_dump = warning_dialog.element().dump(max_depth=8)
+    assert "No output directories were detected for selected take(s)" in warning_dump
+
+    cancel_button = warning_dialog.descendant('button[name="Cancel Export"]')
+    cancel_button.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    cancel_button.press()
+    warning_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    submitter_dialog = dialog_app.locator(
+        f"dialog[name^='{_DIALOG_NAME_PREFIX}'], window[name^='{_DIALOG_NAME_PREFIX}']"
+    )
+    submitter_dialog.wait_visible(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+    SharedSubmitterDialog(submitter_dialog, app_root=dialog_app).button(
+        "Save bundle as"
+    ).wait_enabled(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+    export_failure_dialog = dialog_app.locator(
+        'dialog[name="Export failed"], window[name="Export failed"]'
+    )
+    export_failure_dialog.wait_hidden(timeout=_DIALOG_VISIBLE_TIMEOUT_S)
+
+
+def test_integ_no_output_directory_warning(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """Warn before exporting a scene that has no enabled C4D output target."""
+    case = "no_output_directories"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+    scene_path = _build_cinema4d_scene(
+        cinema4d_location,
+        case_folder,
+        actual_dir,
+        case,
+    )
+
+    try:
+        _export_job_bundle_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            job_bundle_generated=actual_dir,
+            deadline_farm=deadline_farm,
+            warning_handler=_continue_after_no_output_warning,
+        )
+        assert_valid_job_bundle(actual_dir / "template.yaml")
+    finally:
+        rmtree(actual_dir, ignore_errors=True)
+
+
+def test_integ_no_output_directory_warning_cancel_export(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """Cancel export from the no-output warning without surfacing an export failure."""
+    case = "no_output_directories"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+    scene_path = _build_cinema4d_scene(
+        cinema4d_location,
+        case_folder,
+        actual_dir,
+        case,
+    )
+
+    try:
+        _attempt_export_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            deadline_farm=deadline_farm,
+            warning_handler=_cancel_after_no_output_export_warning,
+        )
+        assert deadline_farm["backend"].call_counts.get("CreateJob", 0) == 0
+    finally:
+        rmtree(actual_dir, ignore_errors=True)
+
+
+def test_integ_no_output_directory_warning_on_submission(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """Warn before submitting a scene that has no enabled C4D output target."""
+    case = "no_output_directories"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+    scene_path = _build_cinema4d_scene(
+        cinema4d_location,
+        case_folder,
+        actual_dir,
+        case,
+    )
+
+    try:
+        _attempt_submit_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            deadline_farm=deadline_farm,
+            warning_handler=_cancel_after_no_output_submission_warning,
+        )
+        assert deadline_farm["backend"].call_counts.get("CreateJob", 0) == 0
+    finally:
+        rmtree(actual_dir, ignore_errors=True)
+
+
+# Reliable Redshift rendering requires a GPU. Unlike standard runners, GPU
+# runners are billed, so Windows CI runs Redshift only for the latest supported
+# Cinema 4D version, 2026, and skips the 2024 and 2025 cases.
+_SKIP_REDSHIFT_2024_2025_IN_CI = pytest.mark.skipif(
+    sys.platform == "win32"
+    and os.environ.get("CI") == "true"
+    and os.environ.get("C4D_VERSION") in {"2024", "2025"},
+    reason="Redshift requires a billed GPU runner, so CI runs it only for the latest Cinema 4D version (2026)",
+)
+# Changing the Takes combo cannot be automated on the macOS CI runners. The
+# accessibility action opens the popup and its rows are found, but no synthesised
+# click or keypress commits the selection. The only correlated change is the hosted
+# image moving from macOS 26.5.2 to 26.6.2 (image 20260728.0273.1 -> 20260831.0337.3,
+# around 2026-09-03); the same tests pass locally and a real user with a mouse is
+# unaffected, so this is a CI automation limit rather than a product defect. Tracked
+# internally along with what has already been ruled out, so it is not re-investigated.
+#
+# Gated on CI so local runs keep asserting the real behaviour. Not strict: the cause
+# is a runner image we do not control, so a future image that fixes this should show up
+# as an xpass to clean up, not as a red build.
+_XFAIL_MACOS_TAKE_COMBO_IN_CI = pytest.mark.xfail(
+    sys.platform == "darwin" and os.environ.get("CI") == "true",
+    reason="macOS CI: synthesised input does not commit the Takes combo popup",
+    strict=False,
+)
+_SKIP_OCIO_2024 = pytest.mark.skipif(
+    os.environ.get("C4D_VERSION", "2026") == "2024",
+    reason="BakeOcioViewToBitmap requires Cinema 4D 2025.2 or newer",
+)
+
+# Standard test cases. Each entry is a folder name under test_cases/ with an
+# input/scene.py (required) and an optional input/configure.py (loaded as the
+# dialog configurator). Parametrized case-specific coverage is registered
+# separately below.
+_CASES = [
+    "shared_job_settings",
+    "job_specific_output_path",
+    "job_specific_multi_pass_path",
+    "job_specific_frame_range",
+    "job_specific_detailed_logging",
+    "job_specific_timeouts",
+    "job_specific_save_project_with_assets",
+    "job_specific_task_chunking",
+    "job_specific_tile_rendering",
+    pytest.param(
+        "ocio_render_consistency",
+        marks=_SKIP_OCIO_2024,
+    ),
+    pytest.param(
+        "ocio_untoned",
+        marks=_SKIP_OCIO_2024,
+    ),
+    "physical",
+    "physical_nonascii",
+    "physical_textured",
+    "physical_custom_fps",
+    pytest.param("physical_multi_takes", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    pytest.param("physical_tiles_multi_takes", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    "phy_apos_path",
+    pytest.param("redshift", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
+    pytest.param("redshift_textured", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
+    pytest.param("redshift_tiles", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
+]
+
+_TAKE_SELECTIONS = [
+    pytest.param("current", "Current Take", id="current", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    # "main" is the combo's starting value, so selecting it never opens the popup and is
+    # unaffected. Left unmarked so it keeps asserting take selection on macOS CI.
+    pytest.param("main", "Main Take", id="main"),
+    pytest.param("marked", "Marked Takes", id="marked", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    pytest.param("all", "All Takes", id="all", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+]
+
+
+@pytest.mark.parametrize("case", _CASES)
+def test_integ(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+    case: str,
+) -> None:
+    """Exercise one standard scene through the real submitter UI."""
+    _run_integ_case(
+        cinema4d_location,
+        test_cases_folder_location,
+        deadline_farm,
+        case,
+    )
+
+
+@pytest.mark.parametrize(("expected_variant", "selection"), _TAKE_SELECTIONS)
+def test_job_specific_take_selection(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+    expected_variant: str,
+    selection: str,
+) -> None:
+    """Verify Current, Main, Marked, and All Takes produce the intended job steps."""
+    _run_integ_case(
+        cinema4d_location,
+        test_cases_folder_location,
+        deadline_farm,
+        "job_specific_take_selection",
+        expected_variant=expected_variant,
+        configure_kwargs={"selection": selection},
+        scene_args=(expected_variant,),
+    )
+
+
+# The committed pre-GUI hook script. Its hooks.yaml is NOT committed: it is generated per-run by
+# _materialize_pregui_hooks_dir so the hook's `command` can be this interpreter's absolute path
+# (see that helper for why a static `command` is not portable). DEADLINE_HOOKS_DIR points at the
+# generated dir; the run is gated by settings.allow_environment_hooks.
+_PREGUI_HOOK_SCRIPT = Path(__file__).parent / "fixtures" / "pregui_hooks" / "pregui_hook.py"
+
+# The values pregui_hook.py emits. Kept next to the test as the single source of truth for the
+# assertions; must match that script.
+_HOOK_JOB_NAME = "PREGUI RAN"
+_HOOK_DESCRIPTION = "populated by pre-GUI hook"
+_HOOK_PRIORITY = 88
+
+
+def _materialize_pregui_hooks_dir(dest: Path) -> None:
+    """Write a ``hooks.yaml`` under ``dest`` that runs the committed ``pregui_hook.py`` with the
+    interpreter currently running the tests (``sys.executable``).
+
+    The manifest cannot be a static committed file with a portable ``command``. deadline-cloud
+    resolves a hook ``command`` as an absolute path, then relative to the hooks dir, then via
+    ``shutil.which`` on PATH (``deadline.client.job_bundle._hooks._executor``) — it does not expand
+    environment variables. A bare ``python`` is not a reliable interpreter name: on macOS only
+    ``python3`` exists (the system ``python`` went away with Python 2), and on every platform
+    whether it resolves depends on the PATH Cinema 4D happened to inherit, not on this fixture. When
+    it fails to resolve, the hook silently never runs and the failure surfaces as the value
+    assertions below failing rather than a clear "hook could not be launched".
+
+    Writing ``sys.executable`` (an absolute path that exists on this machine — and ``pregui_hook.py``
+    needs only the stdlib, so any interpreter works) makes the hook resolve on every platform.
+    ``args`` references the committed script by absolute path, so only ``hooks.yaml`` lives here.
+    """
+    dest.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "version": "1.0",
+        "preGUI": [
+            {
+                "command": sys.executable,
+                "args": [str(_PREGUI_HOOK_SCRIPT)],
+                "timeout": 60,
+            }
+        ],
+    }
+    (dest / "hooks.yaml").write_text(safe_dump(manifest, sort_keys=False), encoding="utf-8")
+
+
+def _bundle_parameter_values(actual_dir: Path) -> dict:
+    """Read the exported bundle's parameter_values.yaml into a {name: value} dict."""
+    params_file = actual_dir / "parameter_values.yaml"
+    values = safe_load(params_file.read_text(encoding="utf-8"))["parameterValues"]
+    return {v["name"]: v["value"] for v in values}
+
+
+def test_pre_gui_hook(
+    cinema4d_location: Path,
+    test_cases_folder_location: Path,
+    deadline_farm: dict,
+) -> None:
+    """A pre-GUI hook pre-populates the submitter dialog before it opens (PR #480).
+
+    This is the GUI counterpart to the headless ``test_pre_gui_hooks`` unit tests: those check the
+    ``apply_pre_gui_output`` mapping in isolation, whereas this drives the *real* submitter end to
+    end and proves the wiring holds through an actual export. It launches Cinema 4D with
+    ``DEADLINE_HOOKS_DIR`` pointing at a per-run hooks dir (see ``_materialize_pregui_hooks_dir``)
+    and ``allow_environment_hooks`` / ``auto_accept`` enabled, so the shipped submitter runs the
+    hook (``run_pre_gui_hooks``) before building the dialog and applies its output
+    (``apply_pre_gui_output``). A marker file proves the hook actually ran. The hook emits a fixed
+    name, description, and ``deadline:priority``; the same Export path the render cases use then
+    writes a job bundle, and we assert those three values survived into it:
+
+      * ``name`` / ``description`` -> template.yaml (they land on the settings object, which the
+        submitter writes to the job template).
+      * ``deadline:priority`` -> parameter_values.yaml (hook parameters flow into the dialog's
+        shared parameter values).
+
+    Unlike the standard cases this one never renders and does no golden-bundle diff: the hook path
+    is orthogonal to render output, and asserting just the three hook-owned fields keeps the test
+    robust to unrelated bundle changes. It runs on Windows and macOS (submitter-only; no openjd).
+    """
+    case = "pregui_hook"
+    case_folder, actual_dir = _prepare_actual_dir(test_cases_folder_location, case)
+
+    scene_path = _build_cinema4d_scene(cinema4d_location, case_folder, actual_dir, case)
+
+    # Enable the env-hook path in the config the fixture wrote.
+    _enable_environment_hooks(deadline_farm["env_overlay"])
+
+    # Generate the hooks dir (so `command` is sys.executable, resolvable on every platform) and
+    # give the hook a marker path so we can prove it actually ran. The dir is temporary and always
+    # cleaned up; on failure `actual_dir` (below) is what stays behind for inspection.
+    hooks_dir = Path(tempfile.mkdtemp(prefix="c4d-pregui-hooks-"))
+    marker_path = hooks_dir / "hook_ran.marker"
+    try:
+        _materialize_pregui_hooks_dir(hooks_dir)
+
+        _export_job_bundle_via_submitter(
+            cinema4d_location=cinema4d_location,
+            scene_path=scene_path,
+            job_bundle_generated=actual_dir,
+            deadline_farm=deadline_farm,
+            configure=None,
+            extra_env={
+                "DEADLINE_HOOKS_DIR": str(hooks_dir),
+                "DEADLINE_CLOUD_PREGUI_MARKER": str(marker_path),
+            },
+        )
+
+        # The submitter reached the mock, not real AWS. The hook itself is a local subprocess that
+        # runs before any AWS call, so no new mock routes are needed; still confirm nothing hit an
+        # unmocked route (a hook misfire that changed the submit path would surface here).
+        backend = deadline_farm["backend"]
+        log(f"mock backend call_counts: {dict(backend.call_counts)}")
+        assert (
+            backend.unmatched_requests == []
+        ), f"submitter hit routes the mock doesn't implement: {backend.unmatched_requests}"
+
+        # Prove the hook subprocess ran at all before trusting the exported values. This separates
+        # "the hook never launched" (discovery / interpreter resolution failure) from "the hook ran
+        # but its output wasn't wired into the bundle" — the value assertions below can't tell those
+        # two apart on their own.
+        assert marker_path.is_file(), (
+            f"pre-GUI hook never ran: no marker at {marker_path} (DEADLINE_HOOKS_DIR={hooks_dir}). "
+            "The submitter didn't execute the hook subprocess — look at hook discovery / "
+            "interpreter resolution, not the output-mapping wiring."
+        )
+
+        # The exported bundle must carry the hook's output.
+        assert_valid_job_bundle(actual_dir / "template.yaml")
+        template = safe_load((actual_dir / "template.yaml").read_text(encoding="utf-8"))
+        params = _bundle_parameter_values(actual_dir)
+
+        assert template.get("name") == _HOOK_JOB_NAME, (
+            f"pre-GUI hook ran but its name did not reach the bundle: template name is "
+            f"{template.get('name')!r}, expected {_HOOK_JOB_NAME!r}"
+        )
+        assert template.get("description") == _HOOK_DESCRIPTION, (
+            f"pre-GUI hook ran but its description did not reach the bundle: template description is "
+            f"{template.get('description')!r}, expected {_HOOK_DESCRIPTION!r}"
+        )
+        assert params.get("deadline:priority") == _HOOK_PRIORITY, (
+            f"pre-GUI hook ran but its priority did not reach the bundle: parameter_values has "
+            f"{params.get('deadline:priority')!r}, expected {_HOOK_PRIORITY}"
+        )
+
+        # Clean up if the test was successful
+        rmtree(actual_dir, ignore_errors=True)
+    finally:
+        rmtree(hooks_dir, ignore_errors=True)

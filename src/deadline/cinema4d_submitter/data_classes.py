@@ -6,13 +6,13 @@ import json
 import logging
 import traceback
 from dataclasses import dataclass, field
+from datetime import timedelta
 from pathlib import Path
 
 from deadline.client.ui.dataclasses.timeouts import TimeoutEntry, TimeoutTableEntries
 
-from .takes import TakeSelection  # type: ignore
 from .enums import ErrorChecking, TextCaching
-from datetime import timedelta
+from .takes import TakeSelection  # type: ignore
 
 RENDER_SUBMITTER_SETTINGS_FILE_EXT = ".deadline_render_settings.json"
 

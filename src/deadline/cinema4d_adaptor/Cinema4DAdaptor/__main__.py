@@ -23,7 +23,7 @@ def main(reentry_exe=None) -> int:
 
     try:
         _EntryPoint(Cinema4DAdaptor).start(reentry_exe=reentry_exe)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - the CLI boundary must return a failure code
         _logger.error(f"Entrypoint failed: {e}")
         return 1
 

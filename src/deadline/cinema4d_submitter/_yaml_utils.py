@@ -4,12 +4,14 @@
 # Both cinema4d_render_submitter.py and tile_utils.py need _build_embedded_yaml,
 # but cinema4d_render_submitter.py already imports from tile_utils.py.
 
-from collections.abc import Set
+from collections.abc import Set as AbstractSet
 
 from deadline.client.job_bundle._yaml import deadline_yaml_dump
 
 
-def _build_embedded_yaml(data: dict[str, object], unquoted_keys: Set[str] = frozenset()) -> str:
+def _build_embedded_yaml(
+    data: dict[str, object], unquoted_keys: AbstractSet[str] = frozenset()
+) -> str:
     """Build a YAML string for use in embedded files that undergo parameter substitution.
 
     The Deadline service performs raw text substitution on ``{{Param.*}}``

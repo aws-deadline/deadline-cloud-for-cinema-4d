@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Set
 
 from .warning_logging_handler import WarningCollectorHandler
 
@@ -11,7 +10,7 @@ if not any(isinstance(h, WarningCollectorHandler) for h in logger.handlers):
     logger.addHandler(WarningCollectorHandler())
 
 
-def validate_asset_paths(asset_paths: Set[Path]) -> None:
+def validate_asset_paths(asset_paths: set[Path]) -> None:
     """
     Validate asset paths for pipe character which causes sync failures on Windows.
     Logs warnings for any paths containing pipe character.

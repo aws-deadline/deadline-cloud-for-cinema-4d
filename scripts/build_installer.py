@@ -2,16 +2,14 @@
 """Script to create platform-specific Deadline Client installers using InstallBuilder."""
 
 import os
-import sys
 import shutil
+import sys
 import tempfile
-from typing import Optional
 from pathlib import Path
 
-from common import EvaluationBuildError, run, get_version_string
-from find_installbuilder import InstallBuilderSelection, get_builder_exe_name
-
+from common import EvaluationBuildError, get_version_string, run
 from deps_bundle import build_deps_bundle
+from find_installbuilder import InstallBuilderSelection, get_builder_exe_name
 
 # This is derived from <installerFilename> in installer/DeadlineCloudClient.xml
 # See "Supported Platforms" table in https://releases.installbuilder.com/installbuilder/docs/installbuilder-userguide.html
@@ -24,10 +22,10 @@ EVALUATION_VERSION_STRING = "Built with an evaluation version of InstallBuilder"
 
 def setup_install_builder(
     workdir: Path,
-    install_builder_location: Optional[Path],
-    license_file_path: Optional[Path],
-    install_builder_s3_bucket: Optional[str] = None,
-    install_builder_s3_key: Optional[str] = None,
+    install_builder_location: Path | None,
+    license_file_path: Path | None,
+    install_builder_s3_bucket: str | None = None,
+    install_builder_s3_key: str | None = None,
 ) -> Path:
     """
     Ensure installbuilder is installed in some way and return the path
@@ -68,7 +66,7 @@ def build_installer(
     install_builder_location: Path,
     installer_platform: str,
     dev: bool,
-    override_installer_version: Optional[str],
+    override_installer_version: str | None,
 ) -> Path:
     """
     Actually build the installer
@@ -132,19 +130,19 @@ def build_installer(
 
 def main(
     dev: bool,
-    install_builder_location: Optional[Path],
-    install_builder_license_path: Optional[Path],
-    install_builder_s3_bucket: Optional[str],
-    install_builder_s3_key: Optional[str],
-    output_dir: Optional[Path],
+    install_builder_location: Path | None,
+    install_builder_license_path: Path | None,
+    install_builder_s3_bucket: str | None,
+    install_builder_s3_key: str | None,
+    output_dir: Path | None,
     installer_platform: str,
     installer_source_path: Path,
-    override_installer_version: Optional[str],
+    override_installer_version: str | None,
 ) -> None:
     with tempfile.TemporaryDirectory() as wd:
         workdir = Path(wd)
         print(f"cwd: {os.getcwd()}")
-        print(f"working directory: {str(workdir)}")
+        print(f"working directory: {workdir!s}")
 
         installbuilder_path = setup_install_builder(
             workdir=workdir,

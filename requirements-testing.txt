@@ -4,11 +4,20 @@ mypy == 2.*
 pytest == 9.*
 pytest-cov == 7.*
 pytest-xdist == 3.*
-ruff == 0.15.*
-twine == 6.*
+ruff == 0.16.*
+twine == 7.*
 types-pyyaml == 6.*
 # for integ tests
-numpy == 2.*
+numpy == 2.*; python_version >= "3.12"
+numpy >= 2.2.6, < 2.5; python_version < "3.12"
 pillow == 12.*
 openjd-cli == 0.7.*
 fonttools >= 4.0.0
+deadline-cloud-test-fixtures >= 0.18.22
+# Drives the real submitter dialog via the OS accessibility tree.
+# Used by test/integ/.
+# Temporary compatibility pin while the suite is updated for xa11y 0.15.
+xa11y == 0.14.*
+# Both are used by test_console_signin_dependencies.py, which parses pyproject.toml.
+packaging >= 26.3
+tomli == 2.*; python_version < "3.11"

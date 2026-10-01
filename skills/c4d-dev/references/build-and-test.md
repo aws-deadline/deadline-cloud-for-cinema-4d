@@ -70,9 +70,11 @@ Run against all supported Python versions:
 hatch run all:test
 ```
 
-## Step 4: Run Integration Tests (Windows Only)
+## Step 4: Run Integration Tests
 
-Integration tests are currently only supported on Windows. They require Cinema 4D installed with proper licensing. See `integration-testing.md` for full setup.
+Integration tests require Cinema 4D installed with proper licensing. Bundle
+validation runs on Windows and macOS; rendering assertions run on Windows. See
+`integration-testing.md` for full setup.
 
 ### Set Cinema 4D location
 

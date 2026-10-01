@@ -6,10 +6,8 @@ import shutil
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union
 
 import boto3
-
 from common import UnsupportedOSError
 
 _INSTALL_BUILDER_ARCHIVE_FILENAME = {
@@ -33,7 +31,7 @@ class _InstallBuilderS3Selection:
 
 @dataclass
 class InstallBuilderSelection:
-    selection: Optional[Union[_InstallBuilderPathSelection, _InstallBuilderS3Selection]]
+    selection: _InstallBuilderPathSelection | _InstallBuilderS3Selection | None
 
     def resolve_install_builder_installation(self, workdir: Path) -> Path:
         if self.selection is None:
@@ -65,7 +63,7 @@ class InstallBuilderSelection:
             raise ValueError(f"Unknown selection type: {type(self.selection)}")
 
     @staticmethod
-    def from_s3(bucket_name: str, dest_path: Path, key: Optional[str] = None):
+    def from_s3(bucket_name: str, dest_path: Path, key: str | None = None):
         if key is None:
             if platform.system() in _INSTALL_BUILDER_ARCHIVE_FILENAME:
                 resolved_key = (

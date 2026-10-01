@@ -1,8 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-from deadline.client.ui.dataclasses.timeouts import TimeoutTableEntries
-
 from typing import Any
+
+from deadline.client.ui.dataclasses.timeouts import TimeoutTableEntries
 
 
 def add_timeouts_to_job_template(template: dict[str, Any], timeouts: TimeoutTableEntries) -> None:

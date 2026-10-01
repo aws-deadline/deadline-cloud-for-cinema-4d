@@ -7,12 +7,12 @@ from pathlib import Path
 
 import c4d
 
+from .font_utils import FONTS_DIR, copy_font_to_scene_folder, is_asset_a_font
+from .path_validator import validate_asset_paths
 from .platform_utils import is_windows
 from .scene import Scene
-from .font_utils import is_asset_a_font, copy_font_to_scene_folder, FONTS_DIR
 from .warning_collector import warning_collector
 from .warning_logging_handler import WarningCollectorHandler
-from .path_validator import validate_asset_paths
 
 logger = logging.getLogger(__name__)
 if not any(isinstance(h, WarningCollectorHandler) for h in logger.handlers):
