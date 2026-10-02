@@ -306,12 +306,32 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
             # consume worker time until the initialization timeout.
             # The Redshift pattern is registered first so the failing product is named.
             redshift_license_error_regexes = [
-                re.compile(r".*Redshift Error: Maxon licensing error.*", re.IGNORECASE),
+                # Redshift separates its prefix from the message with a space or a tab
+                # depending on the message, so accept either.
+                re.compile(r".*Redshift Error:\s+Maxon licensing error.*", re.IGNORECASE),
             ]
             callback_list.append(
                 RegexCallback(
                     redshift_license_error_regexes,
                     self._handle_redshift_license_error,
+                )
+            )
+
+            # Redshift prints this when it stops a render because of a license failure, for
+            # example a license mismatch, an unreachable license server or a blocked IP.
+            # Cinema 4D then reports the render as RENDERRESULT_OUTOFMEMORY, which is not the
+            # cause. The preceding Redshift error names the cause, and the acquisition
+            # message's session-limit hint does not apply, so this gets its own message.
+            redshift_render_license_abort_regexes = [
+                re.compile(
+                    r".*Redshift Error:\s+Rendering aborted due to license failure.*",
+                    re.IGNORECASE,
+                ),
+            ]
+            callback_list.append(
+                RegexCallback(
+                    redshift_render_license_abort_regexes,
+                    self._handle_redshift_render_license_abort,
                 )
             )
 
@@ -467,6 +487,17 @@ class Cinema4DAdaptor(Adaptor[AdaptorConfiguration]):
     def _handle_redshift_license_error(self, match: re.Match) -> None:
         """Handle a fatal Redshift licensing failure."""
         self._record_license_error("Redshift", match)
+
+    def _handle_redshift_render_license_abort(self, match: re.Match) -> None:
+        """Handle Redshift aborting a render because of a license failure."""
+        self._record_exception(
+            RuntimeError(
+                "Redshift aborted the render due to a license failure.\n"
+                "See the Redshift errors above this line for the reason, for example a license "
+                "mismatch, an unreachable license server, or a blocked IP address.\n"
+                f"Error: {match.group(0)}"
+            )
+        )
 
     def _handle_arnold_license_error(self, match: re.Match) -> None:
         """Handle a fatal Arnold licensing failure."""

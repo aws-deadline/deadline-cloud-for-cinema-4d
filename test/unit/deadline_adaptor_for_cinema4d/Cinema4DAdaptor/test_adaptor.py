@@ -22,6 +22,62 @@ _ARNOLD_ABORT_LINE = (
     "and abort_on_license_fail option is enabled"
 )
 
+# Redshift prints this when it stops a render because of a license failure, whatever the
+# reason. Cinema 4D then returns RENDERRESULT_OUTOFMEMORY. Note the tab after "Redshift Error:".
+_REDSHIFT_RENDER_ABORTED_LINE = "Redshift Error: \tRendering aborted due to license failure"
+
+# Real Cinema 4D output for the Redshift license aborts seen on Deadline Cloud.
+# Every variant ends in _REDSHIFT_RENDER_ABORTED_LINE, then the client's render result error.
+_REDSHIFT_MID_RENDER_LICENSE_FAILURES = {
+    "license_mismatch": [
+        (
+            "Redshift Error: \tLicense mismatch. Please contact support@redshift3d.com and "
+            "include this log file as well as your floating license file"
+        ),
+        _REDSHIFT_RENDER_ABORTED_LINE,
+        "RuntimeError: Error: render result: Not enough memory.",
+    ],
+    "server_unreachable": [
+        "Redshift Error: \tFailed to communicate with server! (11)",
+        (
+            "Redshift Error: \tPlease report this to your network/IT administrator or the "
+            "person who manages the Redshift floating licenses for your organization"
+        ),
+        _REDSHIFT_RENDER_ABORTED_LINE,
+        "RuntimeError: Error: render result: Not enough memory.",
+    ],
+    "blocked_ip": [
+        (
+            "Redshift Error: \tBlacklisted IP. Your IP address has been blacklisted due to too "
+            "many failed license verification attempts. Please contact support@redshift3d.com "
+            "and include your Redshift log file."
+        ),
+        _REDSHIFT_RENDER_ABORTED_LINE,
+        "RuntimeError: Error: render result: Not enough memory.",
+    ],
+}
+
+
+def _redshift_render_license_abort_message(line: str) -> str:
+    return (
+        "Redshift aborted the render due to a license failure.\n"
+        "See the Redshift errors above this line for the reason, for example a license "
+        "mismatch, an unreachable license server, or a blocked IP address.\n"
+        f"Error: {line}"
+    )
+
+
+def _replay_output(adaptor: Cinema4DAdaptor, lines: list[str]) -> None:
+    """Feeds lines to the adaptor's callbacks the way its stdout handler does.
+
+    Every matching callback runs for each line, as in RegexHandler.emit.
+    """
+    for line in lines:
+        for regex_callback in adaptor._get_regex_callbacks():
+            if match := regex_callback.get_match(line):
+                regex_callback.callback(match)
+
+
 REFERENCE_INIT_DATA_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -418,6 +474,7 @@ class TestCinema4DAdaptor_on_start:
         "product, license_error",
         [
             ("Redshift", "Redshift Error: Maxon licensing error: License not found (6)"),
+            ("Redshift", "Redshift Error: \tMaxon licensing error: License not found (6)"),
             ("Arnold", _ARNOLD_ABORT_LINE),
             ("Arnold", "[rlm] abort_on_license_fail enabled"),
             ("Cinema 4D", "Invalid License"),
@@ -537,6 +594,76 @@ class TestCinema4DAdaptor_on_run:
                 adaptor._action_queue.dequeue_action()
 
         assert "Redshift failed to acquire a license." in str(exc_info.value)
+
+    @pytest.mark.parametrize("error_checking", ["0", "1"])
+    @pytest.mark.parametrize("variant", sorted(_REDSHIFT_MID_RENDER_LICENSE_FAILURES))
+    @patch("time.sleep")
+    def test_redshift_mid_render_license_failure_is_not_reported_as_memory(
+        self,
+        mock_sleep: Mock,
+        init_data: dict,
+        run_data: dict,
+        variant: str,
+        error_checking: str,
+    ) -> None:
+        """Tests that Redshift aborting a render for licensing names the license failure.
+
+        Cinema 4D reports this abort as RENDERRESULT_OUTOFMEMORY, so without a license cause
+        the task fails as "exited early" with only "Not enough memory." in the log.
+        """
+        init_data["activate_error_checking"] = error_checking
+        adaptor = Cinema4DAdaptor(init_data)
+        # on_start reads this from init_data, and this test does not call on_start.
+        adaptor._activate_error_checking = int(error_checking)
+        client = Mock()
+        # Cinema 4D exits after the render fails, short-circuiting the render loop.
+        type(client).is_running = PropertyMock(side_effect=[True, False, False])
+        adaptor._cinema4d_client = client
+
+        _replay_output(adaptor, _REDSHIFT_MID_RENDER_LICENSE_FAILURES[variant])
+
+        try:
+            with pytest.raises(RuntimeError) as exc_info:
+                adaptor.on_run(run_data)
+        finally:
+            # on_run enqueues into the class-level queue before it raises.
+            while len(adaptor._action_queue) > 0:
+                adaptor._action_queue.dequeue_action()
+
+        assert str(exc_info.value) == _redshift_render_license_abort_message(
+            _REDSHIFT_RENDER_ABORTED_LINE
+        )
+
+    @pytest.mark.parametrize(
+        "line",
+        [
+            _REDSHIFT_RENDER_ABORTED_LINE,
+            "Redshift Error: Rendering aborted due to license failure",
+        ],
+    )
+    def test_redshift_render_license_abort_accepts_space_or_tab(
+        self, init_data: dict, line: str
+    ) -> None:
+        """Tests that the abort line is recognised whichever separator Redshift uses."""
+        adaptor = Cinema4DAdaptor(init_data)
+
+        _replay_output(adaptor, [line])
+
+        assert str(adaptor._exc_info) == _redshift_render_license_abort_message(line)
+
+    def test_out_of_memory_without_redshift_license_line_is_unchanged(
+        self, init_data: dict
+    ) -> None:
+        """Tests that a render result alone is not attributed to licensing.
+
+        Cinema 4D reports several causes as RENDERRESULT_OUTOFMEMORY, so the license message
+        is only used when Redshift's own license abort line is present.
+        """
+        adaptor = Cinema4DAdaptor(init_data)
+
+        _replay_output(adaptor, ["RuntimeError: Error: render result: Not enough memory."])
+
+        assert adaptor._exc_info is None
 
     def test_license_failure_survives_an_empty_action_queue(
         self, init_data: dict, run_data: dict
