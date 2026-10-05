@@ -1,3 +1,8 @@
+## 1.0.1 (2026-10-05)
+
+### Bug Fixes
+* Redshift mid-render license aborts (e.g., license mismatch, unreachable license server, or blocked IP) are now correctly reported as license failures instead of misleading "Not enough memory" errors. (#578)
+* License checkout failures now correctly identify which product (Redshift, Arnold, or Cinema 4D) failed, instead of misattributing all failures to Cinema 4D. Arnold license aborts are also now properly detected and reported. (#571)
 ## 1.0.0 (2026-09-28)
 
 ### Features
