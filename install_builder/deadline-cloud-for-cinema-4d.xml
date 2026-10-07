@@ -1,5 +1,6 @@
 <!-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. -->
 <component>
+    <!-- Test-only XML edit to exercise the installer change reminder. -->
     <name>deadline_cloud_for_cinema_4d</name>
     <description>Deadline Cloud for Cinema 4D 2024-2026</description>
     <detailedDescription>Cinema 4D plugin for submitting jobs to AWS Deadline Cloud. Compatible with Cinema 4D 2024 to 2026</detailedDescription>

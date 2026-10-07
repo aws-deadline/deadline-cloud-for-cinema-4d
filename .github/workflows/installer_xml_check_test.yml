@@ -1,0 +1,49 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+# Temporary draft-PR validation of the Python check in aws-deadline/.github#109.
+name: Installer XML changes (test)
+
+on:
+  pull_request:
+    branches: [mainline]
+
+permissions: {}
+
+jobs:
+  installer-xml-changes:
+    name: Installer XML changes
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout PR history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check installer XML changes
+        shell: python
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          import os
+          import subprocess
+
+          changed_files = subprocess.check_output([
+              "git", "-c", "core.quotePath=true", "diff", "--no-ext-diff", "--no-textconv",
+              "--no-renames", "--name-only",
+              f"{os.environ['BASE_SHA']}...{os.environ['HEAD_SHA']}", "--",
+              ":(glob)installer/**/*.[xX][mM][lL]",
+              ":(glob)install_builder/**/*.[xX][mM][lL]",
+          ], text=True)
+          if changed_files:
+              print(changed_files, end="")
+              print(
+                  "::error::Installer definitions changed. Please verify whether any related "
+                  "internal changes are needed to reflect the changes in this PR."
+              )
+              raise SystemExit(1)
