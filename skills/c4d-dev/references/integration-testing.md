@@ -20,13 +20,13 @@ purpose of this suite is to cover the customer-visible plugin and UI path.
 
 ## Prepare the Host
 
-- Install and license Cinema 4D. CI targets Cinema 4D 2026.
+- Install and license Cinema 4D. CI targets Cinema 4D 2024 through 2027.
 - Install Hatch.
 - Grant the terminal or Hatch Python accessibility permission on macOS.
 - Run Windows tests in an interactive desktop session; UI Automation does not
   work in Session 0.
 - Configure renderer licensing for renderer-specific cases.
-- Local runs default to Cinema 4D 2026. Set `C4D_VERSION` to run an older
+- Local runs default to Cinema 4D 2026. Set `C4D_VERSION` to run another
   version, and set `C4D_LOCATION` when that version is outside its default path.
 
 ```powershell

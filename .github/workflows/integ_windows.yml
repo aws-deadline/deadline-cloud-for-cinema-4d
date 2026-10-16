@@ -41,7 +41,10 @@ jobs:
       github.ref == 'refs/heads/mainline' ||
       github.ref == 'refs/heads/feature/ci-tests')
     name: Integration Tests (Windows, Cinema 4D ${{ inputs.c4d_version }})
-    runs-on: ${{ inputs.c4d_version == '2026' && 'aws-deadline_windows-2025_gpu-t4-4-core' || 'windows-latest' }}
+    # Redshift needs a GPU, and GPU runners are billed, so only the versions
+    # that run the Redshift cases (see _SKIP_REDSHIFT_2024_2025_IN_CI in
+    # test/integ/test_cinema4d.py) get one.
+    runs-on: ${{ contains(fromJSON('["2026", "2027"]'), inputs.c4d_version) && 'aws-deadline_windows-2025_gpu-t4-4-core' || 'windows-latest' }}
     timeout-minutes: 60
     permissions:
       id-token: write

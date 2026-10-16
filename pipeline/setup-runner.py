@@ -50,6 +50,18 @@ C4D_INSTALLERS = {
             "type": "dmg",
         },
     },
+    "2027": {
+        "windows": {
+            "s3_key": "cinema4d/2027/Cinema4D_2027_2027.0_Win.exe",
+            "sha256": "d5b0b2845280562ac09a8f4eb582be3475da026d58b14f89c1bbf70e04b50c3c",
+            "type": "exe",
+        },
+        "macos": {
+            "s3_key": "cinema4d/2027/Cinema4D_2027_2027.0_Mac.dmg",
+            "sha256": "6668c90e4458c3b65236209cde0e032131ab5ee492090407a613925aa1e20f23",
+            "type": "dmg",
+        },
+    },
 }
 
 C4D_INSTALL_PATHS = {
@@ -64,6 +76,10 @@ C4D_INSTALL_PATHS = {
     "2026": {
         "windows": Path("C:/Program Files/Maxon Cinema 4D 2026"),
         "macos": Path("/Applications/Maxon Cinema 4D 2026"),
+    },
+    "2027": {
+        "windows": Path("C:/Program Files/Maxon Cinema 4D 2027"),
+        "macos": Path("/Applications/Maxon Cinema 4D 2027"),
     },
 }
 
@@ -350,7 +366,7 @@ if __name__ == "__main__":
         "--versions",
         nargs="+",
         required=True,
-        help="Cinema 4D versions to install (e.g., 2024 2025 2026)",
+        help="Cinema 4D versions to install (e.g., 2024 2025 2026 2027)",
     )
     args = parser.parse_args()
 

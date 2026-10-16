@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        c4d_version: ["2024", "2025", "2026"]
+        c4d_version: ["2024", "2025", "2026", "2027"]
     uses: ./.github/workflows/integ_windows.yml
     with:
       c4d_version: ${{ matrix.c4d_version }}
@@ -65,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        c4d_version: ["2024", "2025", "2026"]
+        c4d_version: ["2024", "2025", "2026", "2027"]
     uses: ./.github/workflows/integ_macos.yml
     with:
       c4d_version: ${{ matrix.c4d_version }}

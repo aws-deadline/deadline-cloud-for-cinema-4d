@@ -18,6 +18,10 @@ from .utils import c4d_extra_python_paths
 # Default install paths per version and platform.
 _DEFAULT_C4D_VERSION = "2026"
 _C4D_DEFAULT_PATHS = {
+    "2027": {
+        "win32": Path(r"C:\Program Files\Maxon Cinema 4D 2027"),
+        "darwin": Path("/Applications/Maxon Cinema 4D 2027"),
+    },
     "2026": {
         "win32": Path(r"C:\Program Files\Maxon Cinema 4D 2026"),
         "darwin": Path("/Applications/Maxon Cinema 4D 2026"),
