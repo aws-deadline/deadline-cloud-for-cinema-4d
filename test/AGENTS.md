@@ -276,10 +276,26 @@ production.
 hatch run integ:test                              # all xa11y integ tests
 ```
 
-CI runs this suite against Cinema 4D 2024, 2025, and 2026 on Windows and
-macOS. All six jobs run in parallel. Local runs default to Cinema 4D 2026.
-Set `C4D_VERSION` for an older version and set `C4D_LOCATION` only when its
+CI runs this suite against Cinema 4D 2024, 2025, 2026, and 2027 on Windows and
+macOS. All eight jobs run in parallel. Redshift cases run only on the Windows
+2026 and 2027 jobs, which use a GPU runner. Local runs default to Cinema 4D 2026.
+Set `C4D_VERSION` for another version and set `C4D_LOCATION` only when its
 installation is outside that version's default path.
+
+To add a new Cinema 4D version to CI:
+
+1. Upload the Windows `.exe` and macOS `.dmg` installers to the integration
+   test installer bucket under `cinema4d/<version>/`.
+2. Add the S3 keys, SHA-256 hashes, and install paths to
+   `pipeline/setup-runner.py`, and the install paths to `test/integ/conftest.py`.
+3. Add the version to the `c4d_version` matrices in
+   `.github/workflows/integration_tests_xa11y.yml` and
+   `.github/workflows/release_prepare.yml`.
+4. If it should run Redshift, add it to the GPU runner list in
+   `.github/workflows/integ_windows.yml`.
+5. Capture `expected/renders/<version>/` baselines for every rendering case
+   (see *Downloading render outputs from CI*) before merging, or every
+   mainline push and release will fail on the missing baselines.
 
 The `integ:test` script hardcodes the `test/integ` path and
 `--numprocesses=1`. Beware: any args you pass *replace* the path (hatch

@@ -946,13 +946,14 @@ def test_integ_no_output_directory_warning_on_submission(
 
 
 # Reliable Redshift rendering requires a GPU. Unlike standard runners, GPU
-# runners are billed, so Windows CI runs Redshift only for the latest supported
-# Cinema 4D version, 2026, and skips the 2024 and 2025 cases.
+# runners are billed, so Windows CI runs Redshift only for the two newest
+# supported Cinema 4D versions, 2026 and 2027, and skips the 2024 and 2025 cases.
+# Keep this in sync with the GPU runner selection in .github/workflows/integ_windows.yml.
 _SKIP_REDSHIFT_2024_2025_IN_CI = pytest.mark.skipif(
     sys.platform == "win32"
     and os.environ.get("CI") == "true"
     and os.environ.get("C4D_VERSION") in {"2024", "2025"},
-    reason="Redshift requires a billed GPU runner, so CI runs it only for the latest Cinema 4D version (2026)",
+    reason="Redshift requires a billed GPU runner, so CI runs it only for Cinema 4D 2026 and 2027",
 )
 # Changing the Takes combo cannot be automated on the macOS CI runners. The
 # accessibility action opens the popup and its rows are found, but no synthesised
