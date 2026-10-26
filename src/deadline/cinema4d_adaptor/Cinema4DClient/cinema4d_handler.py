@@ -45,6 +45,7 @@ START_RENDER_KEY = "start_render"
 ASSEMBLE_TILES_KEY = "assemble_tiles"
 TAKE_KEY = "take"
 REDSHIFT_TEXTURE_DATA_TYPE = 1036765
+MOTION_TRACKER_FOOTAGE_PARAMETER = 10500
 
 
 def progress_callback(progress_percent, progress_type_int):
@@ -124,8 +125,14 @@ class Cinema4DHandler:
                 # unrelated asset, e.g. the main scene which is already pathmapped
                 continue
             mapped_path = self.map_path(filename)
+            if mapped_path == filename and self._is_motion_tracker_footage(owner, param_id):
+                # GetAllAssetsNew reports every frame of a tracker footage sequence.
+                # Assigning those filenames is expensive and changes the selected
+                # sequence file. Leave the tracker intact when its
+                # footage does not need path mapping.
+                continue
             # note: we can't skip if mapped_path == filename because some internal
-            # references in the owner nodes may need to be updated
+            # references in other owner types may need to be updated
 
             is_legacy_redshift_gv_node = self._is_legacy_redshift_gv_node(owner, param_id)
             # whether we have done owner[param_id] = mapped_path
@@ -205,6 +212,17 @@ class Cinema4DHandler:
             return self._pathmap_gv_node(owner, filename, mapped_path)
 
         return False
+
+    @staticmethod
+    def _is_motion_tracker_footage(owner, param_id) -> bool:
+        """Return whether an asset is a Motion Tracker's footage reference."""
+        if param_id != MOTION_TRACKER_FOOTAGE_PARAMETER:
+            return False
+        try:
+            return isinstance(owner, c4d.modules.motiontracker.MotionTrackerObject)
+        except (AttributeError, TypeError):
+            # Preserve existing asset handling when the SDK type cannot be inspected.
+            return False
 
     @staticmethod
     def _is_legacy_redshift_gv_node(owner, param_id) -> bool:
