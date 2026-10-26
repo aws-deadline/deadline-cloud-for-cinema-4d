@@ -1,4 +1,5 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, call, patch
 
 import pytest
@@ -68,6 +69,89 @@ class TestCinema4DHandler:
         mock_get_all_assets.assert_called_once()
         map_path.assert_called_once_with("asset.png")
         mock_remap.assert_called_once_with(owner, 1, "asset.png", None, None, "asset.png")
+
+    @pytest.mark.parametrize(
+        "is_tracker,param_id,changes_path,expected_writes",
+        [
+            (True, 10500, False, 0),
+            (True, 10500, True, 3),
+            (False, 10500, False, 3),
+            (True, 10501, False, 3),
+        ],
+    )
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetAllAssetsNew"
+    )
+    def test_remap_assets_preserves_unchanged_tracker_footage(
+        self, mock_get_all_assets, is_tracker, param_id, changes_path, expected_writes
+    ):
+        class Tracker(MagicMock):
+            pass
+
+        owner = Tracker() if is_tracker else MagicMock()
+        filenames = [f"/scene/tex/footage_{frame:05d}.png" for frame in range(3)]
+        map_path = Mock(
+            side_effect=lambda path: path.replace("/scene/", "/worker/") if changes_path else path
+        )
+        handler = Cinema4DHandler(map_path)
+        handler.doc = Mock()
+
+        def add_assets(_doc, allowDialogs, lastPath, assetList):
+            assetList.extend(
+                {"owner": owner, "paramId": param_id, "filename": filename}
+                for filename in filenames
+            )
+
+        mock_get_all_assets.side_effect = add_assets
+        with (
+            patch.object(c4d.modules.motiontracker, "MotionTrackerObject", Tracker),
+            patch.object(handler, "_pathmap_recognized_types", return_value=False) as mock_remap,
+            patch.object(handler, "_is_legacy_redshift_gv_node", return_value=False),
+        ):
+            handler._remap_assets()
+
+        assert map_path.call_args_list == [call(filename) for filename in filenames]
+        assert mock_remap.call_count == expected_writes
+        assert owner.__setitem__.call_args_list == (
+            [
+                call(
+                    param_id, filename.replace("/scene/", "/worker/") if changes_path else filename
+                )
+                for filename in filenames
+            ]
+            if expected_writes
+            else []
+        )
+
+    @pytest.mark.parametrize(
+        "modules",
+        [
+            SimpleNamespace(),
+            SimpleNamespace(motiontracker=SimpleNamespace()),
+            SimpleNamespace(motiontracker=SimpleNamespace(MotionTrackerObject=None)),
+        ],
+    )
+    @patch(
+        "deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.c4d.documents.GetAllAssetsNew"
+    )
+    def test_remap_assets_falls_back_when_tracker_type_is_unavailable(
+        self, mock_get_all_assets, modules
+    ):
+        owner = MagicMock()
+        handler = Cinema4DHandler(lambda path: path)
+        handler.doc = Mock()
+
+        def add_asset(_doc, allowDialogs, lastPath, assetList):
+            assetList.append({"owner": owner, "paramId": 10500, "filename": "footage.png"})
+
+        mock_get_all_assets.side_effect = add_asset
+        with (
+            patch.object(c4d, "modules", modules),
+            patch.object(handler, "_pathmap_recognized_types", return_value=False),
+        ):
+            handler._remap_assets()
+
+        owner.__setitem__.assert_called_once_with(10500, "footage.png")
 
     @patch("deadline.cinema4d_adaptor.Cinema4DClient.cinema4d_handler.os.path.isfile")
     def test_set_scene_file(self, mock_isfile: Mock):
