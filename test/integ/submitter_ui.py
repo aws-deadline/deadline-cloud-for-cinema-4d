@@ -10,6 +10,7 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from collections.abc import Callable
@@ -234,7 +235,9 @@ def _wait_for_take_selection(combo: xa11y.Locator, selection: str) -> None:
         combo.wait_until(is_selected, timeout=1.0)
         return
     except xa11y.TimeoutError:
-        xa11y.input_sim().press("Enter")
+        # The probe must not answer a system privacy alert with Enter.
+        if sys.platform != "darwin" or not os.environ.get("DEADLINE_CLOUD_TAKES_PROBE_DIR"):
+            xa11y.input_sim().press("Enter")
     combo.wait_until(is_selected, timeout=10.0)
 
 
@@ -353,11 +356,7 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         combo.expand()
     else:
         combo.press()
-    if capture_takes_probe("04-popup-open"):
-        raise AssertionError(
-            "Screenshot diagnostic complete; stopped before pointer/keyboard input "
-            "could answer the observed macOS local-network permission dialog"
-        )
+    capture_takes_probe("04-popup-open")
 
     option_selector = (
         f"list_item[name='{selection}'], "
@@ -375,7 +374,10 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         option.wait_visible(timeout=10.0)
 
     _activate_take_option(option, selection)
-    _wait_for_take_selection(combo, selection)
+    try:
+        _wait_for_take_selection(combo, selection)
+    finally:
+        capture_takes_probe("05-after-selection")
 
 
 def set_tile_rendering(

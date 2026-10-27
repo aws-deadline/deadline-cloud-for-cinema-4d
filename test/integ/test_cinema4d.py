@@ -543,6 +543,7 @@ def _export_job_bundle_via_submitter(
             )
             _copy_bundle_files(staged_bundle, job_bundle_generated)
         finally:
+            capture_takes_probe("06-before-c4d-shutdown")
             kill_proc(proc)
             _dump_plugin_diag_log(plugin_diag_log)
     finally:
