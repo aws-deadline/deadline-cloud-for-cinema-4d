@@ -29,11 +29,11 @@ def log(msg: str) -> None:
     print(f"[integ {timestamp} +{elapsed:6.2f}s] {msg}", flush=True)
 
 
-def capture_takes_probe(stage: str) -> None:
+def capture_takes_probe(stage: str) -> bool:
     """Capture the desktop for the explicitly enabled macOS CI diagnostic."""
     probe_dir = os.environ.get("DEADLINE_CLOUD_TAKES_PROBE_DIR")
     if sys.platform != "darwin" or not probe_dir:
-        return
+        return False
     screenshot = Path(probe_dir) / f"{stage}.png"
     screenshot.parent.mkdir(parents=True, exist_ok=True)
     captured = subprocess.run(
@@ -41,6 +41,7 @@ def capture_takes_probe(stage: str) -> None:
         check=False,
     )
     log(f"Takes probe {stage}: screenshot exit={captured.returncode}")
+    return True
 
 
 def run_command(args: list[str]) -> subprocess.CompletedProcess[bytes]:

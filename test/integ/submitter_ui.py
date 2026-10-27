@@ -353,7 +353,11 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         combo.expand()
     else:
         combo.press()
-    capture_takes_probe("04-popup-open")
+    if capture_takes_probe("04-popup-open"):
+        raise AssertionError(
+            "Screenshot diagnostic complete; stopped before pointer/keyboard input "
+            "could answer the observed macOS local-network permission dialog"
+        )
 
     option_selector = (
         f"list_item[name='{selection}'], "
@@ -371,11 +375,7 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         option.wait_visible(timeout=10.0)
 
     _activate_take_option(option, selection)
-    capture_takes_probe("05-after-option-click")
-    try:
-        _wait_for_take_selection(combo, selection)
-    finally:
-        capture_takes_probe("06-after-selection-wait")
+    _wait_for_take_selection(combo, selection)
 
 
 def set_tile_rendering(
