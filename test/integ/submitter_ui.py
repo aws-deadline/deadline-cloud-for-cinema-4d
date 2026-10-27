@@ -10,7 +10,6 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
-import os
 import re
 import sys
 from collections.abc import Callable
@@ -33,8 +32,6 @@ from deadline_test_fixtures.xa11y.controls import set_priority as _shared_set_pr
 from deadline_test_fixtures.xa11y.controls import (
     set_spin_button_in_group as _shared_set_spin_button_in_group,
 )
-
-from .utils import capture_takes_probe
 
 __all__ = [
     "TAB_JOB_SPECIFIC",
@@ -235,9 +232,7 @@ def _wait_for_take_selection(combo: xa11y.Locator, selection: str) -> None:
         combo.wait_until(is_selected, timeout=1.0)
         return
     except xa11y.TimeoutError:
-        # The probe must not answer a system privacy alert with Enter.
-        if sys.platform != "darwin" or not os.environ.get("DEADLINE_CLOUD_TAKES_PROBE_DIR"):
-            xa11y.input_sim().press("Enter")
+        xa11y.input_sim().press("Enter")
     combo.wait_until(is_selected, timeout=10.0)
 
 
@@ -348,7 +343,6 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
     if current == selection:
         return
 
-    capture_takes_probe("03-before-popup")
     combo_actions = set(combo.element().actions)
     if "show_menu" in combo_actions:
         combo.show_menu()
@@ -356,7 +350,6 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         combo.expand()
     else:
         combo.press()
-    capture_takes_probe("04-popup-open")
 
     option_selector = (
         f"list_item[name='{selection}'], "
@@ -374,10 +367,7 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         option.wait_visible(timeout=10.0)
 
     _activate_take_option(option, selection)
-    try:
-        _wait_for_take_selection(combo, selection)
-    finally:
-        capture_takes_probe("05-after-selection")
+    _wait_for_take_selection(combo, selection)
 
 
 def set_tile_rendering(

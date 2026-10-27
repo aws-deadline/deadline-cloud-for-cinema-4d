@@ -96,7 +96,7 @@ jobs:
     with:
       c4d_version: ${{ matrix.c4d_version }}
       ref: ${{ github.event_name == 'workflow_dispatch' && needs.validate_ref.outputs.ref || github.sha }}
-      test_filter: ${{ inputs.test_filter || (github.ref == 'refs/heads/feature/ci-tests' && 'job_specific_take_selection or physical_multi_takes or physical_tiles_multi_takes') || '' }}
+      test_filter: ${{ inputs.test_filter }}
     secrets:
       AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -126,8 +126,7 @@ jobs:
     with:
       c4d_version: ${{ matrix.c4d_version }}
       ref: ${{ github.event_name == 'workflow_dispatch' && needs.validate_ref.outputs.ref || github.sha }}
-      # Probe all Takes modes on the feature branch.
-      test_filter: ${{ inputs.test_filter || (github.ref == 'refs/heads/feature/ci-tests' && 'job_specific_take_selection or physical_multi_takes or physical_tiles_multi_takes') || '' }}
+      test_filter: ${{ inputs.test_filter }}
     secrets:
       AWS_OIDC_ROLE_ARN: ${{ secrets.AWS_OIDC_ROLE_ARN }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
