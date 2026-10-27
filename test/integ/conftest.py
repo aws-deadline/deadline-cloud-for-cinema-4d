@@ -2,8 +2,10 @@
 
 import os
 import site
+import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from deadline_test_fixtures.deadline_mock import (
@@ -127,7 +129,27 @@ def deadline_farm(tmp_path):
     delay = float(os.environ.get("MOCK_DEADLINE_RESPONSE_DELAY_S", "0.3"))
 
     capture_takes_probe("00-before-mock")
-    server = MockDeadlineServerProcess(MockDeadlineScenario(response_delay_s=delay)).start()
+    server = MockDeadlineServerProcess(MockDeadlineScenario(response_delay_s=delay))
+    if sys.platform == "darwin":
+        original_popen = subprocess.Popen
+
+        def spawn_loopback_child(args, **kwargs):
+            expected = [
+                sys.executable,
+                "-m",
+                "deadline_test_fixtures.deadline_mock._server_child",
+            ]
+            if args == expected:
+                args = [sys.executable, str(Path(__file__).with_name("loopback_mock_child.py"))]
+            return original_popen(args, **kwargs)
+
+        with patch(
+            "deadline_test_fixtures.deadline_mock.process.subprocess.Popen",
+            side_effect=spawn_loopback_child,
+        ):
+            server.start()
+    else:
+        server.start()
     capture_takes_probe("01-after-mock")
     # start() has populated these; assert so the types narrow from Optional.
     assert server.backend is not None and server.base_url is not None
