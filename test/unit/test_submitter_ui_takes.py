@@ -20,6 +20,7 @@ def ui(monkeypatch):
 
 @pytest.fixture
 def closed_combo(ui, monkeypatch):
+    monkeypatch.delenv("DEADLINE_CLOUD_TAKES_PROBE_DIR", raising=False)
     combo = Mock()
     state = SimpleNamespace(name="Main Take", value=None)
     combo.element.side_effect = lambda: state
@@ -99,6 +100,18 @@ def test_already_selected_take_sends_no_input(ui, closed_combo):
     combo, _, input_sim = closed_combo
 
     ui.select_takes(Mock(), "Main Take")
+
+    combo.focus.assert_not_called()
+    input_sim.press.assert_not_called()
+
+
+def test_keyboard_selection_stops_if_dialog_cannot_focus(ui, closed_combo):
+    combo, _, input_sim = closed_combo
+    dialog = Mock()
+    dialog.wait_focused.side_effect = xa11y.TimeoutError("dialog did not receive focus")
+
+    with pytest.raises(xa11y.TimeoutError, match="dialog did not receive focus"):
+        ui.select_takes(dialog, "Marked Takes")
 
     combo.focus.assert_not_called()
     input_sim.press.assert_not_called()

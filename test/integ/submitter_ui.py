@@ -10,10 +10,13 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
 import sys
 from collections.abc import Callable
 from functools import partial
+from pathlib import Path
 
 import xa11y
 from deadline_test_fixtures.xa11y.controls import (
@@ -350,6 +353,18 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
     if sys.platform == "darwin":
         # Qt commits keyboard navigation on the closed combo directly. Its
         # popup does not commit synthesised input on the macOS CI image.
+        probe_dir = os.environ.get("DEADLINE_CLOUD_TAKES_PROBE_DIR")
+        if probe_dir:
+            screenshot = Path(probe_dir) / "before-take-focus.png"
+            screenshot.parent.mkdir(parents=True, exist_ok=True)
+            captured = subprocess.run(
+                ["/usr/sbin/screencapture", "-x", str(screenshot)],
+                check=False,
+            )
+            print(f"[take-keyboard] screenshot exit={captured.returncode}: {screenshot}")
+        dialog.focus()
+        dialog.wait_focused(timeout=5.0)
+        print("[take-keyboard] submitter dialog focused")
         combo.focus()
         combo.wait_focused(timeout=5.0)
         current_index = _TAKE_OPTIONS.index(current)
