@@ -33,7 +33,6 @@ Where the submitter's AWS calls go depends on the test mode:
 The test then drives the resulting Qt dialog with xa11y.
 """
 import os
-import sys
 import traceback
 
 import c4d
@@ -41,8 +40,6 @@ import c4d
 # Must match PLUGIN_ID in deadline_cloud_extension/DeadlineCloud.pyp. Duplicated as
 # a literal so this test fixture needs no import from the shipped plugin.
 SUBMITTER_PLUGIN_ID = 1064358
-# Used only by this unshipped sidecar in the isolated integration-test process.
-_AUTO_OPEN_MESSAGE_ID = 1064359
 
 
 def _diag(msg):
@@ -226,14 +223,6 @@ def _open_submitter():
         _diag(f"CallCommand raised: {e!r}\n{traceback.format_exc()}")
 
 
-class _DeferredSubmitter(c4d.plugins.MessageData):
-    def CoreMessage(self, id, data):
-        if id == _AUTO_OPEN_MESSAGE_ID:
-            _diag("opening submitter from the normal Cinema 4D core-message loop")
-            _open_submitter()
-        return True
-
-
 def PluginMessage(id, data):
     """Cinema 4D lifecycle hook. We act on C4DPL_PROGRAM_STARTED, fired once the
     application is fully initialized, to drive the submitter for the integ test."""
@@ -250,21 +239,5 @@ def PluginMessage(id, data):
         if scene_path:
             _load_active_scene(scene_path)
 
-        if sys.platform == "darwin" and os.environ.get("DEADLINE_CLOUD_MOCK_MODE") == "1":
-            # Let the native host finish its startup callback before entering the
-            # submitter's modal Qt loop, as it does for a user's menu command.
-            _diag("deferring submitter until the startup callback has returned")
-            c4d.SpecialEventAdd(_AUTO_OPEN_MESSAGE_ID)
-        else:
-            _open_submitter()
+        _open_submitter()
     return True
-
-
-if __name__ == "__main__":
-    if not c4d.plugins.RegisterMessagePlugin(
-        id=_AUTO_OPEN_MESSAGE_ID,
-        str="Deadline integration-test deferred submitter",
-        info=0,
-        dat=_DeferredSubmitter(),
-    ):
-        raise RuntimeError("Could not register the integration-test deferred submitter")

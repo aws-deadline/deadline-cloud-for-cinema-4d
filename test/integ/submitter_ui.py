@@ -174,6 +174,10 @@ def _take_selection(element: xa11y.Element) -> str:
     return ""
 
 
+def _take_selection_matches(element: xa11y.Element | None, *, selection: str) -> bool:
+    return element is not None and _take_selection(element) == selection
+
+
 def _take_combo_index(elements: list[xa11y.Element]) -> int:
     """Return the one-based index of the visible Takes combo box."""
     visible = [
@@ -341,6 +345,25 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
     if not current:
         raise AssertionError(f"Unexpected current take selection {current!r}")
     if current == selection:
+        return
+
+    if sys.platform == "darwin":
+        # Qt commits keyboard navigation on the closed combo directly. Its
+        # popup does not commit synthesised input on the macOS CI image.
+        combo.focus()
+        combo.wait_focused(timeout=5.0)
+        current_index = _TAKE_OPTIONS.index(current)
+        target_index = _TAKE_OPTIONS.index(selection)
+        direction = 1 if target_index > current_index else -1
+        key = "ArrowDown" if direction == 1 else "ArrowUp"
+        for index in range(current_index + direction, target_index + direction, direction):
+            expected = _TAKE_OPTIONS[index]
+            xa11y.input_sim().press(key)
+            combo.wait_until(
+                partial(_take_selection_matches, selection=expected),
+                timeout=5.0,
+            )
+            print(f"[take-keyboard] {key}: {_take_selection(combo.element())!r}")
         return
 
     combo_actions = set(combo.element().actions)
