@@ -1005,8 +1005,8 @@ _CASES = [
     "physical_nonascii",
     "physical_textured",
     "physical_custom_fps",
-    pytest.param("physical_multi_takes", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
-    pytest.param("physical_tiles_multi_takes", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    "physical_multi_takes",
+    "physical_tiles_multi_takes",
     "phy_apos_path",
     pytest.param("redshift", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
     pytest.param("redshift_textured", marks=_SKIP_REDSHIFT_2024_2025_IN_CI),
@@ -1014,12 +1014,12 @@ _CASES = [
 ]
 
 _TAKE_SELECTIONS = [
-    pytest.param("current", "Current Take", id="current", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    pytest.param("current", "Current Take", id="current"),
     # "main" is the combo's starting value, so selecting it never opens the popup and is
     # unaffected. Left unmarked so it keeps asserting take selection on macOS CI.
     pytest.param("main", "Main Take", id="main"),
     pytest.param("marked", "Marked Takes", id="marked"),
-    pytest.param("all", "All Takes", id="all", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    pytest.param("all", "All Takes", id="all"),
 ]
 
 

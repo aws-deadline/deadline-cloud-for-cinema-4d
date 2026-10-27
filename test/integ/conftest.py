@@ -130,25 +130,22 @@ def deadline_farm(tmp_path):
 
     capture_takes_probe("00-before-mock")
     server = MockDeadlineServerProcess(MockDeadlineScenario(response_delay_s=delay))
-    if sys.platform == "darwin":
-        original_popen = subprocess.Popen
+    original_popen = subprocess.Popen
 
-        def spawn_loopback_child(args, **kwargs):
-            expected = [
-                sys.executable,
-                "-m",
-                "deadline_test_fixtures.deadline_mock._server_child",
-            ]
-            if args == expected:
-                args = [sys.executable, str(Path(__file__).with_name("loopback_mock_child.py"))]
-            return original_popen(args, **kwargs)
+    def spawn_loopback_child(args, **kwargs):
+        expected = [
+            sys.executable,
+            "-m",
+            "deadline_test_fixtures.deadline_mock._server_child",
+        ]
+        if args == expected:
+            args = [sys.executable, str(Path(__file__).with_name("loopback_mock_child.py"))]
+        return original_popen(args, **kwargs)
 
-        with patch(
-            "deadline_test_fixtures.deadline_mock.process.subprocess.Popen",
-            side_effect=spawn_loopback_child,
-        ):
-            server.start()
-    else:
+    with patch(
+        "deadline_test_fixtures.deadline_mock.process.subprocess.Popen",
+        side_effect=spawn_loopback_child,
+    ):
         server.start()
     capture_takes_probe("01-after-mock")
     # start() has populated these; assert so the types narrow from Optional.
