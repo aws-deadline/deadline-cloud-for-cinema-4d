@@ -1015,7 +1015,7 @@ _TAKE_SELECTIONS = [
     # "main" is the combo's starting value, so selecting it never opens the popup and is
     # unaffected. Left unmarked so it keeps asserting take selection on macOS CI.
     pytest.param("main", "Main Take", id="main"),
-    pytest.param("marked", "Marked Takes", id="marked", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
+    pytest.param("marked", "Marked Takes", id="marked"),
     pytest.param("all", "All Takes", id="all", marks=_XFAIL_MACOS_TAKE_COMBO_IN_CI),
 ]
 
