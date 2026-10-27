@@ -93,6 +93,28 @@ jobs:
           sudo launchctl stop com.apple.tccd 2>/dev/null || true
           sleep 2
 
+      - name: Verify shared-fixture PR package revision
+        if: github.ref == 'refs/heads/feature/ci-tests'
+        run: |
+          hatch -e integ run python - <<'PY'
+          import importlib.metadata
+          import inspect
+          import json
+          from deadline_test_fixtures.deadline_mock import backend
+
+          distribution = importlib.metadata.distribution("deadline-cloud-test-fixtures")
+          origin = json.loads(distribution.read_text("direct_url.json"))
+          expected = "faa2185d737be6e9def14f82237444094bfc548e"
+          assert origin["vcs_info"]["commit_id"] == expected, origin
+          assert origin["url"] == "https://github.com/karthikbekalp/deadline-cloud-test-fixtures.git"
+          assert "_LoopbackHTTPServer" in backend.start_server.__code__.co_names
+          assert "getfqdn" not in backend._LoopbackHTTPServer.server_bind.__code__.co_names
+          print("Installed shared-fixture package:", distribution.version)
+          print("Installed source revision:", json.dumps(origin, sort_keys=True))
+          print("Installed backend:", backend.__file__)
+          print(inspect.getsource(backend._LoopbackHTTPServer))
+          PY
+
       - name: Install and configure Cinema 4D
         run: |
           pip install boto3
