@@ -82,7 +82,6 @@ jobs:
   windows:
     needs: validate_ref
     if: >-
-      github.ref != 'refs/heads/feature/ci-tests' &&
       !cancelled() &&
       (github.event_name != 'workflow_dispatch' ||
       needs.validate_ref.result == 'success')
