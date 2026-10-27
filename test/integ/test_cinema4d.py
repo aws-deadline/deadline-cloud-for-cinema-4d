@@ -29,6 +29,7 @@ from .utils import (
     assert_openjd_run_with_cinema4d_successful,
     build_cinema4d_scene,
     build_submitter_pythonpath,
+    capture_takes_probe,
     kill_proc,
     log,
     resolve_c4d_exe,
@@ -676,6 +677,7 @@ def _run_integ_case(
         case,
         scene_args,
     )
+    capture_takes_probe("02-after-scene-generation")
 
     _export_job_bundle_via_submitter(
         cinema4d_location=cinema4d_location,

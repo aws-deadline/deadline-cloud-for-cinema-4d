@@ -13,7 +13,7 @@ from deadline_test_fixtures.deadline_mock import (
     write_deadline_config,
 )
 
-from .utils import c4d_extra_python_paths
+from .utils import c4d_extra_python_paths, capture_takes_probe
 
 # Default install paths per version and platform.
 _DEFAULT_C4D_VERSION = "2026"
@@ -126,7 +126,9 @@ def deadline_farm(tmp_path):
     # 200-600ms. Override via env var to experiment.
     delay = float(os.environ.get("MOCK_DEADLINE_RESPONSE_DELAY_S", "0.3"))
 
+    capture_takes_probe("00-before-mock")
     server = MockDeadlineServerProcess(MockDeadlineScenario(response_delay_s=delay)).start()
+    capture_takes_probe("01-after-mock")
     # start() has populated these; assert so the types narrow from Optional.
     assert server.backend is not None and server.base_url is not None
     backend = server.backend

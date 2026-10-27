@@ -10,13 +10,10 @@ Cinema 4D submitter.
 
 from __future__ import annotations
 
-import os
 import re
-import subprocess
 import sys
 from collections.abc import Callable
 from functools import partial
-from pathlib import Path
 
 import xa11y
 from deadline_test_fixtures.xa11y.controls import (
@@ -35,6 +32,8 @@ from deadline_test_fixtures.xa11y.controls import set_priority as _shared_set_pr
 from deadline_test_fixtures.xa11y.controls import (
     set_spin_button_in_group as _shared_set_spin_button_in_group,
 )
+
+from .utils import capture_takes_probe
 
 __all__ = [
     "TAB_JOB_SPECIFIC",
@@ -175,10 +174,6 @@ def _take_selection(element: xa11y.Element) -> str:
         if candidate in _TAKE_OPTIONS:
             return candidate
     return ""
-
-
-def _take_selection_matches(element: xa11y.Element | None, *, selection: str) -> bool:
-    return element is not None and _take_selection(element) == selection
 
 
 def _take_combo_index(elements: list[xa11y.Element]) -> int:
@@ -350,37 +345,7 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
     if current == selection:
         return
 
-    if sys.platform == "darwin":
-        # Qt commits keyboard navigation on the closed combo directly. Its
-        # popup does not commit synthesised input on the macOS CI image.
-        probe_dir = os.environ.get("DEADLINE_CLOUD_TAKES_PROBE_DIR")
-        if probe_dir:
-            screenshot = Path(probe_dir) / "before-take-focus.png"
-            screenshot.parent.mkdir(parents=True, exist_ok=True)
-            captured = subprocess.run(
-                ["/usr/sbin/screencapture", "-x", str(screenshot)],
-                check=False,
-            )
-            print(f"[take-keyboard] screenshot exit={captured.returncode}: {screenshot}")
-        dialog.focus()
-        dialog.wait_focused(timeout=5.0)
-        print("[take-keyboard] submitter dialog focused")
-        combo.focus()
-        combo.wait_focused(timeout=5.0)
-        current_index = _TAKE_OPTIONS.index(current)
-        target_index = _TAKE_OPTIONS.index(selection)
-        direction = 1 if target_index > current_index else -1
-        key = "ArrowDown" if direction == 1 else "ArrowUp"
-        for index in range(current_index + direction, target_index + direction, direction):
-            expected = _TAKE_OPTIONS[index]
-            xa11y.input_sim().press(key)
-            combo.wait_until(
-                partial(_take_selection_matches, selection=expected),
-                timeout=5.0,
-            )
-            print(f"[take-keyboard] {key}: {_take_selection(combo.element())!r}")
-        return
-
+    capture_takes_probe("03-before-popup")
     combo_actions = set(combo.element().actions)
     if "show_menu" in combo_actions:
         combo.show_menu()
@@ -388,6 +353,7 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         combo.expand()
     else:
         combo.press()
+    capture_takes_probe("04-popup-open")
 
     option_selector = (
         f"list_item[name='{selection}'], "
@@ -405,7 +371,11 @@ def select_takes(dialog: xa11y.Locator, selection: str) -> None:
         option.wait_visible(timeout=10.0)
 
     _activate_take_option(option, selection)
-    _wait_for_take_selection(combo, selection)
+    capture_takes_probe("05-after-option-click")
+    try:
+        _wait_for_take_selection(combo, selection)
+    finally:
+        capture_takes_probe("06-after-selection-wait")
 
 
 def set_tile_rendering(
