@@ -170,7 +170,13 @@ def bake_full_frame_beauty(
         return
 
     baked = c4d.documents.BakeOcioViewToBitmap(bm, rd, c4d.SAVEBIT_NONE)
-    bm = baked or bm
+    if baked is None:
+        # No view transform to bake (e.g. a Basic/linear-workflow scene, not OCIO).
+        # C4D's own save is already display-referred at the scene's bit depth;
+        # overwriting it with the render-space bitmap would write linear data.
+        print("OCIO view transform NOT baked: no OCIO view transform for this scene")
+        return
+    bm = baked
     if c4d.GetC4DVersion() >= C4D_VERSION_2025_2:
         bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_DISPLAYSPACE)
         bm.SetColorProfile(c4d.bitmaps.ColorProfile(), c4d.COLORPROFILE_INDEX_VIEW_TRANSFORM)
