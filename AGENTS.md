@@ -62,7 +62,7 @@ hatch run typing   # mypy only
 
 ## Python Version
 
-- Cinema 4D 2026 uses Python 3.11
+- Cinema 4D 2026–2027 uses Python 3.11
 - Cinema 4D 2024–2025 uses Python 3.10
 - System Python 3.10+ is sufficient for unit tests
 - Integration tests use Cinema 4D's bundled Python
