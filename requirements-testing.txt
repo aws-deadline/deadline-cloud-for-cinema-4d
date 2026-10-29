@@ -11,7 +11,7 @@ types-pyyaml == 6.*
 numpy == 2.*; python_version >= "3.12"
 numpy >= 2.2.6, < 2.5; python_version < "3.12"
 pillow == 12.*
-openjd-cli == 0.7.*
+openjd-cli == 0.8.*
 fonttools >= 4.0.0
 deadline-cloud-test-fixtures >= 0.18.24
 # Drives the real submitter dialog via the OS accessibility tree.
