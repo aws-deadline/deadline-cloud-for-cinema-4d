@@ -1,4 +1,4 @@
-## 1.0.2 (2026-10-29)
+## 1.0.3 (2026-10-30)
 
 ### Bug Fixes
 * Fixed dark renders from scenes that don't use OCIO (Basic or classic linear workflow). Non-tiled 8-bit renders were also being saved as 16-bit PNGs on Linux and Windows workers. Cinema 4D's own correct output is now kept when there is no OCIO view transform to bake. (#596)
