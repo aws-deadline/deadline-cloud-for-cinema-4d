@@ -279,7 +279,7 @@ Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Redshi
 
 #### Autodesk Arnold
 
-Arnold is supported automatically on Cinema 4D 2025 (Windows and Linux) and 2026 (Windows) on Deadline Cloud service-managed fleets.
+Arnold is supported automatically on Cinema 4D 2025 and 2026 (Windows and Linux) on Deadline Cloud service-managed fleets.
 
 For customer-managed fleets, follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/main/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe supports both Windows and Linux fleets.
 
@@ -295,7 +295,7 @@ Arnold licensing is available automatically on service-managed fleets. To set up
 
 ##### Version compatibility
 
-C4DtoA v4.8.3.1 is supported for Cinema 4D 2025 (Windows and Linux) and 2026 (Windows) on Deadline Cloud service-managed fleets. More recent versions should still be compatible with the latest versions of Cinema 4D. For more information on compatibility, refer to the [C4DtoA release notes](https://help.autodesk.com/view/ARNOL/ENU/?guid=arnold_for_cinema_4d_481_html).
+On Deadline Cloud service-managed fleets, C4DtoA v4.8.4.1 is supported for Cinema 4D 2025 and C4DtoA v4.9.5 is supported for Cinema 4D 2026, on both Windows and Linux. More recent versions should still be compatible with the latest versions of Cinema 4D. For more information on compatibility, refer to the [C4DtoA release notes](https://help.autodesk.com/cloudhelp/ENU/AR-Cinema4D/files/release-notes/4x/arnold_for_cinema_4d_495_html.html).
 
 #### Chaos Group V-Ray
 
