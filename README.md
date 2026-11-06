@@ -27,14 +27,14 @@ For instructions on installing and using this integration, visit the [user guide
 
 This library requires:
 
-1. Cinema 4D 2024 - 2026
+1. Cinema 4D 2024 - 2027
    * Redshift, Arnold, and Cargo are supported natively
    * V-Ray, X-Particles, and Red Giant are supported but require additional setup
 2. Python 3.10 or higher; but Python 3.11 is recommended as this is the version Cinema 4D uses natively.
 3. Windows or macOS operating system for job submission
 4. Windows or Linux operating system for job rendering
-    * Cinema 4D 2024 - 2026 is supported on Windows
-    * Cinema 4D 2025 - 2026 is supported on Linux
+    * Cinema 4D 2024 - 2027 is supported on Windows
+    * Cinema 4D 2025 - 2027 is supported on Linux
 5. When rendering using Redshift with Cinema 4D on NVIDIA GPUs, NVIDIA GRID driver version 551.78 or later is required. Using older drivers can result in job failures.
 
 **Important:** Worker hosts with GPUs that run the Cinema 4D adaptor must have sufficient RAM (at least 2x the amount of VRAM) to run Cinema 4D correctly. For example, if your GPU has 16GB VRAM, your system should have at least 32GB RAM. Insufficient memory can lead to [unstable rendering behavior](https://help.maxon.net/c4d/s26/de-de/Content/_REDSHIFT_/html/Dealing+with+Out-Of-RAM+situations.html).
@@ -215,7 +215,7 @@ Though it refers to Blender, the process applies to Cinema 4D recipes as well.
 
 ### Service-managed Fleets
 
-[Usage based licensing][usage-based-licensing] for Cinema 4D 2024 - 2026, Redshift 2024 - 2026, V-Ray 7, Red Giant, and Arnold is available on Deadline Cloud service-managed fleets with no additional setup.
+[Usage based licensing][usage-based-licensing] for Cinema 4D 2024 - 2027, Redshift 2024 - 2027, V-Ray 7, Red Giant, and Arnold is available on Deadline Cloud service-managed fleets with no additional setup.
 
 If you prefer to use your own licensing for service-managed fleets, you can also connect them to a [custom license server](https://docs.aws.amazon.com/deadline-cloud/latest/developerguide/smf-byol.html).
 
@@ -279,7 +279,7 @@ Cinema 4D for Deadline Cloud works with several common 3rd party plugins. Redshi
 
 #### Autodesk Arnold
 
-Arnold is supported automatically on Cinema 4D 2025 and 2026 (Windows and Linux) on Deadline Cloud service-managed fleets.
+Arnold is supported automatically on Cinema 4D 2025 and 2026 (Windows and Linux) on Deadline Cloud service-managed fleets. Arnold support for Cinema 4D 2027 on service-managed fleets is not available yet.
 
 For customer-managed fleets, follow [these instructions](https://github.com/aws-deadline/deadline-cloud-samples/blob/main/conda_recipes/cinema4d-c4dtoa-2025/README.md) to build the C4DtoA conda package. This recipe supports both Windows and Linux fleets.
 
@@ -367,6 +367,7 @@ The customer plugin hook is available for the following Cinema 4D versions:
 | 2024              | n/a¹  | not yet² |
 | 2025              | ✅    | ✅      |
 | 2026              | ✅    | ✅      |
+| 2027              | ✅    | ✅      |
 
 ¹ Cinema 4D 2024 is only supported on Windows by Deadline Cloud — see the [Compatibility](#compatibility) section.
 ² Customer plugin hook support for Cinema 4D 2024 on Windows is planned and will be added once verified.
