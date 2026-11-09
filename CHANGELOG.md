@@ -1,3 +1,7 @@
+## 1.1.0 (2026-11-09)
+
+### Features
+* Added support for Cinema 4D 2027. You can submit Cinema 4D 2027 jobs and render them on Windows and Linux. Usage-based licensing works for Cinema 4D 2027 and Redshift 2027. The macOS installer now installs the submitter plugin into Cinema 4D 2027 preference folders and removes it when you uninstall. Arnold isn't available for Cinema 4D 2027 yet. (#605)
 ## 1.0.3 (2026-10-30)
 
 ### Bug Fixes
