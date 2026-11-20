@@ -37,10 +37,12 @@ PYPROJECT = Path(__file__).parents[3] / "pyproject.toml"
 # Console sign-in landed in deadline 0.60.4 and nowhere earlier: 0.60.1 through
 # 0.60.3 have no AWS_CONSOLE_LOGIN credentials source and do not declare a
 # `console` extra at all. 0.60.4 lacks the export-cancellation API used by the
-# submitter. 0.60.5 is the first compatible release.
+# submitter. 0.60.5 through 0.60.11 don't list farms reached only through a queue or
+# fleet membership (ListMemberships). 0.60.12 is the first compatible release.
 HIGHEST_DEADLINE_WITHOUT_CONSOLE_SIGNIN = "0.60.3"
 HIGHEST_DEADLINE_WITHOUT_EXPORT_CANCELLATION = "0.60.4"
-LOWEST_COMPATIBLE_DEADLINE = "0.60.5"
+HIGHEST_DEADLINE_WITHOUT_MEMBERSHIP_FARMS = "0.60.11"
+LOWEST_COMPATIBLE_DEADLINE = "0.60.12"
 
 
 def _requirements(*table_path: str) -> list[Requirement]:
@@ -110,6 +112,10 @@ def test_deadline_floor_excludes_releases_without_required_features(table, reque
         assert not req.specifier.contains(HIGHEST_DEADLINE_WITHOUT_EXPORT_CANCELLATION), (
             f"allows deadline {HIGHEST_DEADLINE_WITHOUT_EXPORT_CANCELLATION}, which has no "
             f"export-cancellation support: {req}"
+        )
+        assert not req.specifier.contains(HIGHEST_DEADLINE_WITHOUT_MEMBERSHIP_FARMS), (
+            f"allows deadline {HIGHEST_DEADLINE_WITHOUT_MEMBERSHIP_FARMS}, which doesn't list "
+            f"farms reached only through a membership: {req}"
         )
         assert req.specifier.contains(LOWEST_COMPATIBLE_DEADLINE), (
             f"excludes the first compatible deadline release "
