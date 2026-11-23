@@ -1,3 +1,7 @@
+## 1.1.1 (2026-11-23)
+
+### Bug Fixes
+* Artists whose access comes only from a queue or fleet membership now see their farm in the submitter. Before this fix, the farm list was empty for them. (`c99143f`)
 ## 1.1.0 (2026-11-09)
 
 ### Features
